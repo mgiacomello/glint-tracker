@@ -36,7 +36,7 @@ app.use(session({
 app.use(express.static('public'));
 
 // ── Auth middleware ───────────────────────────────────────────────────────────
-const PUBLIC_API = ['/auth/google', '/api/me'];
+const PUBLIC_API = ['/auth/google', '/api/me', '/api/logout'];
 app.use((req, res, next) => {
   // System token bypass (for scheduled tasks)
   const authHeader = req.headers.authorization || '';

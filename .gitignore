@@ -3,7 +3,9 @@ data/db.json
 data/users/
 data/sessions/
 data/users.json
+data/shared.json
 .env
+.claude/
 .env.local
 config.json
 *.log

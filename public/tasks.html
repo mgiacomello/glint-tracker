@@ -674,20 +674,22 @@ function renderDetailBody() {
     if (t.link) html += `<div class="detail-section"><a href="${t.link}" target="_blank" style="font-size:13px;color:var(--primary)">↗ Apri in Gmail</a></div>`;
   }
 
-  // Steps
-  const steps = t.steps || t.actionPoints || [];
-  html += `<div class="detail-section" id="steps-section"><div class="detail-section-label">Passaggi</div><ul class="steps-list" id="steps-list">`;
-  steps.forEach((s, i) => {
-    const stepId = s.id || i;
-    html += `<li class="step-item" data-id="${stepId}">
+  // Steps (only for non-briefing tasks; briefing shows action points in its own section)
+  if (!isBriefing) {
+    const steps = t.steps || [];
+    html += `<div class="detail-section" id="steps-section"><div class="detail-section-label">Passaggi</div><ul class="steps-list" id="steps-list">`;
+    steps.forEach((s, i) => {
+      const stepId = s.id || i;
+      html += `<li class="step-item" data-id="${stepId}">
       <div class="step-check${s.done?' done':''}">${s.done?'<svg width="10" height="10" viewBox="0 0 10 10"><polyline points="1,5 3.5,7.5 9,2" stroke="#fff" stroke-width="2" fill="none"/></svg>':''}</div>
       <span class="step-text${s.done?' done':''}">${esc(s.text)}</span>
-      ${!isBriefing&&!isViewer?`<button class="step-del">✕</button>`:''}
+      ${!isViewer?`<button class="step-del">✕</button>`:''}
     </li>`;
-  });
-  html += '</ul>';
-  if (!isBriefing && !isViewer) html += `<div class="add-step-input"><input type="text" id="new-step-input" placeholder="Aggiungi passaggio" /></div>`;
-  html += '</div>';
+    });
+    html += '</ul>';
+    if (!isViewer) html += `<div class="add-step-input"><input type="text" id="new-step-input" placeholder="Aggiungi passaggio" /></div>`;
+    html += '</div>';
+  }
 
   if (!isBriefing && !isViewer) {
     // My Day
