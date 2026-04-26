@@ -1,0 +1,18 @@
+{
+  "name": "daily-tracker",
+  "version": "1.0.0",
+  "description": "Daily briefing & task tracker for Marco",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node server.js"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.79.0",
+    "cors": "^2.8.5",
+    "express": "^4.18.2",
+    "express-session": "^1.19.0",
+    "session-file-store": "^1.5.0",
+    "uuid": "^14.0.0"
+  }
+}

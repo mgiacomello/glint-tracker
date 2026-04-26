@@ -1,0 +1,17 @@
+node_modules/
+data/db.json
+data/users/
+data/sessions/
+data/users.json
+.env
+.env.local
+config.json
+*.log
+.DS_Store
+
+# Escludi gli altri progetti dalla root
+francescabravi/
+gvchain/
+teamtask/
+logs/
+index.html
