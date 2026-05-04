@@ -3159,6 +3159,45 @@ app.get('/api/morning-agent/status', (req, res) => {
 
 // ── DEBUG (solo in development) ───────────────────────────────────────────────
 if (process.env.NODE_ENV !== 'production') {
+  // GET /dev-login  → crea sessione demo senza OAuth (solo sviluppo)
+  app.get('/dev-login', (req, res) => {
+    const DEV_UID = 'dev-preview-user';
+    req.session.userId = DEV_UID;
+    req.session.userName = 'Preview User';
+    req.session.userEmail = 'preview@glint.local';
+    req.session.userPicture = '';
+    // Assicura che esista un DB minimo per l'utente dev
+    const devDbPath = path.join(__dirname, 'data', 'users', DEV_UID, 'db.json');
+    if (!fs.existsSync(devDbPath)) {
+      fs.mkdirSync(path.dirname(devDbPath), { recursive: true });
+      const today = new Date().toISOString().slice(0, 10);
+      fs.writeFileSync(devDbPath, JSON.stringify({
+        userSettings: { name: 'Preview User', email: 'preview@glint.local', timezone: 'Europe/Rome' },
+        googleTokens: null,
+        days: {
+          [today]: {
+            events: [
+              { id: 'ev1', title: 'Chiamata con cliente', time: '10:00', duration: 60, location: 'Google Meet' },
+              { id: 'ev2', title: 'Pranzo di team', time: '13:00', duration: 90 }
+            ],
+            tasks: [
+              { id: 'task-1', title: 'Revisione proposta commerciale', quadrant: 'Q1', priority: 1, done: false, brief: 'Documento da revisionare prima della call delle 10.', actionPoints: ['Aprire la bozza su Drive', 'Verificare i prezzi', 'Inviare per approvazione'] },
+              { id: 'task-2', title: 'Aggiornare roadmap Q3', quadrant: 'Q2', priority: 2, done: false, brief: 'Pianificazione strategica del prossimo trimestre.', actionPoints: ['Raccogliere input dal team', 'Inserire milestone'] },
+              { id: 'mail-1', title: 'Email: Richiesta preventivo da Fornitore XYZ', quadrant: 'Q1', priority: 1, done: false, brief: 'Il fornitore ha inviato una richiesta urgente di preventivo per la fornitura di materiali.', actionPoints: ['Rispondere entro oggi', 'Allegare listino prezzi', 'CC responsabile acquisti'], link: '#' }
+            ],
+            items: {},
+            insights: { dayType: 'mixed', studyItems: [{ title: 'Articolo: Leadership nei team distribuiti', url: '#', source: 'Newsletter' }] },
+            family: { alessandraEvents: [{ title: 'Visita medica', time: '15:30' }], tommasoAlerts: [{ title: 'Compiti matematica da controllare' }] },
+            network: { city: 'Milano', events: [{ title: 'Aperitivo startup community', time: '19:00', location: 'Brera' }] },
+            brief: 'Oggi è una giornata intensa ma ben strutturata. La mattinata è dedicata alla call con il cliente, preceduta dalla revisione della proposta. Nel pomeriggio c\'è spazio per la pianificazione strategica del Q3. Ricordati di rispondere al preventivo di Fornitore XYZ entro fine giornata.',
+            agentRanAt: new Date().toISOString()
+          }
+        }
+      }, null, 2));
+    }
+    res.redirect('/app.html');
+  });
+
   // GET /api/debug/day  → dump day data for current user (last 3 days)
   app.get('/api/debug/day', (req, res) => {
     const uid = getCurrentUid();
@@ -3183,6 +3222,422 @@ if (process.env.NODE_ENV !== 'production') {
     res.json({ uid, days, googleTokens: db.googleTokens ? 'present' : 'MISSING', userSettings: db.userSettings || {} });
   });
 }
+
+// ══════════════════════════════════════════════════════════════════════════════
+// ── WELLNESS MODULE: Oura Ring + Mendi + Brain Training ──────────────────────
+// ══════════════════════════════════════════════════════════════════════════════
+
+const OURA_CLIENT_ID = process.env.OURA_CLIENT_ID || '';
+const OURA_CLIENT_SECRET = process.env.OURA_CLIENT_SECRET || '';
+const OURA_REDIRECT_URI = process.env.OURA_REDIRECT_URI || `http://localhost:${process.env.PORT || 3000}/auth/oura/callback`;
+const OURA_AUTH_URL = 'https://cloud.ouraring.com/oauth/authorize';
+const OURA_TOKEN_URL = 'https://api.ouraring.com/oauth/token';
+const OURA_API = 'https://api.ouraring.com/v2';
+
+// ── Oura OAuth ────────────────────────────────────────────────────────────────
+app.get('/auth/oura', (req, res) => {
+  const uid = req.session?.userId;
+  if (!uid) return res.redirect('/login.html');
+  if (!OURA_CLIENT_ID) return res.status(400).send('OURA_CLIENT_ID non configurato nelle variabili d\'ambiente.');
+  const params = new URLSearchParams({
+    response_type: 'code',
+    client_id: OURA_CLIENT_ID,
+    redirect_uri: OURA_REDIRECT_URI,
+    scope: 'daily heartrate workout session personal',
+    state: uid
+  });
+  res.redirect(`${OURA_AUTH_URL}?${params}`);
+});
+
+app.get('/auth/oura/callback', async (req, res) => {
+  const { code, state } = req.query;
+  if (!code) return res.redirect('/wellness.html?oura=error');
+  try {
+    const resp = await fetch(OURA_TOKEN_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: new URLSearchParams({
+        grant_type: 'authorization_code',
+        code,
+        redirect_uri: OURA_REDIRECT_URI,
+        client_id: OURA_CLIENT_ID,
+        client_secret: OURA_CLIENT_SECRET
+      })
+    });
+    const tokens = await resp.json();
+    if (!tokens.access_token) throw new Error('No access_token');
+    await als.run({ uid: state }, () => {
+      const db = readDB();
+      db.ouraTokens = { ...tokens, connectedAt: new Date().toISOString() };
+      writeDB(db);
+    });
+    res.redirect('/wellness.html?oura=connected');
+  } catch (e) {
+    console.error('Oura OAuth error:', e);
+    res.redirect('/wellness.html?oura=error');
+  }
+});
+
+// ── Oura token refresh ────────────────────────────────────────────────────────
+async function refreshOuraToken(db) {
+  if (!db.ouraTokens?.refresh_token) return null;
+  try {
+    const resp = await fetch(OURA_TOKEN_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: new URLSearchParams({
+        grant_type: 'refresh_token',
+        refresh_token: db.ouraTokens.refresh_token,
+        client_id: OURA_CLIENT_ID,
+        client_secret: OURA_CLIENT_SECRET
+      })
+    });
+    const tokens = await resp.json();
+    if (tokens.access_token) {
+      db.ouraTokens = { ...db.ouraTokens, ...tokens };
+      writeDB(db);
+      return tokens.access_token;
+    }
+  } catch (e) { console.error('Oura refresh error:', e); }
+  return null;
+}
+
+async function ouraFetch(path, db) {
+  let token = db.ouraTokens?.access_token;
+  if (!token) return null;
+  let resp = await fetch(`${OURA_API}${path}`, { headers: { Authorization: `Bearer ${token}` } });
+  if (resp.status === 401) {
+    token = await refreshOuraToken(db);
+    if (!token) return null;
+    resp = await fetch(`${OURA_API}${path}`, { headers: { Authorization: `Bearer ${token}` } });
+  }
+  if (!resp.ok) return null;
+  return resp.json();
+}
+
+// ── GET /api/oura/status ──────────────────────────────────────────────────────
+app.get('/api/oura/status', (req, res) => {
+  const db = readDB();
+  res.json({
+    connected: !!db.ouraTokens?.access_token,
+    connectedAt: db.ouraTokens?.connectedAt || null,
+    lastSync: db.ouraLastSync || null
+  });
+});
+
+// ── POST /api/oura/sync ───────────────────────────────────────────────────────
+app.post('/api/oura/sync', async (req, res) => {
+  const db = readDB();
+  if (!db.ouraTokens?.access_token) return res.status(400).json({ error: 'Oura non connesso' });
+
+  const today = new Date().toISOString().slice(0, 10);
+  const weekAgo = new Date(Date.now() - 7 * 86400000).toISOString().slice(0, 10);
+  const params = `?start_date=${weekAgo}&end_date=${today}`;
+
+  try {
+    const [readiness, sleep, activity, hrv] = await Promise.all([
+      ouraFetch(`/usercollection/daily_readiness${params}`, db),
+      ouraFetch(`/usercollection/daily_sleep${params}`, db),
+      ouraFetch(`/usercollection/daily_activity${params}`, db),
+      ouraFetch(`/usercollection/heartrate?start_datetime=${weekAgo}T00:00:00&end_datetime=${today}T23:59:59`, db)
+    ]);
+
+    if (!db.ouraData) db.ouraData = {};
+
+    // Index readiness by date
+    (readiness?.data || []).forEach(d => {
+      const date = d.day;
+      if (!db.ouraData[date]) db.ouraData[date] = {};
+      db.ouraData[date].readiness = {
+        score: d.score,
+        hrv_balance: d.contributors?.hrv_balance,
+        recovery_index: d.contributors?.recovery_index,
+        resting_heart_rate: d.contributors?.resting_heart_rate,
+        sleep_balance: d.contributors?.sleep_balance,
+        body_temperature: d.temperature_deviation
+      };
+    });
+
+    // Index sleep by date
+    (sleep?.data || []).forEach(d => {
+      const date = d.day;
+      if (!db.ouraData[date]) db.ouraData[date] = {};
+      db.ouraData[date].sleep = {
+        score: d.score,
+        total_sleep: Math.round((d.contributors?.total_sleep || 0)),
+        efficiency: d.contributors?.efficiency,
+        rem_sleep: d.contributors?.rem_sleep,
+        deep_sleep: d.contributors?.deep_sleep,
+        latency: d.contributors?.latency,
+        timing: d.contributors?.timing
+      };
+    });
+
+    // Index activity by date
+    (activity?.data || []).forEach(d => {
+      const date = d.day;
+      if (!db.ouraData[date]) db.ouraData[date] = {};
+      db.ouraData[date].activity = {
+        score: d.score,
+        steps: d.steps,
+        active_calories: d.active_calories,
+        total_calories: d.total_calories,
+        met_minutes: d.met?.average,
+        sedentary_minutes: d.sedentary_time ? Math.round(d.sedentary_time / 60) : null
+      };
+    });
+
+    // Compute daily avg HRV from heartrate stream
+    if (hrv?.data?.length) {
+      const hrvByDay = {};
+      hrv.data.forEach(h => {
+        const day = h.timestamp?.slice(0, 10);
+        if (!day) return;
+        if (!hrvByDay[day]) hrvByDay[day] = [];
+        if (h.bpm) hrvByDay[day].push(h.bpm);
+      });
+      Object.entries(hrvByDay).forEach(([day, vals]) => {
+        if (!db.ouraData[day]) db.ouraData[day] = {};
+        db.ouraData[day].hrv_avg = Math.round(vals.reduce((a, b) => a + b, 0) / vals.length);
+      });
+    }
+
+    db.ouraLastSync = new Date().toISOString();
+    writeDB(db);
+    res.json({ ok: true, days: Object.keys(db.ouraData).length, lastSync: db.ouraLastSync });
+  } catch (e) {
+    console.error('Oura sync error:', e);
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// ── GET /api/oura/data?days=7 ─────────────────────────────────────────────────
+app.get('/api/oura/data', (req, res) => {
+  const db = readDB();
+  const days = parseInt(req.query.days || '7');
+  const result = {};
+  for (let i = 0; i < days; i++) {
+    const d = new Date(Date.now() - i * 86400000).toISOString().slice(0, 10);
+    if (db.ouraData?.[d]) result[d] = db.ouraData[d];
+  }
+  res.json({ data: result, lastSync: db.ouraLastSync || null });
+});
+
+// ── Mendi Sessions ────────────────────────────────────────────────────────────
+// GET /api/mendi/sessions?days=30
+app.get('/api/mendi/sessions', (req, res) => {
+  const db = readDB();
+  const days = parseInt(req.query.days || '30');
+  const cutoff = new Date(Date.now() - days * 86400000).toISOString().slice(0, 10);
+  const sessions = (db.mendiSessions || []).filter(s => s.date >= cutoff);
+  res.json({ sessions });
+});
+
+// POST /api/mendi/sessions  { date, time, duration, score, mode, notes }
+app.post('/api/mendi/sessions', (req, res) => {
+  const { date, time, duration, score, mode, notes } = req.body;
+  if (!date || score == null) return res.status(400).json({ error: 'date e score obbligatori' });
+  const db = readDB();
+  if (!db.mendiSessions) db.mendiSessions = [];
+  const session = {
+    id: uuidv4(),
+    date,
+    time: time || new Date().toTimeString().slice(0, 5),
+    duration: duration || 20,
+    score: Math.min(100, Math.max(0, Number(score))),
+    mode: mode || 'focus',
+    notes: notes || '',
+    createdAt: new Date().toISOString()
+  };
+  db.mendiSessions.unshift(session);
+  writeDB(db);
+  res.json({ ok: true, session });
+});
+
+// DELETE /api/mendi/sessions/:id
+app.delete('/api/mendi/sessions/:id', (req, res) => {
+  const db = readDB();
+  db.mendiSessions = (db.mendiSessions || []).filter(s => s.id !== req.params.id);
+  writeDB(db);
+  res.json({ ok: true });
+});
+
+// ── Brain Training ────────────────────────────────────────────────────────────
+const Anthropic = require('@anthropic-ai/sdk');
+
+// GET /api/brain/today  → restituisce (o genera) il piano di allenamento di oggi
+app.get('/api/brain/today', async (req, res) => {
+  const db = readDB();
+  const today = new Date().toISOString().slice(0, 10);
+
+  // Ritorna cached se già generato oggi
+  if (db.brainTraining?.[today]?.exercises?.length) {
+    return res.json({ date: today, ...db.brainTraining[today] });
+  }
+
+  // Costruisce contesto dai dati Oura
+  const oura = db.ouraData?.[today] || db.ouraData?.[Object.keys(db.ouraData || {}).sort().pop()] || {};
+  const mendiRecent = (db.mendiSessions || []).slice(0, 5);
+  const mendiAvg = mendiRecent.length ? Math.round(mendiRecent.reduce((a, b) => a + b.score, 0) / mendiRecent.length) : null;
+
+  const context = `
+Dati biometrici utente (oggi o ultimo disponibile):
+- Readiness Oura: ${oura.readiness?.score ?? 'N/D'}/100
+- Sleep Oura: ${oura.sleep?.score ?? 'N/D'}/100 (totale ${oura.sleep?.total_sleep ?? '?'} min)
+- HRV medio: ${oura.hrv_avg ?? 'N/D'} ms
+- Activity: ${oura.activity?.score ?? 'N/D'}/100, passi: ${oura.activity?.steps ?? 'N/D'}
+- Mendi score medio (ultime 5 sessioni): ${mendiAvg ?? 'N/D'}/100
+`;
+
+  try {
+    const ai = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
+    const msg = await ai.messages.create({
+      model: 'claude-sonnet-4-6',
+      max_tokens: 1500,
+      messages: [{
+        role: 'user',
+        content: `Sei un coach neurocognitivo. Basandoti sui seguenti dati biometrici, crea un piano di allenamento cerebrale personalizzato per oggi.
+
+${context}
+
+Genera un piano con esattamente 4 esercizi cognitivi, bilanciati in base allo stato biometrico (se readiness è bassa, privilegia esercizi leggeri; se è alta, sfida cognitiva più intensa).
+
+Rispondi SOLO con JSON valido in questo formato:
+{
+  "neuroscore": <numero 0-100 composito basato sui dati>,
+  "neurostate": "<stato in 2-3 parole, es. 'Mente acuta', 'Recupero attivo', 'Focus elevato'>",
+  "recommendation": "<frase di 1-2 righe su come approcciarsi alla giornata mentalmente>",
+  "exercises": [
+    {
+      "id": "ex-1",
+      "category": "<Memoria|Focus|Creatività|Problem Solving|Mindfulness>",
+      "title": "<titolo esercizio>",
+      "description": "<descrizione chiara di come eseguirlo, 2-3 righe>",
+      "duration_minutes": <5-15>,
+      "difficulty": "<Leggero|Medio|Intenso>",
+      "icon": "<emoji>",
+      "tip": "<consiglio scientifico breve>"
+    }
+  ]
+}`
+      }]
+    });
+
+    const raw = msg.content[0]?.text || '';
+    let plan = null;
+    try { plan = JSON.parse(raw.trim()); } catch {
+      const m = raw.match(/\{[\s\S]*\}/);
+      if (m) try { plan = JSON.parse(m[0]); } catch {}
+    }
+
+    if (!plan) throw new Error('Parse fallito');
+
+    if (!db.brainTraining) db.brainTraining = {};
+    db.brainTraining[today] = {
+      ...plan,
+      completed: [],
+      generatedAt: new Date().toISOString()
+    };
+    writeDB(db);
+    res.json({ date: today, ...db.brainTraining[today] });
+  } catch (e) {
+    console.error('Brain training gen error:', e);
+    // Fallback statico
+    const fallback = {
+      neuroscore: 70,
+      neurostate: 'Modalità standard',
+      recommendation: 'Inizia con qualcosa di leggero e aumenta gradualmente l\'intensità cognitiva.',
+      exercises: [
+        { id: 'ex-1', category: 'Focus', title: 'Respirazione 4-7-8', description: 'Inspira per 4 secondi, trattieni per 7, espira per 8. Ripeti 4 volte. Attiva il sistema parasimpatico.', duration_minutes: 5, difficulty: 'Leggero', icon: '🌬️', tip: 'Riduce il cortisolo del 23% in media.' },
+        { id: 'ex-2', category: 'Memoria', title: 'Metodo dei loci', description: 'Visualizza il tuo percorso casa-lavoro e posiziona mentalmente 5 oggetti da ricordare oggi in punti precisi del tragitto.', duration_minutes: 8, difficulty: 'Medio', icon: '🧠', tip: 'Tecnica usata dai campioni di memoria mondiali.' },
+        { id: 'ex-3', category: 'Problem Solving', title: 'Reverse thinking', description: 'Prendi il problema più complesso che hai oggi e chiediti: come potrei PEGGIORARLO? Poi inverti le risposte per trovare soluzioni.', duration_minutes: 10, difficulty: 'Medio', icon: '🔄', tip: 'Tecnica usata da Jeff Bezos per l\'innovazione.' },
+        { id: 'ex-4', category: 'Mindfulness', title: 'Body scan cognitivo', description: 'Chiudi gli occhi, porta l\'attenzione da testa a piedi, nota le sensazioni senza giudicarle. Poi identifica 3 pensieri ricorrenti di oggi.', duration_minutes: 7, difficulty: 'Leggero', icon: '🔍', tip: 'Aumenta la metacognizione e la consapevolezza emotiva.' }
+      ],
+      completed: [],
+      generatedAt: new Date().toISOString(),
+      isFallback: true
+    };
+    if (!db.brainTraining) db.brainTraining = {};
+    db.brainTraining[today] = fallback;
+    writeDB(db);
+    res.json({ date: today, ...fallback });
+  }
+});
+
+// POST /api/brain/complete  { exerciseId }
+app.post('/api/brain/complete', (req, res) => {
+  const { exerciseId } = req.body;
+  const db = readDB();
+  const today = new Date().toISOString().slice(0, 10);
+  if (!db.brainTraining?.[today]) return res.status(404).json({ error: 'Piano non trovato' });
+  const completed = db.brainTraining[today].completed || [];
+  if (!completed.includes(exerciseId)) completed.push(exerciseId);
+  db.brainTraining[today].completed = completed;
+  if (completed.length === db.brainTraining[today].exercises?.length) {
+    db.brainTraining[today].completedAllAt = new Date().toISOString();
+  }
+  writeDB(db);
+  // Calcola streak
+  let streak = 0;
+  for (let i = 0; i < 365; i++) {
+    const d = new Date(Date.now() - i * 86400000).toISOString().slice(0, 10);
+    const day = db.brainTraining?.[d];
+    if (day?.completedAllAt || (day?.completed?.length && day?.completed?.length >= (day?.exercises?.length || 4))) streak++;
+    else break;
+  }
+  res.json({ ok: true, completed, streak });
+});
+
+// GET /api/brain/stats  → streak, history
+app.get('/api/brain/stats', (req, res) => {
+  const db = readDB();
+  const days = 30;
+  const history = [];
+  let streak = 0;
+  let streakBroken = false;
+
+  for (let i = 0; i < days; i++) {
+    const d = new Date(Date.now() - i * 86400000).toISOString().slice(0, 10);
+    const day = db.brainTraining?.[d];
+    const total = day?.exercises?.length || 0;
+    const done = day?.completed?.length || 0;
+    const complete = total > 0 && done >= total;
+    history.push({ date: d, neuroscore: day?.neuroscore || null, done, total, complete });
+    if (i === 0 || !streakBroken) {
+      if (complete) streak++;
+      else if (i > 0) streakBroken = true;
+    }
+  }
+  res.json({ streak, history: history.reverse() });
+});
+
+// ── GET /api/wellness/summary ─────────────────────────────────────────────────
+app.get('/api/wellness/summary', (req, res) => {
+  const db = readDB();
+  const today = new Date().toISOString().slice(0, 10);
+  const oura = db.ouraData?.[today] || null;
+  const mendiRecent = (db.mendiSessions || []).slice(0, 7);
+  const mendiAvg7 = mendiRecent.length ? Math.round(mendiRecent.reduce((a, b) => a + b.score, 0) / mendiRecent.length) : null;
+  const brain = db.brainTraining?.[today] || null;
+
+  // Composite wellness score
+  const scores = [];
+  if (oura?.readiness?.score) scores.push(oura.readiness.score);
+  if (oura?.sleep?.score) scores.push(oura.sleep.score);
+  if (mendiAvg7) scores.push(mendiAvg7);
+  if (brain?.neuroscore) scores.push(brain.neuroscore);
+  const composite = scores.length ? Math.round(scores.reduce((a, b) => a + b, 0) / scores.length) : null;
+
+  res.json({
+    composite,
+    ouraConnected: !!db.ouraTokens?.access_token,
+    ouraLastSync: db.ouraLastSync || null,
+    oura: oura || null,
+    mendiSessionsTotal: (db.mendiSessions || []).length,
+    mendiAvg7,
+    brain: brain ? { neuroscore: brain.neuroscore, neurostate: brain.neurostate, exercisesTotal: brain.exercises?.length, exercisesDone: brain.completed?.length } : null
+  });
+});
 
 // ── START ─────────────────────────────────────────────────────────────────────
 

@@ -1,0 +1,985 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>Glint · Wellness & Brain</title>
+<style>
+:root {
+  --bg: #09090b;
+  --surface: #18181b;
+  --surface2: #27272a;
+  --border: #3f3f46;
+  --text: #fafafa;
+  --subtle: #a1a1aa;
+  --accent: #7c3aed;
+  --accent2: #06b6d4;
+  --green: #22c55e;
+  --orange: #f97316;
+  --red: #ef4444;
+  --yellow: #eab308;
+  --radius: 14px;
+}
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { font-size: 16px; }
+body { background: var(--bg); color: var(--text); font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; min-height: 100vh; }
+
+/* ── Nav ── */
+.topbar { display: flex; align-items: center; gap: 12px; padding: 14px 20px; border-bottom: 1px solid var(--border); background: var(--bg); position: sticky; top: 0; z-index: 100; }
+.logo { display: flex; align-items: center; gap: 8px; font-weight: 700; font-size: 16px; text-decoration: none; color: var(--text); }
+.logo-icon { width: 30px; height: 30px; background: var(--accent); border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 14px; }
+.topbar-center { flex: 1; }
+.nav-tabs { display: flex; gap: 4px; background: var(--surface); border-radius: 10px; padding: 3px; width: fit-content; margin: 0 auto; }
+.nav-tab { padding: 6px 14px; border-radius: 8px; font-size: 13px; font-weight: 500; color: var(--subtle); cursor: pointer; border: none; background: none; transition: all .15s; text-decoration: none; display: flex; align-items: center; gap: 5px; }
+.nav-tab.active, .nav-tab:hover { background: var(--surface2); color: var(--text); }
+.topbar-right { display: flex; align-items: center; gap: 8px; }
+.btn-sm { padding: 7px 14px; border-radius: 8px; font-size: 13px; font-weight: 500; cursor: pointer; border: none; transition: all .15s; }
+.btn-primary { background: var(--accent); color: #fff; }
+.btn-primary:hover { background: #6d28d9; }
+.btn-secondary { background: var(--surface2); color: var(--text); }
+.btn-secondary:hover { background: var(--border); }
+.btn-danger { background: #7f1d1d; color: #fca5a5; }
+.avatar { width: 32px; height: 32px; border-radius: 50%; background: var(--accent); display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 700; color: #fff; cursor: pointer; overflow: hidden; }
+.avatar img { width: 100%; height: 100%; object-fit: cover; }
+
+/* ── Layout ── */
+.page { max-width: 900px; margin: 0 auto; padding: 28px 20px 60px; }
+.section-title { font-size: 12px; font-weight: 600; letter-spacing: .08em; text-transform: uppercase; color: var(--subtle); margin-bottom: 14px; display: flex; align-items: center; gap: 8px; }
+.section-title::after { content: ''; flex: 1; height: 1px; background: var(--border); }
+
+/* ── Score ring ── */
+.hero-scores { display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 12px; margin-bottom: 28px; }
+@media (max-width: 640px) { .hero-scores { grid-template-columns: 1fr 1fr; } }
+.score-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 18px; text-align: center; position: relative; overflow: hidden; }
+.score-card::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 3px; background: var(--card-color, var(--accent)); }
+.score-num { font-size: 36px; font-weight: 800; line-height: 1; margin: 8px 0 4px; color: var(--card-color, var(--text)); }
+.score-label { font-size: 11px; color: var(--subtle); text-transform: uppercase; letter-spacing: .06em; }
+.score-sub { font-size: 11px; color: var(--subtle); margin-top: 2px; }
+.score-icon { font-size: 22px; }
+
+/* ── Composite banner ── */
+.neuro-banner { background: linear-gradient(135deg, #1e1b4b 0%, #312e81 50%, #1e1b4b 100%); border: 1px solid #4338ca; border-radius: var(--radius); padding: 24px 28px; margin-bottom: 28px; display: flex; align-items: center; gap: 24px; }
+.neuro-ring { width: 80px; height: 80px; border-radius: 50%; background: conic-gradient(var(--accent) calc(var(--pct)*1%), var(--surface2) 0); display: flex; align-items: center; justify-content: center; position: relative; flex-shrink: 0; }
+.neuro-ring::before { content: ''; position: absolute; inset: 8px; border-radius: 50%; background: #1e1b4b; }
+.neuro-ring-num { position: relative; font-size: 20px; font-weight: 800; color: var(--text); }
+.neuro-info h2 { font-size: 22px; font-weight: 700; margin-bottom: 4px; }
+.neuro-info p { font-size: 14px; color: #c4b5fd; line-height: 1.5; }
+.neuro-badge { margin-left: auto; background: rgba(124,58,237,.3); border: 1px solid var(--accent); color: #c4b5fd; padding: 6px 14px; border-radius: 20px; font-size: 13px; font-weight: 600; white-space: nowrap; flex-shrink: 0; }
+
+/* ── Oura section ── */
+.oura-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; margin-bottom: 28px; }
+@media (max-width: 640px) { .oura-grid { grid-template-columns: 1fr 1fr; } }
+.oura-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 16px; }
+.oura-card h4 { font-size: 11px; color: var(--subtle); text-transform: uppercase; letter-spacing: .06em; margin-bottom: 10px; display: flex; align-items: center; gap: 6px; }
+.oura-score-row { display: flex; align-items: baseline; gap: 6px; }
+.oura-score-big { font-size: 32px; font-weight: 800; }
+.oura-score-max { font-size: 14px; color: var(--subtle); }
+.oura-bars { margin-top: 10px; display: flex; flex-direction: column; gap: 5px; }
+.oura-bar-row { display: flex; align-items: center; gap: 8px; font-size: 11px; color: var(--subtle); }
+.oura-bar-label { width: 80px; flex-shrink: 0; }
+.oura-bar-track { flex: 1; height: 4px; background: var(--surface2); border-radius: 2px; overflow: hidden; }
+.oura-bar-fill { height: 100%; border-radius: 2px; background: var(--bar-color, var(--accent)); transition: width .5s; }
+.oura-bar-val { width: 24px; text-align: right; flex-shrink: 0; }
+.oura-connect-box { background: var(--surface); border: 1px dashed var(--border); border-radius: var(--radius); padding: 32px; text-align: center; margin-bottom: 28px; }
+.oura-connect-box h3 { font-size: 16px; font-weight: 600; margin-bottom: 6px; }
+.oura-connect-box p { font-size: 13px; color: var(--subtle); margin-bottom: 16px; }
+
+/* ── Mendi section ── */
+.mendi-layout { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 28px; }
+@media (max-width: 640px) { .mendi-layout { grid-template-columns: 1fr; } }
+.card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 20px; }
+.card h3 { font-size: 15px; font-weight: 600; margin-bottom: 16px; display: flex; align-items: center; gap: 8px; }
+.form-row { display: flex; flex-direction: column; gap: 6px; margin-bottom: 14px; }
+.form-row label { font-size: 12px; color: var(--subtle); }
+.form-row input, .form-row select, .form-row textarea {
+  background: var(--surface2); border: 1px solid var(--border); border-radius: 8px;
+  color: var(--text); padding: 9px 12px; font-size: 13px; font-family: inherit; width: 100%;
+  transition: border-color .15s;
+}
+.form-row input:focus, .form-row select:focus, .form-row textarea:focus { outline: none; border-color: var(--accent); }
+.form-2col { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.score-slider { -webkit-appearance: none; height: 6px; border-radius: 3px; outline: none; background: linear-gradient(to right, var(--accent) 0%, var(--accent) calc(var(--val)*1%), var(--surface2) calc(var(--val)*1%)); }
+.score-slider::-webkit-slider-thumb { -webkit-appearance: none; width: 18px; height: 18px; border-radius: 50%; background: var(--accent); cursor: pointer; box-shadow: 0 0 0 3px rgba(124,58,237,.3); }
+.score-display { text-align: center; font-size: 28px; font-weight: 800; color: var(--accent); }
+
+/* Mendi sessions list */
+.session-list { display: flex; flex-direction: column; gap: 8px; max-height: 300px; overflow-y: auto; }
+.session-item { display: flex; align-items: center; gap: 10px; padding: 10px 12px; background: var(--surface2); border-radius: 10px; }
+.session-score-badge { width: 44px; height: 44px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 14px; font-weight: 800; flex-shrink: 0; }
+.session-info { flex: 1; min-width: 0; }
+.session-date { font-size: 12px; color: var(--subtle); }
+.session-meta { font-size: 11px; color: var(--subtle); margin-top: 2px; }
+.session-delete { opacity: 0; transition: opacity .15s; background: none; border: none; color: var(--subtle); cursor: pointer; font-size: 14px; padding: 4px; }
+.session-item:hover .session-delete { opacity: 1; }
+
+/* Mendi timer */
+.timer-box { text-align: center; padding: 20px 0; }
+.timer-display { font-size: 52px; font-weight: 800; letter-spacing: 4px; color: var(--text); font-variant-numeric: tabular-nums; margin-bottom: 12px; }
+.timer-phase { font-size: 14px; color: var(--accent2); margin-bottom: 20px; }
+.timer-controls { display: flex; gap: 10px; justify-content: center; }
+.progress-ring { margin: 0 auto 16px; width: 120px; height: 120px; position: relative; }
+.progress-ring svg { transform: rotate(-90deg); }
+.progress-ring-text { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+.progress-ring-num { font-size: 26px; font-weight: 800; }
+.progress-ring-min { font-size: 11px; color: var(--subtle); }
+
+/* ── Brain Training ── */
+.brain-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; }
+.streak-badge { display: flex; align-items: center; gap: 6px; background: var(--surface2); border-radius: 20px; padding: 6px 14px; font-size: 13px; font-weight: 600; }
+.exercises-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+@media (max-width: 600px) { .exercises-grid { grid-template-columns: 1fr; } }
+.exercise-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 18px; cursor: pointer; transition: all .2s; position: relative; overflow: hidden; }
+.exercise-card.done { opacity: .55; }
+.exercise-card.done::after { content: '✓'; position: absolute; top: 14px; right: 14px; width: 24px; height: 24px; border-radius: 50%; background: var(--green); color: #fff; display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 700; }
+.exercise-card:not(.done):hover { border-color: var(--accent); transform: translateY(-1px); box-shadow: 0 4px 20px rgba(124,58,237,.2); }
+.exercise-card::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 2px; background: var(--ex-color, var(--accent)); }
+.ex-header { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
+.ex-icon { font-size: 24px; }
+.ex-category { font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: .08em; color: var(--ex-color, var(--accent)); }
+.ex-title { font-size: 15px; font-weight: 600; margin-bottom: 6px; }
+.ex-desc { font-size: 13px; color: var(--subtle); line-height: 1.55; }
+.ex-footer { display: flex; align-items: center; gap: 8px; margin-top: 12px; flex-wrap: wrap; }
+.ex-tag { font-size: 11px; background: var(--surface2); border-radius: 6px; padding: 3px 8px; color: var(--subtle); }
+.ex-tip { font-size: 11px; color: var(--accent2); margin-top: 8px; line-height: 1.4; }
+
+/* Exercise modal */
+.modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,.7); z-index: 200; display: none; align-items: center; justify-content: center; padding: 20px; }
+.modal-overlay.open { display: flex; }
+.modal { background: var(--surface); border: 1px solid var(--border); border-radius: 18px; padding: 28px; max-width: 480px; width: 100%; position: relative; }
+.modal-close { position: absolute; top: 16px; right: 16px; background: var(--surface2); border: none; color: var(--subtle); cursor: pointer; width: 28px; height: 28px; border-radius: 50%; font-size: 16px; display: flex; align-items: center; justify-content: center; }
+.modal h2 { font-size: 20px; font-weight: 700; margin-bottom: 6px; }
+.modal-category { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .08em; margin-bottom: 12px; }
+.modal-desc { font-size: 14px; color: var(--subtle); line-height: 1.65; margin-bottom: 16px; }
+.modal-timer { text-align: center; margin: 16px 0; }
+.modal-timer-num { font-size: 48px; font-weight: 800; color: var(--text); font-variant-numeric: tabular-nums; }
+.modal-timer-label { font-size: 12px; color: var(--subtle); }
+.modal-actions { display: flex; gap: 10px; margin-top: 16px; }
+.modal-actions button { flex: 1; }
+.modal-tip { background: rgba(6,182,212,.1); border: 1px solid rgba(6,182,212,.3); border-radius: 8px; padding: 10px 14px; font-size: 12px; color: var(--accent2); line-height: 1.5; margin-bottom: 14px; }
+
+/* ── History chart ── */
+.history-chart { display: flex; align-items: flex-end; gap: 3px; height: 60px; margin: 12px 0; }
+.history-bar { flex: 1; border-radius: 3px 3px 0 0; min-width: 0; transition: opacity .2s; position: relative; cursor: default; }
+.history-bar:hover { opacity: .8; }
+.history-bar[title]:hover::after { content: attr(title); position: absolute; bottom: calc(100% + 4px); left: 50%; transform: translateX(-50%); background: var(--surface2); border: 1px solid var(--border); border-radius: 6px; padding: 4px 8px; font-size: 11px; white-space: nowrap; color: var(--text); pointer-events: none; }
+
+/* ── Misc ── */
+.empty-state { text-align: center; padding: 32px 20px; color: var(--subtle); font-size: 14px; }
+.empty-state .big { font-size: 32px; margin-bottom: 8px; }
+.sync-info { font-size: 11px; color: var(--subtle); display: flex; align-items: center; gap: 6px; }
+.dot { width: 6px; height: 6px; border-radius: 50%; background: var(--green); display: inline-block; }
+.dot.off { background: var(--border); }
+.spinner { width: 14px; height: 14px; border: 2px solid var(--border); border-top-color: var(--accent); border-radius: 50%; animation: spin .6s linear infinite; display: inline-block; vertical-align: middle; }
+@keyframes spin { to { transform: rotate(360deg); } }
+.toast { position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%); background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 10px 18px; font-size: 13px; font-weight: 500; z-index: 300; opacity: 0; transition: opacity .2s; pointer-events: none; display: flex; align-items: center; gap: 8px; }
+.toast.show { opacity: 1; }
+.loading-screen { display: flex; align-items: center; justify-content: center; min-height: 300px; flex-direction: column; gap: 12px; color: var(--subtle); font-size: 14px; }
+</style>
+</head>
+<body>
+
+<!-- Topbar -->
+<div class="topbar">
+  <a href="/app.html" class="logo">
+    <div class="logo-icon">✦</div>
+    <span>Glint</span>
+  </a>
+  <div class="topbar-center">
+    <div class="nav-tabs">
+      <a href="/app.html" class="nav-tab">📋 Giornata</a>
+      <a href="/wellness.html" class="nav-tab active">🧠 Wellness</a>
+      <a href="/settings.html" class="nav-tab">⚙️</a>
+    </div>
+  </div>
+  <div class="topbar-right">
+    <div class="avatar" id="avatar-btn">—</div>
+  </div>
+</div>
+
+<div class="page">
+
+  <!-- Loading -->
+  <div id="loading-screen" class="loading-screen">
+    <span class="spinner" style="width:24px;height:24px;"></span>
+    <span>Carico i tuoi dati wellness…</span>
+  </div>
+
+  <div id="main-content" style="display:none">
+
+    <!-- ── Neuroscore banner ── -->
+    <div class="neuro-banner" id="neuro-banner">
+      <div class="neuro-ring" id="neuro-ring" style="--pct:70">
+        <div class="neuro-ring-num" id="neuro-ring-num">—</div>
+      </div>
+      <div class="neuro-info">
+        <h2 id="neuro-state">Carico…</h2>
+        <p id="neuro-rec">Analisi in corso.</p>
+      </div>
+      <div class="neuro-badge" id="neuro-badge">NeuroCortex Score</div>
+    </div>
+
+    <!-- ── Score cards ── -->
+    <div class="hero-scores">
+      <div class="score-card" style="--card-color:#a78bfa">
+        <div class="score-icon">🛌</div>
+        <div class="score-num" id="sc-sleep">—</div>
+        <div class="score-label">Sleep</div>
+        <div class="score-sub" id="sc-sleep-sub">Oura</div>
+      </div>
+      <div class="score-card" style="--card-color:#34d399">
+        <div class="score-icon">⚡</div>
+        <div class="score-num" id="sc-readiness">—</div>
+        <div class="score-label">Readiness</div>
+        <div class="score-sub" id="sc-ready-sub">Oura</div>
+      </div>
+      <div class="score-card" style="--card-color:#f97316">
+        <div class="score-icon">🧬</div>
+        <div class="score-num" id="sc-hrv">—</div>
+        <div class="score-label">HRV</div>
+        <div class="score-sub">ms (avg)</div>
+      </div>
+      <div class="score-card" style="--card-color:#06b6d4">
+        <div class="score-icon">🧠</div>
+        <div class="score-num" id="sc-mendi">—</div>
+        <div class="score-label">Mendi</div>
+        <div class="score-sub">7gg avg</div>
+      </div>
+    </div>
+
+    <!-- ── OURA RING ── -->
+    <div class="section-title">🔵 Oura Ring 4</div>
+
+    <!-- Not connected -->
+    <div id="oura-disconnected" class="oura-connect-box" style="display:none">
+      <h3>Collega il tuo Oura Ring 4</h3>
+      <p>Sincronizza sleep, readiness, HRV e activity per un'analisi neuro-cognitiva personalizzata.</p>
+      <a href="/auth/oura" class="btn-sm btn-primary" style="display:inline-block;text-decoration:none;padding:10px 24px;font-size:14px">Connetti Oura Ring</a>
+      <p style="font-size:11px;color:var(--subtle);margin-top:10px">Richiede OURA_CLIENT_ID e OURA_CLIENT_SECRET nelle env vars.</p>
+    </div>
+
+    <!-- Connected -->
+    <div id="oura-connected" style="display:none">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
+        <div class="sync-info">
+          <span class="dot" id="oura-dot"></span>
+          <span id="oura-sync-label">Ultima sync: —</span>
+        </div>
+        <button class="btn-sm btn-secondary" onclick="syncOura()" id="oura-sync-btn">↻ Sincronizza</button>
+      </div>
+      <div class="oura-grid">
+        <!-- Sleep -->
+        <div class="oura-card">
+          <h4>🛌 Sleep</h4>
+          <div class="oura-score-row">
+            <span class="oura-score-big" id="oura-sleep-score" style="color:#a78bfa">—</span>
+            <span class="oura-score-max">/100</span>
+          </div>
+          <div class="oura-bars">
+            <div class="oura-bar-row">
+              <span class="oura-bar-label">Efficienza</span>
+              <div class="oura-bar-track"><div class="oura-bar-fill" id="oura-eff-bar" style="width:0%;--bar-color:#a78bfa"></div></div>
+              <span class="oura-bar-val" id="oura-eff-val">—</span>
+            </div>
+            <div class="oura-bar-row">
+              <span class="oura-bar-label">REM</span>
+              <div class="oura-bar-track"><div class="oura-bar-fill" id="oura-rem-bar" style="width:0%;--bar-color:#818cf8"></div></div>
+              <span class="oura-bar-val" id="oura-rem-val">—</span>
+            </div>
+            <div class="oura-bar-row">
+              <span class="oura-bar-label">Deep</span>
+              <div class="oura-bar-track"><div class="oura-bar-fill" id="oura-deep-bar" style="width:0%;--bar-color:#6366f1"></div></div>
+              <span class="oura-bar-val" id="oura-deep-val">—</span>
+            </div>
+          </div>
+        </div>
+        <!-- Readiness -->
+        <div class="oura-card">
+          <h4>⚡ Readiness</h4>
+          <div class="oura-score-row">
+            <span class="oura-score-big" id="oura-ready-score" style="color:#34d399">—</span>
+            <span class="oura-score-max">/100</span>
+          </div>
+          <div class="oura-bars">
+            <div class="oura-bar-row">
+              <span class="oura-bar-label">HRV balance</span>
+              <div class="oura-bar-track"><div class="oura-bar-fill" id="oura-hrv-bar" style="width:0%;--bar-color:#34d399"></div></div>
+              <span class="oura-bar-val" id="oura-hrv-val">—</span>
+            </div>
+            <div class="oura-bar-row">
+              <span class="oura-bar-label">Recovery</span>
+              <div class="oura-bar-track"><div class="oura-bar-fill" id="oura-rec-bar" style="width:0%;--bar-color:#86efac"></div></div>
+              <span class="oura-bar-val" id="oura-rec-val">—</span>
+            </div>
+            <div class="oura-bar-row">
+              <span class="oura-bar-label">Sleep bal.</span>
+              <div class="oura-bar-track"><div class="oura-bar-fill" id="oura-sb-bar" style="width:0%;--bar-color:#4ade80"></div></div>
+              <span class="oura-bar-val" id="oura-sb-val">—</span>
+            </div>
+          </div>
+        </div>
+        <!-- Activity -->
+        <div class="oura-card">
+          <h4>🏃 Activity</h4>
+          <div class="oura-score-row">
+            <span class="oura-score-big" id="oura-act-score" style="color:#f97316">—</span>
+            <span class="oura-score-max">/100</span>
+          </div>
+          <div class="oura-bars">
+            <div class="oura-bar-row">
+              <span class="oura-bar-label">Passi</span>
+              <div class="oura-bar-track"><div class="oura-bar-fill" id="oura-steps-bar" style="width:0%;--bar-color:#f97316"></div></div>
+              <span class="oura-bar-val" id="oura-steps-val">—</span>
+            </div>
+            <div class="oura-bar-row">
+              <span class="oura-bar-label">Cal. attive</span>
+              <div class="oura-bar-track"><div class="oura-bar-fill" id="oura-cal-bar" style="width:0%;--bar-color:#fb923c"></div></div>
+              <span class="oura-bar-val" id="oura-cal-val">—</span>
+            </div>
+            <div class="oura-bar-row">
+              <span class="oura-bar-label">Sedent.</span>
+              <div class="oura-bar-track"><div class="oura-bar-fill" id="oura-sed-bar" style="width:0%;--bar-color:#ef4444"></div></div>
+              <span class="oura-bar-val" id="oura-sed-val">—</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── MENDI ── -->
+    <div class="section-title" style="margin-top:24px">🔵 Mendi · Neurofeedback</div>
+    <div class="mendi-layout">
+      <!-- Log sessione -->
+      <div class="card">
+        <h3>📝 Registra sessione</h3>
+        <div class="form-2col">
+          <div class="form-row">
+            <label>Data</label>
+            <input type="date" id="mendi-date"/>
+          </div>
+          <div class="form-row">
+            <label>Orario</label>
+            <input type="time" id="mendi-time"/>
+          </div>
+        </div>
+        <div class="form-2col">
+          <div class="form-row">
+            <label>Durata (min)</label>
+            <input type="number" id="mendi-duration" value="20" min="5" max="60"/>
+          </div>
+          <div class="form-row">
+            <label>Modalità</label>
+            <select id="mendi-mode">
+              <option value="focus">Focus</option>
+              <option value="relax">Relax</option>
+              <option value="sleep">Pre-sleep</option>
+            </select>
+          </div>
+        </div>
+        <div class="form-row">
+          <label>Score Mendi: <span id="mendi-score-display" style="color:var(--accent);font-weight:700">70</span>/100</label>
+          <input type="range" class="score-slider" id="mendi-score" min="0" max="100" value="70" style="--val:70" oninput="updateMendiSlider(this)"/>
+        </div>
+        <div class="form-row">
+          <label>Note (opzionale)</label>
+          <textarea id="mendi-notes" rows="2" placeholder="Come ti sei sentito…" style="resize:vertical"></textarea>
+        </div>
+        <button class="btn-sm btn-primary" style="width:100%;padding:10px" onclick="saveMendiSession()">💾 Salva sessione</button>
+
+        <!-- Timer guidato -->
+        <div style="margin-top:16px;border-top:1px solid var(--border);padding-top:16px">
+          <div style="font-size:12px;color:var(--subtle);margin-bottom:10px;font-weight:600;text-transform:uppercase;letter-spacing:.06em">⏱ Timer sessione guidata</div>
+          <div class="timer-box">
+            <div class="timer-display" id="timer-display">20:00</div>
+            <div class="timer-phase" id="timer-phase">Premi Start per iniziare</div>
+            <div class="timer-controls">
+              <button class="btn-sm btn-primary" id="timer-start-btn" onclick="timerStart()">▶ Start</button>
+              <button class="btn-sm btn-secondary" onclick="timerReset()">↺ Reset</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Storia sessioni -->
+      <div class="card">
+        <h3>📊 Sessioni recenti</h3>
+        <div id="mendi-chart" style="margin-bottom:16px"></div>
+        <div id="mendi-sessions-list" class="session-list">
+          <div class="empty-state"><div class="big">🧠</div>Nessuna sessione ancora.<br>Registra la tua prima sessione Mendi.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── BRAIN TRAINING ── -->
+    <div class="section-title" style="margin-top:8px">🧠 Brain Training · NeuroCortex</div>
+    <div style="margin-bottom:20px">
+      <div class="brain-header">
+        <div>
+          <div style="font-size:13px;color:var(--subtle)" id="brain-subtitle">Esercizi cognitivi AI-generati basati sui tuoi dati biometrici</div>
+        </div>
+        <div style="display:flex;align-items:center;gap:10px">
+          <div class="streak-badge">🔥 <span id="streak-num">0</span> giorni</div>
+          <button class="btn-sm btn-secondary" onclick="regenBrain()" id="regen-btn" title="Rigenera piano">↻</button>
+        </div>
+      </div>
+
+      <div id="brain-loading" style="display:none" class="loading-screen" style="min-height:160px">
+        <span class="spinner" style="width:20px;height:20px"></span>
+        <span>Genero il tuo piano cognitivo…</span>
+      </div>
+
+      <div id="exercises-grid" class="exercises-grid"></div>
+
+      <!-- Mindfulness extra -->
+      <div style="margin-top:16px;background:linear-gradient(135deg,#052e16,#14532d);border:1px solid #166534;border-radius:var(--radius);padding:20px;display:flex;align-items:center;gap:16px">
+        <div style="font-size:32px">🌿</div>
+        <div style="flex:1">
+          <div style="font-size:15px;font-weight:600;margin-bottom:4px">Mindfulness · Respiro coerente</div>
+          <div style="font-size:13px;color:#86efac;line-height:1.5">5 cicli di respirazione 4-4-4-4 per attivare la coerenza cardiaca e abbassare il cortisolo.</div>
+        </div>
+        <button class="btn-sm" style="background:#166534;color:#86efac;flex-shrink:0" onclick="startBreathing()">Inizia</button>
+      </div>
+
+      <!-- Stats 30gg -->
+      <div class="card" style="margin-top:16px">
+        <h3>📈 Andamento 30 giorni</h3>
+        <div id="brain-history-chart" class="history-chart"></div>
+        <div style="display:flex;gap:16px;margin-top:8px;font-size:11px;color:var(--subtle)">
+          <span>🟣 NeuroCortex score</span>
+          <span>🟢 Completato</span>
+          <span>⬜ Nessun dato</span>
+        </div>
+      </div>
+    </div>
+
+  </div><!-- /main-content -->
+</div><!-- /page -->
+
+<!-- Exercise modal -->
+<div class="modal-overlay" id="ex-modal">
+  <div class="modal">
+    <button class="modal-close" onclick="closeModal()">✕</button>
+    <div id="modal-category" class="modal-category"></div>
+    <h2 id="modal-title"></h2>
+    <div id="modal-tip" class="modal-tip"></div>
+    <p id="modal-desc" class="modal-desc"></p>
+    <div class="modal-timer" id="modal-timer-box">
+      <div class="modal-timer-num" id="modal-timer">00:00</div>
+      <div class="modal-timer-label">Tempo rimanente</div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn-sm btn-secondary" id="modal-timer-btn" onclick="toggleModalTimer()">▶ Inizia timer</button>
+      <button class="btn-sm btn-primary" id="modal-done-btn" onclick="completeExercise()">✓ Completato</button>
+    </div>
+  </div>
+</div>
+
+<!-- Breathing modal -->
+<div class="modal-overlay" id="breath-modal">
+  <div class="modal" style="text-align:center">
+    <button class="modal-close" onclick="closeBreathing()">✕</button>
+    <div style="font-size:13px;color:var(--subtle);margin-bottom:6px">MINDFULNESS · COERENZA CARDIACA</div>
+    <h2>Respiro coerente</h2>
+    <div style="margin:24px 0">
+      <div id="breath-circle" style="width:120px;height:120px;border-radius:50%;background:var(--surface2);margin:0 auto;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:600;border:3px solid var(--accent);transition:transform .5s ease,border-color .5s">
+        <span id="breath-label">Inizia</span>
+      </div>
+    </div>
+    <div id="breath-counter" style="font-size:28px;font-weight:800;color:var(--accent)">5</div>
+    <div id="breath-phase" style="font-size:14px;color:var(--subtle);margin:6px 0 20px">cicli rimanenti</div>
+    <div style="display:flex;gap:10px;justify-content:center">
+      <button class="btn-sm btn-primary" id="breath-start-btn" onclick="startBreathCycle()">▶ Inizia</button>
+      <button class="btn-sm btn-secondary" onclick="closeBreathing()">Chiudi</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ── Utilities ─────────────────────────────────────────────────────────────────
+function toast(msg, emoji = '✓') {
+  const t = document.getElementById('toast');
+  t.innerHTML = `<span>${emoji}</span> ${msg}`;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2500);
+}
+
+function scoreColor(s) {
+  if (!s && s !== 0) return '#71717a';
+  if (s >= 85) return '#22c55e';
+  if (s >= 70) return '#eab308';
+  if (s >= 50) return '#f97316';
+  return '#ef4444';
+}
+
+function fmtDate(iso) {
+  if (!iso) return '—';
+  return new Date(iso).toLocaleDateString('it-IT', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' });
+}
+
+// ── Load data ─────────────────────────────────────────────────────────────────
+let currentExercises = [];
+let currentExerciseId = null;
+let modalTimerInterval = null;
+let modalTimerSecs = 0;
+let modalTimerRunning = false;
+
+async function loadAll() {
+  try {
+    const [summary, brain, stats, mendiResp] = await Promise.all([
+      fetch('/api/wellness/summary').then(r => r.json()),
+      fetch('/api/brain/today').then(r => r.json()),
+      fetch('/api/brain/stats').then(r => r.json()),
+      fetch('/api/mendi/sessions?days=30').then(r => r.json())
+    ]);
+
+    renderSummary(summary);
+    renderBrain(brain);
+    renderStreak(stats);
+    renderMendi(mendiResp.sessions || []);
+
+    document.getElementById('loading-screen').style.display = 'none';
+    document.getElementById('main-content').style.display = 'block';
+  } catch (e) {
+    console.error(e);
+    document.getElementById('loading-screen').innerHTML = `<div style="color:var(--red)">Errore caricamento dati</div>`;
+  }
+}
+
+function renderSummary(s) {
+  // Neurobanner
+  const ns = s.brain?.neuroscore ?? s.composite ?? null;
+  const ring = document.getElementById('neuro-ring');
+  const ringNum = document.getElementById('neuro-ring-num');
+  if (ns != null) {
+    ring.style.setProperty('--pct', ns);
+    ringNum.textContent = ns;
+  } else {
+    ringNum.textContent = '?';
+    ring.style.setProperty('--pct', 0);
+  }
+
+  document.getElementById('neuro-state').textContent = s.brain?.neurostate ?? 'Connetti dispositivi';
+  document.getElementById('neuro-rec').textContent = 'NeuroCortex score composito basato su Oura + Mendi + Brain Training';
+
+  // Score cards
+  const sleepSc = s.oura?.sleep?.score;
+  document.getElementById('sc-sleep').textContent = sleepSc ?? '—';
+  document.getElementById('sc-sleep').style.color = scoreColor(sleepSc);
+
+  const readySc = s.oura?.readiness?.score;
+  document.getElementById('sc-readiness').textContent = readySc ?? '—';
+  document.getElementById('sc-readiness').style.color = scoreColor(readySc);
+
+  document.getElementById('sc-hrv').textContent = s.oura?.hrv_avg ?? '—';
+  document.getElementById('sc-hrv').style.color = s.oura?.hrv_avg ? scoreColor(Math.min(100, s.oura.hrv_avg)) : '#71717a';
+
+  document.getElementById('sc-mendi').textContent = s.mendiAvg7 ?? '—';
+  document.getElementById('sc-mendi').style.color = scoreColor(s.mendiAvg7);
+
+  // Oura section
+  if (s.ouraConnected) {
+    document.getElementById('oura-disconnected').style.display = 'none';
+    document.getElementById('oura-connected').style.display = 'block';
+    document.getElementById('oura-dot').className = 'dot';
+
+    const ls = s.ouraLastSync ? fmtDate(s.ouraLastSync) : 'mai';
+    document.getElementById('oura-sync-label').textContent = `Ultima sync: ${ls}`;
+
+    const o = s.oura;
+    if (o) {
+      setOuraStat('oura-sleep-score', o.sleep?.score);
+      setBar('oura-eff', o.sleep?.efficiency, 100);
+      setBar('oura-rem', o.sleep?.rem_sleep, 100);
+      setBar('oura-deep', o.sleep?.deep_sleep, 100);
+
+      setOuraStat('oura-ready-score', o.readiness?.score);
+      setBar('oura-hrv', o.readiness?.hrv_balance, 100);
+      setBar('oura-rec', o.readiness?.recovery_index, 100);
+      setBar('oura-sb', o.readiness?.sleep_balance, 100);
+
+      setOuraStat('oura-act-score', o.activity?.score);
+      const steps = o.activity?.steps;
+      setBar('oura-steps', steps ? Math.min(100, Math.round(steps / 100)) : null, 100, steps?.toLocaleString('it') ?? '—');
+      const cal = o.activity?.active_calories;
+      setBar('oura-cal', cal ? Math.min(100, Math.round(cal / 8)) : null, 100, cal?.toLocaleString('it') ?? '—');
+      const sed = o.activity?.sedentary_minutes;
+      setBar('oura-sed', sed ? Math.min(100, Math.round(sed / 4.8)) : null, 100, sed ? `${Math.round(sed/60)}h` : '—');
+    }
+  } else {
+    document.getElementById('oura-disconnected').style.display = 'block';
+    document.getElementById('oura-connected').style.display = 'none';
+    document.getElementById('oura-dot').className = 'dot off';
+  }
+}
+
+function setOuraStat(id, val) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  el.textContent = val ?? '—';
+  el.style.color = scoreColor(val);
+}
+
+function setBar(prefix, val, max, displayVal) {
+  const barEl = document.getElementById(`${prefix}-bar`);
+  const valEl = document.getElementById(`${prefix}-val`);
+  if (barEl) barEl.style.width = (val != null ? Math.min(100, val) : 0) + '%';
+  if (valEl) valEl.textContent = displayVal !== undefined ? displayVal : (val ?? '—');
+}
+
+function renderBrain(b) {
+  currentExercises = b.exercises || [];
+  const grid = document.getElementById('exercises-grid');
+  const completed = b.completed || [];
+
+  // Update neuro-state from brain data
+  if (b.neuroscore) {
+    document.getElementById('neuro-ring-num').textContent = b.neuroscore;
+    document.getElementById('neuro-ring').style.setProperty('--pct', b.neuroscore);
+    document.getElementById('neuro-state').textContent = b.neurostate || 'NeuroCortex attivo';
+    document.getElementById('neuro-rec').textContent = b.recommendation || '';
+  }
+
+  const catColors = {
+    'Memoria': '#818cf8', 'Focus': '#06b6d4', 'Creatività': '#f59e0b',
+    'Problem Solving': '#f97316', 'Mindfulness': '#34d399'
+  };
+
+  grid.innerHTML = currentExercises.map(ex => {
+    const done = completed.includes(ex.id);
+    const color = catColors[ex.category] || '#7c3aed';
+    return `
+      <div class="exercise-card ${done ? 'done' : ''}" id="excard-${ex.id}"
+           style="--ex-color:${color}" onclick="${done ? '' : `openExercise('${ex.id}')`}">
+        <div class="ex-header">
+          <span class="ex-icon">${ex.icon || '🧠'}</span>
+          <span class="ex-category">${ex.category}</span>
+        </div>
+        <div class="ex-title">${ex.title}</div>
+        <div class="ex-desc">${ex.description}</div>
+        <div class="ex-footer">
+          <span class="ex-tag">⏱ ${ex.duration_minutes} min</span>
+          <span class="ex-tag">${ex.difficulty}</span>
+        </div>
+        ${ex.tip ? `<div class="ex-tip">💡 ${ex.tip}</div>` : ''}
+      </div>`;
+  }).join('');
+
+  if (!currentExercises.length) {
+    grid.innerHTML = `<div class="empty-state" style="grid-column:1/-1"><div class="big">🧠</div>Nessun piano disponibile.<br><button class="btn-sm btn-primary" onclick="regenBrain()" style="margin-top:10px">Genera piano</button></div>`;
+  }
+
+  document.getElementById('brain-subtitle').textContent =
+    `${completed.length}/${currentExercises.length} completati oggi${b.isFallback ? ' · Piano base (connetti Oura per personalizzazione)' : ''}`;
+}
+
+function renderStreak(stats) {
+  document.getElementById('streak-num').textContent = stats.streak || 0;
+  const chart = document.getElementById('brain-history-chart');
+  const maxScore = Math.max(...stats.history.map(d => d.neuroscore || 0), 1);
+  chart.innerHTML = stats.history.map(d => {
+    const h = d.neuroscore ? Math.max(8, Math.round((d.neuroscore / maxScore) * 60)) : 4;
+    const col = d.complete ? '#22c55e' : d.neuroscore ? '#7c3aed' : '#27272a';
+    const title = d.date.slice(5) + (d.neuroscore ? ` · ${d.neuroscore}` : '');
+    return `<div class="history-bar" style="height:${h}px;background:${col}" title="${title}"></div>`;
+  }).join('');
+}
+
+function renderMendi(sessions) {
+  const list = document.getElementById('mendi-sessions-list');
+  if (!sessions.length) {
+    list.innerHTML = `<div class="empty-state"><div class="big">🧠</div>Nessuna sessione ancora.<br>Registra la tua prima sessione Mendi.</div>`;
+    return;
+  }
+
+  // Mini chart
+  const chart = document.getElementById('mendi-chart');
+  const recent14 = sessions.slice(0, 14).reverse();
+  const maxS = Math.max(...recent14.map(s => s.score), 1);
+  chart.innerHTML = `<div style="display:flex;align-items:flex-end;gap:3px;height:40px">${
+    recent14.map(s => {
+      const h = Math.max(4, Math.round((s.score / 100) * 40));
+      return `<div style="flex:1;height:${h}px;background:${scoreColor(s.score)};border-radius:2px 2px 0 0" title="${s.date}: ${s.score}"></div>`;
+    }).join('')
+  }</div><div style="font-size:10px;color:var(--subtle);margin-top:4px">Ultime ${recent14.length} sessioni</div>`;
+
+  list.innerHTML = sessions.map(s => {
+    const col = scoreColor(s.score);
+    return `
+      <div class="session-item">
+        <div class="session-score-badge" style="background:${col}22;color:${col}">${s.score}</div>
+        <div class="session-info">
+          <div style="font-size:13px;font-weight:600">${s.mode} · ${s.duration} min</div>
+          <div class="session-date">${new Date(s.date).toLocaleDateString('it-IT', {day:'2-digit',month:'short'})} ${s.time || ''}</div>
+          ${s.notes ? `<div class="session-meta">${s.notes}</div>` : ''}
+        </div>
+        <button class="session-delete" onclick="deleteMendi('${s.id}')">🗑</button>
+      </div>`;
+  }).join('');
+}
+
+// ── Oura sync ─────────────────────────────────────────────────────────────────
+async function syncOura() {
+  const btn = document.getElementById('oura-sync-btn');
+  btn.textContent = '↻ Sync…';
+  btn.disabled = true;
+  try {
+    const r = await fetch('/api/oura/sync', { method: 'POST' }).then(r => r.json());
+    if (r.ok) { toast(`Sincronizzati ${r.days} giorni`); loadAll(); }
+    else toast(r.error || 'Errore sync', '⚠️');
+  } catch { toast('Errore di rete', '⚠️'); }
+  finally { btn.textContent = '↻ Sincronizza'; btn.disabled = false; }
+}
+
+// ── Mendi ─────────────────────────────────────────────────────────────────────
+function updateMendiSlider(el) {
+  el.style.setProperty('--val', el.value);
+  document.getElementById('mendi-score-display').textContent = el.value;
+}
+
+async function saveMendiSession() {
+  const score = document.getElementById('mendi-score').value;
+  const date = document.getElementById('mendi-date').value;
+  const time = document.getElementById('mendi-time').value;
+  const duration = document.getElementById('mendi-duration').value;
+  const mode = document.getElementById('mendi-mode').value;
+  const notes = document.getElementById('mendi-notes').value;
+  if (!date) return toast('Inserisci la data', '⚠️');
+
+  const r = await fetch('/api/mendi/sessions', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ score: Number(score), date, time, duration: Number(duration), mode, notes })
+  }).then(r => r.json());
+
+  if (r.ok) {
+    toast('Sessione salvata!');
+    document.getElementById('mendi-notes').value = '';
+    const sessions = await fetch('/api/mendi/sessions?days=30').then(r => r.json());
+    renderMendi(sessions.sessions || []);
+  } else toast(r.error || 'Errore', '⚠️');
+}
+
+async function deleteMendi(id) {
+  await fetch(`/api/mendi/sessions/${id}`, { method: 'DELETE' });
+  const sessions = await fetch('/api/mendi/sessions?days=30').then(r => r.json());
+  renderMendi(sessions.sessions || []);
+  toast('Sessione eliminata', '🗑');
+}
+
+// ── Mendi timer ───────────────────────────────────────────────────────────────
+let timerInterval = null;
+let timerSecs = 0;
+let timerRunning = false;
+
+function timerStart() {
+  const dur = parseInt(document.getElementById('mendi-duration').value) || 20;
+  if (!timerRunning && timerSecs === 0) timerSecs = dur * 60;
+  if (!timerRunning) {
+    timerRunning = true;
+    document.getElementById('timer-start-btn').textContent = '⏸ Pausa';
+    document.getElementById('timer-phase').textContent = 'Sessione in corso…';
+    timerInterval = setInterval(() => {
+      timerSecs--;
+      updateTimerDisplay();
+      if (timerSecs <= 0) {
+        clearInterval(timerInterval);
+        timerRunning = false;
+        document.getElementById('timer-phase').textContent = '✓ Sessione completata!';
+        document.getElementById('timer-start-btn').textContent = '▶ Start';
+        toast('Sessione Mendi completata!', '🧠');
+      }
+    }, 1000);
+  } else {
+    clearInterval(timerInterval);
+    timerRunning = false;
+    document.getElementById('timer-start-btn').textContent = '▶ Continua';
+    document.getElementById('timer-phase').textContent = 'In pausa';
+  }
+}
+
+function timerReset() {
+  clearInterval(timerInterval);
+  timerRunning = false;
+  timerSecs = 0;
+  document.getElementById('timer-start-btn').textContent = '▶ Start';
+  document.getElementById('timer-display').textContent = `${document.getElementById('mendi-duration').value || 20}:00`;
+  document.getElementById('timer-phase').textContent = 'Premi Start per iniziare';
+}
+
+function updateTimerDisplay() {
+  const m = Math.floor(timerSecs / 60).toString().padStart(2, '0');
+  const s = (timerSecs % 60).toString().padStart(2, '0');
+  document.getElementById('timer-display').textContent = `${m}:${s}`;
+}
+
+// ── Brain Training ─────────────────────────────────────────────────────────────
+function openExercise(id) {
+  const ex = currentExercises.find(e => e.id === id);
+  if (!ex) return;
+  currentExerciseId = id;
+  modalTimerSecs = (ex.duration_minutes || 10) * 60;
+  modalTimerRunning = false;
+  clearInterval(modalTimerInterval);
+
+  const catColors = {
+    'Memoria': '#818cf8', 'Focus': '#06b6d4', 'Creatività': '#f59e0b',
+    'Problem Solving': '#f97316', 'Mindfulness': '#34d399'
+  };
+  const color = catColors[ex.category] || '#7c3aed';
+
+  document.getElementById('modal-category').textContent = ex.category;
+  document.getElementById('modal-category').style.color = color;
+  document.getElementById('modal-title').textContent = `${ex.icon || ''} ${ex.title}`;
+  document.getElementById('modal-desc').textContent = ex.description;
+  document.getElementById('modal-tip').textContent = `💡 ${ex.tip}`;
+  document.getElementById('modal-tip').style.display = ex.tip ? 'block' : 'none';
+  updateModalTimer();
+  document.getElementById('modal-timer-btn').textContent = '▶ Inizia timer';
+  document.getElementById('ex-modal').classList.add('open');
+}
+
+function closeModal() {
+  clearInterval(modalTimerInterval);
+  modalTimerRunning = false;
+  document.getElementById('ex-modal').classList.remove('open');
+}
+
+function updateModalTimer() {
+  const m = Math.floor(modalTimerSecs / 60).toString().padStart(2, '0');
+  const s = (modalTimerSecs % 60).toString().padStart(2, '0');
+  document.getElementById('modal-timer').textContent = `${m}:${s}`;
+}
+
+function toggleModalTimer() {
+  if (!modalTimerRunning) {
+    modalTimerRunning = true;
+    document.getElementById('modal-timer-btn').textContent = '⏸ Pausa';
+    modalTimerInterval = setInterval(() => {
+      modalTimerSecs--;
+      updateModalTimer();
+      if (modalTimerSecs <= 0) {
+        clearInterval(modalTimerInterval);
+        modalTimerRunning = false;
+        document.getElementById('modal-timer-btn').textContent = '✓ Tempo scaduto';
+        toast('Esercizio completato!', '🧠');
+      }
+    }, 1000);
+  } else {
+    clearInterval(modalTimerInterval);
+    modalTimerRunning = false;
+    document.getElementById('modal-timer-btn').textContent = '▶ Continua';
+  }
+}
+
+async function completeExercise() {
+  if (!currentExerciseId) return;
+  clearInterval(modalTimerInterval);
+  const r = await fetch('/api/brain/complete', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ exerciseId: currentExerciseId })
+  }).then(r => r.json());
+
+  document.getElementById(`excard-${currentExerciseId}`)?.classList.add('done');
+  document.getElementById(`excard-${currentExerciseId}`)?.setAttribute('onclick', '');
+
+  if (r.streak > 0) document.getElementById('streak-num').textContent = r.streak;
+  const done = r.completed?.length || 0;
+  const total = currentExercises.length;
+  document.getElementById('brain-subtitle').textContent = `${done}/${total} completati oggi`;
+
+  toast(r.completed?.length === total ? `🔥 Tutti completati! Streak: ${r.streak} giorni` : 'Esercizio completato!', '✓');
+  closeModal();
+}
+
+async function regenBrain() {
+  document.getElementById('brain-loading').style.display = 'flex';
+  document.getElementById('exercises-grid').style.display = 'none';
+  // Force regen by clearing today's plan via a workaround: fetch fresh
+  try {
+    const r = await fetch('/api/brain/today?regen=1').then(r => r.json());
+    renderBrain(r);
+  } catch {}
+  document.getElementById('brain-loading').style.display = 'none';
+  document.getElementById('exercises-grid').style.display = 'grid';
+}
+
+// ── Breathing exercise ─────────────────────────────────────────────────────────
+let breathInterval = null;
+let breathCycles = 0;
+
+function startBreathing() {
+  document.getElementById('breath-modal').classList.add('open');
+  breathCycles = 5;
+  document.getElementById('breath-counter').textContent = breathCycles;
+  document.getElementById('breath-phase').textContent = 'cicli rimanenti';
+  document.getElementById('breath-start-btn').textContent = '▶ Inizia';
+}
+
+function closeBreathing() {
+  clearInterval(breathInterval);
+  document.getElementById('breath-modal').classList.remove('open');
+}
+
+function startBreathCycle() {
+  document.getElementById('breath-start-btn').disabled = true;
+  document.getElementById('breath-start-btn').textContent = 'In corso…';
+  runBreathPhase(['Inspira', 'Trattieni', 'Espira', 'Trattieni'], [4000, 4000, 4000, 4000], 0);
+}
+
+function runBreathPhase(phases, durations, idx) {
+  if (breathCycles <= 0) {
+    document.getElementById('breath-label').textContent = '✓ Fatto!';
+    document.getElementById('breath-phase').textContent = 'Sessione completata';
+    document.getElementById('breath-circle').style.transform = 'scale(1)';
+    document.getElementById('breath-circle').style.borderColor = 'var(--green)';
+    document.getElementById('breath-start-btn').disabled = false;
+    document.getElementById('breath-start-btn').textContent = '↺ Ripeti';
+    breathCycles = 5;
+    toast('Respirazione completata! 🌿', '🧘');
+    return;
+  }
+  const phase = phases[idx % phases.length];
+  const dur = durations[idx % durations.length];
+  document.getElementById('breath-label').textContent = phase;
+  const circle = document.getElementById('breath-circle');
+  if (phase === 'Inspira') { circle.style.transform = 'scale(1.3)'; circle.style.borderColor = 'var(--accent2)'; }
+  else if (phase === 'Espira') { circle.style.transform = 'scale(0.85)'; circle.style.borderColor = 'var(--accent)'; }
+  else { circle.style.transform = 'scale(1.1)'; circle.style.borderColor = 'var(--yellow)'; }
+
+  setTimeout(() => {
+    if (idx % phases.length === phases.length - 1) {
+      breathCycles--;
+      document.getElementById('breath-counter').textContent = breathCycles;
+    }
+    runBreathPhase(phases, durations, idx + 1);
+  }, dur);
+}
+
+// ── Init ──────────────────────────────────────────────────────────────────────
+(async function init() {
+  // Set defaults for date/time
+  const now = new Date();
+  document.getElementById('mendi-date').value = now.toISOString().slice(0, 10);
+  document.getElementById('mendi-time').value = now.toTimeString().slice(0, 5);
+
+  // Load user info
+  try {
+    const me = await fetch('/api/me').then(r => r.json());
+    if (me.picture) {
+      document.getElementById('avatar-btn').innerHTML = `<img src="${me.picture}" alt=""/>`;
+    } else {
+      document.getElementById('avatar-btn').textContent = (me.name || 'U').slice(0, 2).toUpperCase();
+    }
+  } catch {}
+
+  // Check Oura URL params
+  const params = new URLSearchParams(location.search);
+  if (params.get('oura') === 'connected') toast('Oura Ring connesso! 🔵', '✓');
+  if (params.get('oura') === 'error') toast('Errore connessione Oura', '⚠️');
+
+  loadAll();
+})();
+</script>
+</body>
+</html>
