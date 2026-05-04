@@ -3122,6 +3122,9 @@ app.post('/api/morning-agent/:date/run', async (req, res) => {
   try {
     const { runMorningAgent } = require('./agent/morning-agent');
 
+    const force = req.query.force === 'true' || req.body?.force === true;
+    if (force) send({ log: '⚡ Force refresh: rianalisi completa' });
+
     const result = await als.run({ uid }, () => runMorningAgent({
       uid, date, settings,
       readDBForUid, writeDBForUid,
@@ -3129,6 +3132,7 @@ app.post('/api/morning-agent/:date/run', async (req, res) => {
       googleClientSecret: GOOGLE_CLIENT_SECRET,
       anthropicApiKey: cfg.anthropicApiKey,
       perplexityApiKey: settings.perplexityApiKey || process.env.PERPLEXITY_API_KEY || '',
+      force,
       log: (msg) => send({ log: msg })
     }));
 
@@ -3152,6 +3156,33 @@ app.get('/api/morning-agent/status', (req, res) => {
     dayType: day?.insights?.dayType || null
   });
 });
+
+// ── DEBUG (solo in development) ───────────────────────────────────────────────
+if (process.env.NODE_ENV !== 'production') {
+  // GET /api/debug/day  → dump day data for current user (last 3 days)
+  app.get('/api/debug/day', (req, res) => {
+    const uid = getCurrentUid();
+    if (!uid) return res.status(401).json({ error: 'non autenticato' });
+    const db = readDB();
+    const today = new Date().toISOString().slice(0, 10);
+    const days = {};
+    for (let i = 0; i < 3; i++) {
+      const d = new Date(today);
+      d.setDate(d.getDate() - i);
+      const ds = d.toISOString().slice(0, 10);
+      const day = db.days?.[ds];
+      if (day) days[ds] = {
+        events: day.events?.length || 0,
+        tasks: day.tasks?.length || 0,
+        taskIds: (day.tasks || []).map(t => t.id),
+        insights: { dayType: day.insights?.dayType, studyItems: day.insights?.studyItems?.length || 0 },
+        family: { alessandra: day.family?.alessandraEvents?.length || 0, tommaso: day.family?.tommasoAlerts?.length || 0 },
+        network: { city: day.network?.city || '', events: day.network?.events?.length || 0 }
+      };
+    }
+    res.json({ uid, days, googleTokens: db.googleTokens ? 'present' : 'MISSING', userSettings: db.userSettings || {} });
+  });
+}
 
 // ── START ─────────────────────────────────────────────────────────────────────
 

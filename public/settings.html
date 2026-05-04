@@ -429,8 +429,11 @@
         calcola il tipo di giornata, cerca eventi networking, e invia la mail di riepilogo.
       </p>
       <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
-        <button class="agent-run-btn" id="run-agent-btn" onclick="runAgent()">
+        <button class="agent-run-btn" id="run-agent-btn" onclick="runAgent(false)">
           <span>▶ Esegui ora</span>
+        </button>
+        <button class="agent-run-btn" id="force-agent-btn" onclick="runAgent(true)" style="background:#3f3f46;font-size:12px;padding:8px 14px;" title="Rianalizza tutte le email da capo, ignorando la cache">
+          <span>⚡ Force refresh</span>
         </button>
         <span style="font-size:12px;color:var(--muted);" id="last-run-label"></span>
       </div>
@@ -450,7 +453,7 @@
       <div class="row row-2">
         <div class="field">
           <label>Nome</label>
-          <input type="text" id="s-userName" placeholder="Marco Giacomello"/>
+          <input type="text" id="s-userName" placeholder="Il tuo nome"/>
         </div>
         <div class="field">
           <label>Timezone</label>
@@ -466,7 +469,7 @@
       <div class="row row-2">
         <div class="field">
           <label>Email briefing mattutino</label>
-          <input type="email" id="s-briefingEmail" placeholder="marco@esempio.com"/>
+          <input type="email" id="s-briefingEmail" placeholder="nome@esempio.com"/>
           <span class="hint">L'agente manda il riepilogo a questo indirizzo ogni mattina</span>
         </div>
         <div class="field">
@@ -497,7 +500,7 @@
     <div class="section-body">
       <div class="field">
         <label>Email calendario principale</label>
-        <input type="email" id="s-primaryEmail" placeholder="marco@gmail.com"/>
+        <input type="email" id="s-primaryEmail" placeholder="nome@gmail.com"/>
         <span class="hint">Usata come ID del calendario primario</span>
       </div>
       <div class="field">
@@ -766,25 +769,28 @@ async function checkAgentStatus() {
   } catch(e) { /* skip */ }
 }
 
-async function runAgent() {
+async function runAgent(force = false) {
   const btn = document.getElementById('run-agent-btn');
+  const forceBtn = document.getElementById('force-agent-btn');
   const logEl = document.getElementById('agent-log');
   const summaryEl = document.getElementById('agent-summary');
   const statusEl = document.getElementById('agent-status');
   const statusText = document.getElementById('agent-status-text');
 
   btn.disabled = true;
+  forceBtn.disabled = true;
   btn.innerHTML = '<span>⏳ In esecuzione...</span>';
   logEl.innerHTML = '';
   logEl.classList.add('active');
   summaryEl.classList.remove('active');
   statusEl.className = 'agent-status running';
-  statusText.textContent = 'In esecuzione...';
+  statusText.textContent = force ? 'Force refresh in corso...' : 'In esecuzione...';
 
   const date = new Date().toISOString().slice(0, 10);
+  const url = force ? `/api/morning-agent/${date}/run?force=true` : `/api/morning-agent/${date}/run`;
 
   try {
-    const r = await fetch(`/api/morning-agent/${date}/run`, {
+    const r = await fetch(url, {
       method: 'POST',
       credentials: 'include'
     });
@@ -847,6 +853,7 @@ async function runAgent() {
   }
 
   btn.disabled = false;
+  forceBtn.disabled = false;
   btn.innerHTML = '<span>▶ Esegui ora</span>';
 }
 

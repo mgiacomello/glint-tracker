@@ -254,6 +254,7 @@
 
     /* ── EMPTY STATE ── */
     .empty { padding: 32px; text-align: center; color: var(--subtle); font-size: 13px; line-height: 1.7; }
+    .empty-section { padding: 16px 0; color: var(--subtle); font-size: 13px; line-height: 1.7; }
     .empty .big { font-size: 28px; margin-bottom: 8px; }
 
     /* ── USER MENU ── */
@@ -285,7 +286,8 @@
   <a class="tb-logo" href="/"><div class="gem">✦</div><span>Glint</span></a>
   <span class="tb-date" id="tb-date"></span>
   <div class="tb-right">
-    <button class="btn-run" id="run-btn" onclick="runAgent()">☀️ Briefing</button>
+    <button class="btn-run" id="run-btn" onclick="runAgent(false)">☀️ Briefing</button>
+    <button class="btn-run" onclick="runAgent(true)" style="background:#3f3f46;font-size:12px;padding:5px 10px;" title="Rianalizza tutte le email da capo">⚡</button>
     <a href="/settings.html" class="btn-settings">⚙️</a>
     <div class="avatar" id="avatar-btn" onclick="toggleUserMenu()">?
       <img id="avatar-img" src="" style="display:none"/>
@@ -479,66 +481,64 @@ function render() {
   // Growth / study items
   if (currentSection === 'all' || currentSection === 'growth') {
     const study = insights.studyItems || [];
-    if (study.length) {
-      html += `<div class="card">
-        <div class="card-header"><h2>📚 Crescita · Da leggere</h2><span class="count">${study.length}</span></div>
-        <div class="card-body">
-          ${study.map((s,i) => `<div class="study-item ${s.done ? 'done' : ''}">
-            <div class="study-num">${i+1}</div>
-            <div class="study-info">
-              <div class="study-title">${esc(s.title||'')}</div>
-              <div class="study-source">${esc(s.source||'')}</div>
-              <div class="study-summary">${esc(s.summary||'')}</div>
-              ${s.recommendation ? `<div class="study-rec">→ ${esc(s.recommendation)}</div>` : ''}
-            </div>
-            <div>
-              <button class="btn-done ${s.done ? 'checked' : ''}" style="margin-top:2px;" onclick="toggleStudy(${i})">${s.done ? '✓' : ''}</button>
-            </div>
-          </div>`).join('')}
-        </div>
-      </div>`;
-    }
+    html += `<div class="card">
+      <div class="card-header"><h2>📚 Crescita · Da leggere</h2>${study.length ? `<span class="count">${study.length}</span>` : ''}</div>
+      <div class="card-body">
+        ${study.length ? study.map((s,i) => `<div class="study-item ${s.done ? 'done' : ''}">
+          <div class="study-num">${i+1}</div>
+          <div class="study-info">
+            <div class="study-title">${esc(s.title||'')}</div>
+            <div class="study-source">${esc(s.source||'')}</div>
+            <div class="study-summary">${esc(s.summary||'')}</div>
+            ${s.recommendation ? `<div class="study-rec">→ ${esc(s.recommendation)}</div>` : ''}
+          </div>
+          <div>
+            <button class="btn-done ${s.done ? 'checked' : ''}" style="margin-top:2px;" onclick="toggleStudy(${i})">${s.done ? '✓' : ''}</button>
+          </div>
+        </div>`).join('') : `<div class="empty-section">Nessuna newsletter rilevante trovata.<br/><span style="font-size:12px;color:var(--subtle)">L'agente cerca in Gmail › Categorie › Aggiornamenti e Social.</span></div>`}
+      </div>
+    </div>`;
   }
 
   // Family
   if (currentSection === 'all' || currentSection === 'family') {
     const al = family.alessandraEvents || [];
     const tm = family.tommasoAlerts   || [];
-    if (al.length || tm.length) {
-      html += `<div class="card">
-        <div class="card-header"><h2>👨‍👩‍👦 Famiglia</h2></div>
-        <div class="family-grid">
-          <div class="family-col">
-            <div class="family-label">Partner</div>
-            <div class="family-item">${al.length ? al.map(e => `${e.time ? e.time + ' · ' : ''}${esc(e.title)}${e.isAway ? '<div class="alert">⚠️ Non sarà a casa</div>' : ''}`).join('<br/>') : '<span style="color:var(--subtle)">Nessun impegno oggi</span>'}</div>
-          </div>
-          <div class="family-col">
-            <div class="family-label">Scuola</div>
-            <div class="family-item">${tm.length ? tm.map(t => `<a href="${t.link}" target="_blank" style="color:var(--blue);text-decoration:none;">${esc(t.title)}</a>${t.priority === 'high' ? ' 🔴' : ''}`).join('<br/>') : '<span style="color:var(--subtle)">Nessuna comunicazione</span>'}</div>
-          </div>
+    const spouseName = (dayData?.userSettings?.familyMembers||[]).find(f=>f.role==='spouse')?.name || 'Partner';
+    const childName  = (dayData?.userSettings?.familyMembers||[]).find(f=>f.role==='child')?.name  || 'Figli';
+    html += `<div class="card">
+      <div class="card-header"><h2>👨‍👩‍👦 Famiglia</h2></div>
+      <div class="family-grid">
+        <div class="family-col">
+          <div class="family-label">${esc(spouseName)}</div>
+          <div class="family-item">${al.length ? al.map(e => `${e.time ? e.time + ' · ' : ''}${esc(e.title)}${e.isAway ? '<div class="alert">⚠️ Non sarà a casa</div>' : ''}`).join('<br/>') : '<span style="color:var(--subtle)">Nessun impegno rilevato oggi</span>'}</div>
         </div>
-      </div>`;
-    }
+        <div class="family-col">
+          <div class="family-label">${esc(childName)} · Scuola</div>
+          <div class="family-item">${tm.length ? tm.map(t => `<a href="${t.link}" target="_blank" style="color:var(--blue);text-decoration:none;">${esc(t.title)}</a>${t.priority === 'high' ? ' 🔴' : ''}`).join('<br/>') : '<span style="color:var(--subtle)">Nessuna comunicazione recente</span>'}</div>
+        </div>
+      </div>
+      ${!al.length && !tm.length ? `<div style="padding:8px 0 0;font-size:12px;color:var(--subtle)">Configura i membri della famiglia in <a href="/settings.html" style="color:var(--accent);text-decoration:none;">Impostazioni → Famiglia</a> per abilitare il monitoraggio.</div>` : ''}
+    </div>`;
   }
 
   // Network
   if (currentSection === 'all' || currentSection === 'network') {
     const evts = network.events || [];
-    if (evts.length) {
-      html += `<div class="card">
-        <div class="card-header"><h2>🌐 Network · ${esc(network.city||'')}</h2><span class="count">${evts.length} eventi</span></div>
-        <div class="card-body">
-          ${evts.map(e => `<div class="network-item">
-            <div class="network-dot"></div>
-            <div class="network-info">
-              <div class="network-title">${esc(e.title||'')}</div>
-              <div class="network-date">${esc(e.date||'')} ${e.description ? '· ' + esc(e.description) : ''}</div>
-            </div>
-            ${e.link ? `<a href="${e.link}" target="_blank" class="network-link">↗ Info</a>` : ''}
-          </div>`).join('')}
-        </div>
-      </div>`;
-    }
+    const city = network.city || '';
+    html += `<div class="card">
+      <div class="card-header"><h2>🌐 Network${city ? ' · ' + esc(city) : ''}</h2>${evts.length ? `<span class="count">${evts.length} eventi</span>` : ''}</div>
+      <div class="card-body">
+        ${evts.length ? evts.map(e => `<div class="network-item">
+          <div class="network-dot"></div>
+          <div class="network-info">
+            <div class="network-title">${esc(e.title||'')}</div>
+            <div class="network-date">${esc(e.date||'')} ${e.description ? '· ' + esc(e.description) : ''}</div>
+          </div>
+          ${e.link ? `<a href="${e.link}" target="_blank" class="network-link">↗ Info</a>` : ''}
+        </div>`).join('') : `<div class="empty-section">Nessun evento networking trovato.${!city ? '<br/><span style="font-size:12px;color:var(--subtle)">La città viene rilevata automaticamente dagli eventi Calendar con voli.</span>' : `<br/><span style="font-size:12px;color:var(--subtle)">Posizione: ${esc(city)}. Aggiungi la Perplexity API key in <a href="/settings.html" style="color:var(--accent);text-decoration:none;">Impostazioni</a> per abilitare la ricerca.</span>`}</div>`}
+      </div>
+    </div>`;
   }
 
   if (!html) html = renderEmpty(true);
@@ -631,20 +631,24 @@ async function toggleStudy(idx) {
 }
 
 // ── Morning Agent runner ───────────────────────────────────────────────────────
-async function runAgent() {
+async function runAgent(force = false) {
   const btn    = document.getElementById('run-btn');
   const panel  = document.getElementById('agent-panel');
   const logEl  = document.getElementById('agent-log');
   const sumEl  = document.getElementById('agent-summary');
 
   btn.disabled = true;
-  btn.textContent = '⏳ In esecuzione...';
+  btn.textContent = force ? '⚡ Force refresh...' : '⏳ In esecuzione...';
   panel.classList.add('visible');
   logEl.innerHTML = '';
   sumEl.classList.remove('visible');
 
+  const url = force
+    ? `/api/morning-agent/${today}/run?force=true`
+    : `/api/morning-agent/${today}/run`;
+
   try {
-    const r = await fetch(`/api/morning-agent/${today}/run`, { method: 'POST', credentials: 'include' });
+    const r = await fetch(url, { method: 'POST', credentials: 'include' });
     const reader = r.body.getReader();
     const dec = new TextDecoder();
     let buf = '';

@@ -1,0 +1,676 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Glint — Il tuo briefing mattutino con AI</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet"/>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:      #09090b;
+      --surface: #111113;
+      --card:    #18181b;
+      --border:  #27272a;
+      --text:    #fafafa;
+      --muted:   #a1a1aa;
+      --subtle:  #52525b;
+      --accent:  #6366f1;
+      --accent2: #8b5cf6;
+      --green:   #22c55e;
+    }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Inter', system-ui, sans-serif;
+      font-size: 16px;
+      line-height: 1.6;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* ── NAV ── */
+    nav {
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      background: rgba(9,9,11,.85);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      border-bottom: 1px solid var(--border);
+      padding: 0 32px;
+      height: 60px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .nav-logo {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      text-decoration: none;
+    }
+    .nav-logo .gem {
+      width: 30px; height: 30px;
+      background: linear-gradient(135deg, var(--accent), var(--accent2));
+      border-radius: 8px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 15px;
+    }
+    .nav-logo span { font-size: 17px; font-weight: 700; color: var(--text); }
+    .nav-right { display: flex; align-items: center; gap: 8px; }
+    .btn-ghost {
+      background: none;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      color: var(--muted);
+      padding: 7px 16px;
+      font-size: 14px;
+      font-weight: 500;
+      cursor: pointer;
+      text-decoration: none;
+      transition: color .15s, border-color .15s;
+    }
+    .btn-ghost:hover { color: var(--text); border-color: var(--subtle); }
+    .btn-primary {
+      background: var(--accent);
+      border: none;
+      border-radius: 8px;
+      color: #fff;
+      padding: 8px 18px;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      text-decoration: none;
+      transition: opacity .15s;
+    }
+    .btn-primary:hover { opacity: .88; }
+
+    /* ── HERO ── */
+    .hero {
+      padding: 120px 24px 80px;
+      text-align: center;
+      max-width: 760px;
+      margin: 0 auto;
+    }
+    .hero-eyebrow {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      background: rgba(99,102,241,.1);
+      border: 1px solid rgba(99,102,241,.25);
+      border-radius: 20px;
+      padding: 5px 14px;
+      font-size: 12px;
+      font-weight: 500;
+      color: #a5b4fc;
+      letter-spacing: .04em;
+      text-transform: uppercase;
+      margin-bottom: 36px;
+    }
+    .hero-eyebrow .dot {
+      width: 6px; height: 6px;
+      background: var(--accent);
+      border-radius: 50%;
+      animation: pulse 2s infinite;
+    }
+    @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.3} }
+
+    .hero h1 {
+      font-size: clamp(40px, 6vw, 72px);
+      font-weight: 900;
+      line-height: 1.05;
+      letter-spacing: -.03em;
+      margin-bottom: 24px;
+      color: var(--text);
+    }
+    .hero h1 em {
+      font-style: normal;
+      background: linear-gradient(90deg, var(--accent), var(--accent2));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+    .hero p {
+      font-size: 18px;
+      color: var(--muted);
+      max-width: 520px;
+      margin: 0 auto 48px;
+      line-height: 1.7;
+      font-weight: 400;
+    }
+    .hero-cta {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+    .btn-cta {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      background: var(--accent);
+      border: none;
+      border-radius: 12px;
+      color: #fff;
+      padding: 15px 32px;
+      font-size: 16px;
+      font-weight: 700;
+      cursor: pointer;
+      text-decoration: none;
+      transition: opacity .15s, transform .15s;
+    }
+    .btn-cta:hover { opacity: .9; transform: translateY(-1px); }
+    .btn-cta-ghost {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      background: none;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      color: var(--muted);
+      padding: 15px 28px;
+      font-size: 16px;
+      font-weight: 500;
+      cursor: pointer;
+      text-decoration: none;
+      transition: color .15s, border-color .15s;
+    }
+    .btn-cta-ghost:hover { color: var(--text); border-color: var(--subtle); }
+    .hero-meta {
+      margin-top: 20px;
+      font-size: 13px;
+      color: var(--subtle);
+    }
+
+    /* ── EMAIL PREVIEW ── */
+    .preview-wrap {
+      max-width: 700px;
+      margin: 72px auto 0;
+      padding: 0 24px;
+      position: relative;
+    }
+    .preview-wrap::before {
+      content: '';
+      position: absolute;
+      inset: -40px;
+      background: radial-gradient(ellipse 60% 40% at 50% 60%, rgba(99,102,241,.12), transparent);
+      pointer-events: none;
+    }
+    .email-preview {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      overflow: hidden;
+      box-shadow: 0 32px 80px rgba(0,0,0,.5);
+      position: relative;
+    }
+    .ep-header {
+      background: #16161a;
+      padding: 14px 18px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .ep-dots { display: flex; gap: 6px; }
+    .ep-dots span { width: 11px; height: 11px; border-radius: 50%; }
+    .ep-dots span:nth-child(1) { background: #ff5f57; }
+    .ep-dots span:nth-child(2) { background: #febc2e; }
+    .ep-dots span:nth-child(3) { background: #28c840; }
+    .ep-title { font-size: 12px; color: var(--subtle); flex: 1; text-align: center; }
+    .ep-body { padding: 24px; }
+    .ep-subject { font-size: 14px; font-weight: 600; color: #f0abfc; margin-bottom: 3px; }
+    .ep-from { font-size: 11px; color: var(--subtle); margin-bottom: 18px; }
+    .ep-greeting { font-size: 17px; font-weight: 700; margin-bottom: 16px; }
+    .ep-row { display: flex; gap: 12px; margin-bottom: 16px; }
+    .ep-card {
+      flex: 1;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 12px 14px;
+    }
+    .ep-card .ep-label { font-size: 10px; color: var(--subtle); text-transform: uppercase; letter-spacing: .06em; margin-bottom: 4px; }
+    .ep-card .ep-val { font-size: 20px; font-weight: 800; color: #a5b4fc; }
+    .ep-card .ep-sub { font-size: 11px; color: var(--muted); margin-top: 2px; }
+    .ep-section { margin-bottom: 12px; }
+    .ep-sh { font-size: 11px; font-weight: 600; color: var(--muted); margin-bottom: 6px; display: flex; align-items: center; gap: 5px; }
+    .ep-task {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 9px 12px;
+      margin-bottom: 4px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .ep-task .q { width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0; }
+    .q1 { background: #ef4444; }
+    .q2 { background: #60a5fa; }
+    .ep-task .t-title { font-size: 12px; flex: 1; color: var(--muted); }
+    .ep-task .t-badge { font-size: 10px; color: var(--subtle); background: #1a1a1e; padding: 2px 7px; border-radius: 8px; }
+
+    /* ── DIVIDER ── */
+    .divider {
+      height: 1px;
+      background: linear-gradient(90deg, transparent, var(--border), transparent);
+      max-width: 1000px;
+      margin: 0 auto;
+    }
+
+    /* ── SECTIONS ── */
+    .section {
+      padding: 100px 24px;
+      max-width: 1000px;
+      margin: 0 auto;
+      text-align: center;
+    }
+    .section-label {
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--accent);
+      text-transform: uppercase;
+      letter-spacing: .12em;
+      margin-bottom: 16px;
+    }
+    .section-title {
+      font-size: clamp(28px, 3.5vw, 44px);
+      font-weight: 800;
+      letter-spacing: -.025em;
+      line-height: 1.1;
+      margin-bottom: 16px;
+    }
+    .section-sub {
+      font-size: 17px;
+      color: var(--muted);
+      max-width: 480px;
+      margin: 0 auto;
+      line-height: 1.7;
+    }
+
+    /* ── HOW IT WORKS ── */
+    .steps {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 20px;
+      margin-top: 60px;
+      text-align: left;
+    }
+    .step {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 28px;
+    }
+    .step-num {
+      width: 34px; height: 34px;
+      background: linear-gradient(135deg, var(--accent), var(--accent2));
+      border-radius: 10px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 14px; font-weight: 800; color: #fff;
+      margin-bottom: 18px;
+    }
+    .step h3 { font-size: 17px; font-weight: 700; margin-bottom: 8px; }
+    .step p { font-size: 14px; color: var(--muted); line-height: 1.7; }
+
+    /* ── FEATURES ── */
+    .features-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 16px;
+      margin-top: 60px;
+      text-align: left;
+    }
+    .feature-card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 24px;
+      transition: border-color .2s;
+    }
+    .feature-card:hover { border-color: rgba(99,102,241,.4); }
+    .feature-icon {
+      width: 40px; height: 40px;
+      border-radius: 10px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 20px;
+      margin-bottom: 14px;
+    }
+    .feature-card h3 { font-size: 15px; font-weight: 700; margin-bottom: 6px; }
+    .feature-card p { font-size: 13px; color: var(--muted); line-height: 1.65; }
+
+    /* ── PRICING ── */
+    .pricing-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 20px;
+      margin-top: 60px;
+      max-width: 680px;
+      margin-left: auto;
+      margin-right: auto;
+      text-align: left;
+    }
+    .pricing-card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      padding: 32px;
+      position: relative;
+    }
+    .pricing-card.featured {
+      border-color: var(--accent);
+      background: linear-gradient(160deg, rgba(99,102,241,.08) 0%, var(--card) 60%);
+    }
+    .pricing-badge {
+      position: absolute;
+      top: -11px;
+      left: 24px;
+      background: var(--accent);
+      color: #fff;
+      font-size: 11px;
+      font-weight: 700;
+      padding: 3px 12px;
+      border-radius: 20px;
+      white-space: nowrap;
+    }
+    .pricing-name { font-size: 13px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: .07em; margin-bottom: 10px; }
+    .pricing-price {
+      font-size: 44px;
+      font-weight: 900;
+      letter-spacing: -.03em;
+      line-height: 1;
+      margin-bottom: 6px;
+    }
+    .pricing-price sup { font-size: 22px; vertical-align: top; margin-top: 8px; }
+    .pricing-price .period { font-size: 15px; font-weight: 400; color: var(--muted); }
+    .pricing-sub { font-size: 13px; color: var(--subtle); margin-bottom: 24px; line-height: 1.5; }
+    .pricing-features { list-style: none; display: flex; flex-direction: column; gap: 10px; margin-bottom: 24px; }
+    .pricing-features li {
+      display: flex; align-items: flex-start; gap: 8px;
+      font-size: 13px; color: var(--muted);
+    }
+    .pricing-features li .check { color: var(--green); flex-shrink: 0; margin-top: 1px; }
+    .pricing-features li .x { color: var(--subtle); flex-shrink: 0; margin-top: 1px; }
+    .pricing-features li.dim { color: var(--subtle); }
+    .btn-pricing {
+      display: block; width: 100%; text-align: center;
+      padding: 12px; border-radius: 10px;
+      font-size: 14px; font-weight: 600;
+      cursor: pointer; text-decoration: none;
+      transition: opacity .15s;
+    }
+    .btn-pricing.outline {
+      background: none;
+      border: 1px solid var(--border);
+      color: var(--text);
+    }
+    .btn-pricing.outline:hover { border-color: var(--subtle); }
+    .btn-pricing.filled {
+      background: var(--accent); border: none; color: #fff;
+    }
+    .btn-pricing.filled:hover { opacity: .88; }
+
+    /* ── CTA ── */
+    .cta-section {
+      padding: 100px 24px;
+      text-align: center;
+    }
+    .cta-section h2 {
+      font-size: clamp(30px, 4vw, 52px);
+      font-weight: 900;
+      letter-spacing: -.03em;
+      margin-bottom: 16px;
+      line-height: 1.05;
+    }
+    .cta-section p { font-size: 17px; color: var(--muted); margin-bottom: 40px; }
+
+    /* ── FOOTER ── */
+    footer {
+      border-top: 1px solid var(--border);
+      padding: 36px 32px;
+      max-width: 1000px;
+      margin: 0 auto;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 12px;
+    }
+    footer p { font-size: 13px; color: var(--subtle); }
+    .footer-links { display: flex; gap: 24px; }
+    .footer-links a { font-size: 13px; color: var(--subtle); text-decoration: none; transition: color .15s; }
+    .footer-links a:hover { color: var(--muted); }
+
+    /* ── RESPONSIVE ── */
+    @media (max-width: 768px) {
+      nav { padding: 0 20px; }
+      .steps, .features-grid { grid-template-columns: 1fr; }
+      .pricing-grid { grid-template-columns: 1fr; }
+      footer { flex-direction: column; align-items: flex-start; }
+      .ep-row { flex-direction: column; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- NAV -->
+<nav>
+  <a class="nav-logo" href="/">
+    <div class="gem">✦</div>
+    <span>Glint</span>
+  </a>
+  <div class="nav-right">
+    <a href="/login.html" class="btn-ghost">Accedi</a>
+    <a href="/login.html" class="btn-primary">Prova gratis →</a>
+  </div>
+</nav>
+
+<!-- HERO -->
+<section class="hero">
+  <div class="hero-eyebrow">
+    <div class="dot"></div>
+    Powered by Claude AI
+  </div>
+  <h1>Il tuo briefing<br/>mattutino, <em>generato dall'AI</em></h1>
+  <p>Ogni mattina Glint analizza Gmail, Calendar e Drive e ti manda un riepilogo prioritizzato, pronto da leggere.</p>
+  <div class="hero-cta">
+    <a href="/login.html" class="btn-cta">
+      <svg width="17" height="17" viewBox="0 0 24 24" fill="currentColor"><path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/><path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/><path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/><path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/></svg>
+      Prova gratis 14 giorni
+    </a>
+    <a href="#come-funziona" class="btn-cta-ghost">Come funziona ↓</a>
+  </div>
+  <p class="hero-meta">Nessuna carta richiesta · 14 giorni gratis · poi €12/mese</p>
+</section>
+
+<!-- EMAIL PREVIEW MOCKUP -->
+<div class="preview-wrap">
+  <div class="email-preview">
+    <div class="ep-header">
+      <div class="ep-dots"><span></span><span></span><span></span></div>
+      <div class="ep-title">Mail — Briefing Glint</div>
+    </div>
+    <div class="ep-body">
+      <div class="ep-subject">☀️ Briefing Lunedì — 4 impegni · 7 mail · 🛠️ Maker Day</div>
+      <div class="ep-from">glint-agent@app.glint.ai → utente@gmail.com</div>
+      <div class="ep-greeting">Buongiorno Alex 🌅</div>
+
+      <div class="ep-row">
+        <div class="ep-card">
+          <div class="ep-label">Tipo giornata</div>
+          <div class="ep-val">🛠️ Maker</div>
+          <div class="ep-sub">2 riunioni oggi</div>
+        </div>
+        <div class="ep-card">
+          <div class="ep-label">Energia</div>
+          <div class="ep-val">82/100</div>
+          <div class="ep-sub">HRV ottimale · Focus alto</div>
+        </div>
+        <div class="ep-card">
+          <div class="ep-label">Email da gestire</div>
+          <div class="ep-val">7</div>
+          <div class="ep-sub">3 urgenti oggi</div>
+        </div>
+      </div>
+
+      <div class="ep-section">
+        <div class="ep-sh"><span style="color:#ef4444">●</span> Q1 — Urgente + Importante</div>
+        <div class="ep-task"><div class="q q1"></div><div class="t-title">Inviare offerta aggiornata – Cliente Acme</div><div class="t-badge">Oggi</div></div>
+        <div class="ep-task"><div class="q q1"></div><div class="t-title">Confermare partecipazione Board – Direttore Ops</div><div class="t-badge">Oggi</div></div>
+      </div>
+      <div class="ep-section">
+        <div class="ep-sh"><span style="color:#60a5fa">●</span> Q2 — Importante (pianifica)</div>
+        <div class="ep-task"><div class="q q2"></div><div class="t-title">Rivedere proposta contratto – Fornitore XYZ</div><div class="t-badge">Q2</div></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div style="height:100px;"></div>
+<div class="divider"></div>
+
+<!-- COME FUNZIONA -->
+<section class="section" id="come-funziona">
+  <div class="section-label">Come funziona</div>
+  <div class="section-title">Setup in 3 minuti.<br/>Poi ci pensa Glint.</div>
+  <p class="section-sub">Connetti una volta. Ogni mattina ricevi il briefing senza fare nulla.</p>
+
+  <div class="steps">
+    <div class="step">
+      <div class="step-num">1</div>
+      <h3>Connetti Google</h3>
+      <p>Autorizza l'accesso a Gmail, Calendar e Drive. Bastano 30 secondi. I dati non vengono mai condivisi.</p>
+    </div>
+    <div class="step">
+      <div class="step-num">2</div>
+      <h3>Configura il profilo</h3>
+      <p>Imposta l'orario del briefing, i calendari da monitorare e i tuoi interessi. Tutto privato, solo tuo.</p>
+    </div>
+    <div class="step">
+      <div class="step-num">3</div>
+      <h3>Ricevi il briefing</h3>
+      <p>Ogni mattina arriva una mail con email prioritizzate, brief riunioni, dati salute e molto altro.</p>
+    </div>
+  </div>
+</section>
+
+<div class="divider"></div>
+
+<!-- FUNZIONALITÀ -->
+<section class="section" id="funzionalita">
+  <div class="section-label">Funzionalità</div>
+  <div class="section-title">Tutto nella prima mail del giorno.</div>
+  <p class="section-sub">Niente di superfluo. Solo le informazioni che contano.</p>
+
+  <div class="features-grid">
+    <div class="feature-card">
+      <div class="feature-icon" style="background:rgba(239,68,68,.1)">📧</div>
+      <h3>Analisi inbox</h3>
+      <p>Email categorizzate con la matrice di Eisenhower. Q1 urgente, Q2 pianifica. Brief per ogni thread.</p>
+    </div>
+    <div class="feature-card">
+      <div class="feature-icon" style="background:rgba(99,102,241,.1)">📅</div>
+      <h3>Brief riunioni AI</h3>
+      <p>Per ogni meeting, Glint cerca email e file Drive correlati e genera un brief con contesto e punti aperti.</p>
+    </div>
+    <div class="feature-card">
+      <div class="feature-icon" style="background:rgba(34,197,94,.1)">🛌</div>
+      <h3>Salute & energia</h3>
+      <p>Sonno, HRV e stress da Apple Health tradotti in raccomandazioni concrete per la giornata.</p>
+    </div>
+    <div class="feature-card">
+      <div class="feature-icon" style="background:rgba(245,158,11,.1)">👨‍👩‍👦</div>
+      <h3>Sezione famiglia</h3>
+      <p>Impegni del partner e alert scolastici dei figli, tutto consolidato in un'unica mail mattutina.</p>
+    </div>
+    <div class="feature-card">
+      <div class="feature-icon" style="background:rgba(139,92,246,.1)">🌐</div>
+      <h3>Networking & città</h3>
+      <p>Glint rileva la tua posizione dal calendario e suggerisce eventi di networking rilevanti nella tua città.</p>
+    </div>
+    <div class="feature-card">
+      <div class="feature-icon" style="background:rgba(96,165,250,.1)">📚</div>
+      <h3>Newsletter filtrate</h3>
+      <p>I 5 contenuti più rilevanti tra le tue newsletter, selezionati e sintetizzati dall'AI sui tuoi interessi.</p>
+    </div>
+  </div>
+</section>
+
+<div class="divider"></div>
+
+<!-- PREZZI -->
+<section class="section" id="prezzi">
+  <div class="section-label">Prezzi</div>
+  <div class="section-title">Prova gratis.<br/>Abbonati quando sei convinto.</div>
+  <p class="section-sub">14 giorni di prova, nessuna carta richiesta. Cancella quando vuoi.</p>
+
+  <div class="pricing-grid">
+    <!-- PRO -->
+    <div class="pricing-card featured">
+      <div class="pricing-badge">Più scelto</div>
+      <div class="pricing-name">Pro</div>
+      <div class="pricing-price"><sup>€</sup>12<span class="period">/mese</span></div>
+      <p class="pricing-sub">Per professionisti che vogliono partire avvantaggiati ogni mattina.</p>
+      <ul class="pricing-features">
+        <li><span class="check">✓</span> Briefing automatico ogni mattina</li>
+        <li><span class="check">✓</span> Gmail + Calendar + Drive</li>
+        <li><span class="check">✓</span> Brief riunioni AI avanzati</li>
+        <li><span class="check">✓</span> Dati salute & raccomandazioni</li>
+        <li><span class="check">✓</span> Sezione famiglia & scuola</li>
+        <li><span class="check">✓</span> Networking events</li>
+        <li><span class="check">✓</span> Newsletter filtrate</li>
+        <li><span class="check">✓</span> Storico illimitato</li>
+      </ul>
+      <a href="/login.html" class="btn-pricing filled">Inizia gratis 14 giorni →</a>
+    </div>
+
+    <!-- BUSINESS -->
+    <div class="pricing-card">
+      <div class="pricing-name">Business</div>
+      <div class="pricing-price"><sup>€</sup>39<span class="period">/mese</span></div>
+      <p class="pricing-sub">Per team fino a 10 persone che vogliono iniziare la giornata sincronizzati.</p>
+      <ul class="pricing-features">
+        <li><span class="check">✓</span> Tutto il piano Pro</li>
+        <li><span class="check">✓</span> Fino a 10 utenti</li>
+        <li><span class="check">✓</span> Dashboard team condiviso</li>
+        <li><span class="check">✓</span> Task assegnabili al team</li>
+        <li><span class="check">✓</span> Admin panel</li>
+        <li><span class="check">✓</span> Supporto prioritario</li>
+        <li><span class="check">✓</span> Onboarding dedicato</li>
+      </ul>
+      <a href="mailto:hello@glint.ai" class="btn-pricing outline">Contattaci</a>
+    </div>
+  </div>
+</section>
+
+<!-- CTA FINALE -->
+<div class="divider"></div>
+<section class="cta-section">
+  <h2>Inizia ogni giornata<br/>con chiarezza.</h2>
+  <p>Connetti Google. Il primo briefing arriva domani mattina.</p>
+  <a href="/login.html" class="btn-cta" style="display:inline-flex;">
+    <svg width="17" height="17" viewBox="0 0 24 24" fill="currentColor"><path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/><path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/><path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/><path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/></svg>
+    Prova gratis 14 giorni
+  </a>
+  <p style="margin-top:14px;font-size:13px;color:var(--subtle);">Nessuna carta · Cancella quando vuoi</p>
+</section>
+
+<!-- FOOTER -->
+<footer>
+  <p>© 2026 Glint AI</p>
+  <div class="footer-links">
+    <a href="/privacy.html">Privacy</a>
+    <a href="/terms.html">Termini</a>
+    <a href="mailto:hello@glint.ai">Contatto</a>
+    <a href="/login.html">Accedi</a>
+  </div>
+</footer>
+
+</body>
+</html>

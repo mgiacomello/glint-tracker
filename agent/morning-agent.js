@@ -124,10 +124,18 @@ function dayOfWeekIt(dateStr) {
 }
 
 function safeJsonParse(text, fallback = []) {
-  try {
-    const match = text.match(/[\[{][\s\S]*[\]}]/);
-    return match ? JSON.parse(match[0]) : fallback;
-  } catch { return fallback; }
+  if (!text) return fallback;
+  // Try direct parse first
+  try { return JSON.parse(text.trim()); } catch {}
+  // Strip markdown code fences
+  const stripped = text.replace(/^```(?:json)?\s*/i, '').replace(/\s*```\s*$/, '').trim();
+  try { return JSON.parse(stripped); } catch {}
+  // Extract first [...] or {...} block (greedy from last closing bracket)
+  const arrMatch = stripped.match(/(\[[\s\S]*\])/);
+  if (arrMatch) { try { return JSON.parse(arrMatch[1]); } catch {} }
+  const objMatch = stripped.match(/(\{[\s\S]*\})/);
+  if (objMatch) { try { return JSON.parse(objMatch[1]); } catch {} }
+  return fallback;
 }
 
 // ── Token refresh for a specific uid ──────────────────────────────────────────
@@ -167,6 +175,7 @@ async function runMorningAgent({
   googleClientId, googleClientSecret,
   anthropicApiKey,
   perplexityApiKey = '',
+  force = false,
   log = console.log
 }) {
   const logs = [];
@@ -322,14 +331,25 @@ async function runMorningAgent({
 
   // ── STEP 3: Gmail full inbox analysis ─────────────────────────────────────────
   emit('[3/9] Analisi inbox Gmail...');
+  // If force=true, clear previous email tasks so they get re-analyzed
+  if (force && dbNow.days?.[date]?.tasks) {
+    dbNow.days[date].tasks = (dbNow.days[date].tasks || []).filter(t => !t.id.startsWith('mail-'));
+    emit('  ↳ Force refresh: task email precedenti rimossi per rianalisi');
+  }
   const existingTaskIds = new Set((dbNow.days?.[date]?.tasks || []).map(t => t.id));
 
-  const inboxRaw = await gmailSearch(token, 'in:inbox -category:promotions -category:social -category:updates', 50);
-  emit(`  ↳ ${inboxRaw.length} messaggi trovati`);
+  let inboxRaw = [];
+  try {
+    inboxRaw = await gmailSearch(token, 'in:inbox -category:promotions -category:social -category:updates', 50);
+    emit(`  ↳ ${inboxRaw.length} messaggi trovati in inbox`);
+  } catch(e) {
+    emit(`  ↳ ERRORE Gmail search: ${e.message}`);
+  }
 
   const emailsData = [];
+  let skippedExisting = 0;
   for (const msg of inboxRaw.slice(0, 35)) {
-    if (existingTaskIds.has(`mail-${msg.id}`)) continue;
+    if (existingTaskIds.has(`mail-${msg.id}`)) { skippedExisting++; continue; }
     try {
       const full = await gmailGetMessage(token, msg.id);
       const h = gmailHeaders(full);
@@ -340,8 +360,9 @@ async function runMorningAgent({
         date: h.date || '',
         body: gmailBody(full, 1200)
       });
-    } catch(e) { /* skip singola email */ }
+    } catch(e) { emit(`  ↳ Skip email ${msg.id}: ${e.message}`); }
   }
+  if (skippedExisting > 0) emit(`  ↳ ${skippedExisting} email già elaborate in precedenza (skippate)`);
 
   let emailTasks = [];
   if (emailsData.length > 0) {
@@ -376,8 +397,15 @@ EMAIL:\n${emailList}`
         }]
       });
 
-      emailTasks = safeJsonParse(resp.content[0]?.text || '[]', []);
-    } catch(e) { emit(`  ↳ Errore analisi AI: ${e.message}`); }
+      const rawText = resp.content[0]?.text || '[]';
+      emailTasks = safeJsonParse(rawText, []);
+      if (!Array.isArray(emailTasks)) {
+        emit(`  ↳ WARN: risposta AI non è array, testo: ${rawText.slice(0, 200)}`);
+        emailTasks = [];
+      }
+    } catch(e) { emit(`  ↳ Errore analisi AI: ${e.message}\n${e.stack?.slice(0,300)}`); }
+  } else {
+    emit(`  ↳ Nessuna email nuova da analizzare (inboxRaw: ${inboxRaw.length})`);
   }
 
   result.tasks = emailTasks.map(t => ({
@@ -601,6 +629,14 @@ Respond as valid JSON array only.`
   if (!saveDb.days[date]) saveDb.days[date] = { events: [], tasks: [], items: {}, reflection: '', briefing: '' };
   const day = saveDb.days[date];
 
+  // If force=true, clear old mail tasks and their items from saveDb too
+  if (force) {
+    const mailTaskIds = (day.tasks || []).filter(t => t.id.startsWith('mail-')).map(t => t.id);
+    day.tasks = (day.tasks || []).filter(t => !t.id.startsWith('mail-'));
+    for (const id of mailTaskIds) delete day.items[id];
+    emit(`  ↳ Force: rimossi ${mailTaskIds.length} task email dal DB per sostituzione`);
+  }
+
   day.briefing = `${dayType === 'focus' ? '🧘' : dayType === 'maker' ? '🛠️' : '👔'} ${dayType.charAt(0).toUpperCase() + dayType.slice(1)} Day · ${calendarEvents.length} eventi · ${result.tasks.length} mail da gestire`;
 
   for (const evt of calendarEvents) {
@@ -718,9 +754,20 @@ function buildEmailHtml({ date, dayType, dayTypeLabel, health, healthRec, calend
 
   const qSection = (label, icon, color, items) => !items.length ? '' : `
     ${h3(icon, label, color)}
-    <ul style="margin:0;padding-left:20px;">
-      ${items.map(t => `<li style="margin-bottom:4px;">${link(t.link, t.title)}<small style="color:#9ca3af;"> — ${t.due || ''}</small></li>`).join('')}
-    </ul>`;
+    ${items.map(t => card(`
+      <div style="margin-bottom:6px;">
+        <strong>${link(t.link, t.title)}</strong>
+        <small style="color:#9ca3af;"> — ${t.due || ''}</small>
+      </div>
+      ${t.brief ? `<div style="font-size:13px;color:#d1d5db;white-space:pre-wrap;margin-bottom:8px;">${t.brief}</div>` : ''}
+      ${(t.actionPoints || []).length ? `
+        <div style="margin-top:6px;">
+          <strong style="font-size:12px;color:#a5b4fc;">📌 Azioni:</strong>
+          <ul style="margin:4px 0 0 16px;padding:0;">
+            ${t.actionPoints.map(ap => `<li style="font-size:12px;color:#d1d5db;margin-bottom:3px;">${ap}</li>`).join('')}
+          </ul>
+        </div>` : ''}
+    `)).join('')}`;
 
   const meetingSection = calendarEvents.length ? `
     ${h3('📅', 'Meeting di oggi')}
