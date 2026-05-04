@@ -1,0 +1,887 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Impostazioni · Daily Tracker</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet"/>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #0e0e10;
+      --surface: #1a1a1c;
+      --border: #2e2e32;
+      --text: #e5e7eb;
+      --muted: #9ca3af;
+      --accent: #6366f1;
+      --accent-hover: #4f46e5;
+      --danger: #ef4444;
+      --success: #22c55e;
+      --warn: #f59e0b;
+      --radius: 10px;
+    }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Inter', system-ui, sans-serif;
+      font-size: 14px;
+      min-height: 100vh;
+    }
+
+    /* ── Header ── */
+    .header {
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      padding: 0 24px;
+      height: 56px;
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+    .header a { color: var(--muted); text-decoration: none; font-size: 13px; }
+    .header a:hover { color: var(--text); }
+    .header-sep { color: var(--border); }
+    .header h1 { font-size: 15px; font-weight: 600; }
+
+    /* ── Layout ── */
+    .page {
+      max-width: 760px;
+      margin: 0 auto;
+      padding: 32px 24px 80px;
+      display: flex;
+      flex-direction: column;
+      gap: 24px;
+    }
+
+    /* ── Section card ── */
+    .section {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      overflow: hidden;
+    }
+    .section-header {
+      padding: 14px 20px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .section-header .icon { font-size: 16px; }
+    .section-header h2 { font-size: 14px; font-weight: 600; }
+    .section-header .badge {
+      margin-left: auto;
+      font-size: 11px;
+      color: var(--muted);
+      background: #2a2a2e;
+      padding: 2px 8px;
+      border-radius: 20px;
+    }
+    .section-body { padding: 20px; display: flex; flex-direction: column; gap: 16px; }
+
+    /* ── Form elements ── */
+    .field { display: flex; flex-direction: column; gap: 6px; }
+    .field label { font-size: 12px; font-weight: 500; color: var(--muted); text-transform: uppercase; letter-spacing: .04em; }
+    .field input, .field select, .field textarea {
+      background: #111113;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 9px 12px;
+      color: var(--text);
+      font-family: inherit;
+      font-size: 14px;
+      width: 100%;
+      transition: border-color .15s;
+    }
+    .field input:focus, .field select:focus, .field textarea:focus {
+      outline: none;
+      border-color: var(--accent);
+    }
+    .field textarea { resize: vertical; min-height: 64px; }
+    .field .hint { font-size: 11px; color: var(--muted); }
+
+    .row { display: grid; gap: 12px; }
+    .row-2 { grid-template-columns: 1fr 1fr; }
+    .row-3 { grid-template-columns: 1fr 1fr 1fr; }
+
+    /* ── Toggle ── */
+    .toggle-row {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 4px 0;
+    }
+    .toggle-row .tinfo { flex: 1; }
+    .toggle-row .tinfo strong { display: block; font-size: 13px; font-weight: 500; }
+    .toggle-row .tinfo span { font-size: 12px; color: var(--muted); }
+    .toggle {
+      position: relative;
+      width: 40px;
+      height: 22px;
+      flex-shrink: 0;
+    }
+    .toggle input { opacity: 0; width: 0; height: 0; position: absolute; }
+    .toggle-track {
+      position: absolute;
+      inset: 0;
+      background: #333;
+      border-radius: 22px;
+      cursor: pointer;
+      transition: background .2s;
+    }
+    .toggle input:checked + .toggle-track { background: var(--accent); }
+    .toggle-thumb {
+      position: absolute;
+      width: 16px;
+      height: 16px;
+      background: #fff;
+      border-radius: 50%;
+      top: 3px;
+      left: 3px;
+      transition: transform .2s;
+      pointer-events: none;
+    }
+    .toggle input:checked ~ .toggle-thumb { transform: translateX(18px); }
+
+    /* ── Tags / list inputs ── */
+    .tag-input-wrap { display: flex; gap: 8px; }
+    .tag-input-wrap input { flex: 1; }
+    .tag-input-wrap button {
+      background: var(--accent);
+      border: none;
+      border-radius: 8px;
+      color: #fff;
+      padding: 0 14px;
+      cursor: pointer;
+      font-size: 18px;
+      line-height: 1;
+      transition: background .15s;
+    }
+    .tag-input-wrap button:hover { background: var(--accent-hover); }
+
+    .tag-list { display: flex; flex-wrap: wrap; gap: 6px; min-height: 24px; }
+    .tag {
+      background: #2a2a2e;
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      padding: 3px 10px;
+      font-size: 12px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .tag button {
+      background: none;
+      border: none;
+      color: var(--muted);
+      cursor: pointer;
+      font-size: 14px;
+      padding: 0;
+      line-height: 1;
+    }
+    .tag button:hover { color: var(--danger); }
+
+    /* ── Family member cards ── */
+    .member-list { display: flex; flex-direction: column; gap: 10px; }
+    .member-card {
+      background: #111113;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 12px 14px;
+      display: flex;
+      gap: 12px;
+      align-items: flex-start;
+    }
+    .member-avatar {
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      background: #2a2a2e;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 18px;
+      flex-shrink: 0;
+    }
+    .member-info { flex: 1; display: flex; flex-direction: column; gap: 6px; }
+    .member-info input, .member-info select {
+      background: #1a1a1c;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 6px 10px;
+      color: var(--text);
+      font-size: 13px;
+      font-family: inherit;
+      width: 100%;
+    }
+    .member-info input:focus, .member-info select:focus { outline: none; border-color: var(--accent); }
+    .member-fields { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+    .member-remove {
+      background: none;
+      border: none;
+      color: var(--muted);
+      cursor: pointer;
+      font-size: 16px;
+      padding: 2px;
+    }
+    .member-remove:hover { color: var(--danger); }
+    .btn-add-member {
+      background: none;
+      border: 1px dashed var(--border);
+      border-radius: 8px;
+      color: var(--muted);
+      padding: 10px;
+      width: 100%;
+      cursor: pointer;
+      font-size: 13px;
+      transition: border-color .15s, color .15s;
+    }
+    .btn-add-member:hover { border-color: var(--accent); color: var(--text); }
+
+    /* ── Agent runner ── */
+    .agent-box {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      overflow: hidden;
+    }
+    .agent-header {
+      padding: 16px 20px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    .agent-header h2 { font-size: 14px; font-weight: 600; flex: 1; }
+    .agent-status {
+      font-size: 12px;
+      color: var(--muted);
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .agent-status .dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: var(--muted);
+    }
+    .agent-status.running .dot { background: var(--warn); animation: pulse 1s infinite; }
+    .agent-status.done .dot { background: var(--success); }
+    .agent-status.error .dot { background: var(--danger); }
+    @keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: .4; } }
+
+    .agent-body { padding: 20px; display: flex; flex-direction: column; gap: 16px; }
+    .agent-run-btn {
+      background: var(--accent);
+      border: none;
+      border-radius: 8px;
+      color: #fff;
+      padding: 11px 20px;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background .15s;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      width: fit-content;
+    }
+    .agent-run-btn:hover:not(:disabled) { background: var(--accent-hover); }
+    .agent-run-btn:disabled { opacity: .5; cursor: not-allowed; }
+
+    .agent-log {
+      background: #111113;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 12px 14px;
+      font-family: 'SF Mono', 'Fira Code', monospace;
+      font-size: 12px;
+      color: #86efac;
+      max-height: 260px;
+      overflow-y: auto;
+      display: none;
+      flex-direction: column;
+      gap: 2px;
+    }
+    .agent-log.active { display: flex; }
+    .agent-log .log-line { line-height: 1.6; }
+    .agent-log .log-error { color: #fca5a5; }
+    .agent-log .log-done  { color: #a78bfa; font-weight: 600; }
+
+    .agent-summary {
+      background: #111113;
+      border: 1px solid #374151;
+      border-radius: 8px;
+      padding: 12px 14px;
+      display: none;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+    .agent-summary.active { display: flex; }
+    .sum-item { display: flex; flex-direction: column; gap: 2px; }
+    .sum-item .val { font-size: 20px; font-weight: 700; }
+    .sum-item .lbl { font-size: 11px; color: var(--muted); }
+
+    /* ── Save bar ── */
+    .save-bar {
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      background: var(--surface);
+      border-top: 1px solid var(--border);
+      padding: 14px 24px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      z-index: 200;
+    }
+    .save-bar .saved-msg { font-size: 13px; color: var(--success); display: none; }
+    .save-bar .saved-msg.show { display: block; }
+    .btn-save {
+      background: var(--accent);
+      border: none;
+      border-radius: 8px;
+      color: #fff;
+      padding: 9px 20px;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background .15s;
+    }
+    .btn-save:hover { background: var(--accent-hover); }
+    .btn-cancel {
+      background: none;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      color: var(--muted);
+      padding: 9px 16px;
+      font-size: 14px;
+      cursor: pointer;
+    }
+    .btn-cancel:hover { color: var(--text); }
+
+    /* ── Google connect banner ── */
+    .connect-banner {
+      background: #1c1c10;
+      border: 1px solid #444108;
+      border-radius: 8px;
+      padding: 12px 16px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    .connect-banner .icon { font-size: 20px; }
+    .connect-banner p { flex: 1; font-size: 13px; color: #fde68a; }
+    .connect-banner a {
+      background: #ca8a04;
+      color: #fff;
+      border-radius: 6px;
+      padding: 6px 14px;
+      font-size: 13px;
+      font-weight: 600;
+      text-decoration: none;
+    }
+    .connected-badge {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 13px;
+      color: var(--success);
+    }
+    @media (max-width: 600px) {
+      .row-2, .row-3 { grid-template-columns: 1fr; }
+      .member-fields { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- Header -->
+<header class="header">
+  <a href="/">← Torna al Tracker</a>
+  <span class="header-sep">|</span>
+  <h1>⚙️ Impostazioni</h1>
+</header>
+
+<main class="page">
+
+  <!-- ── Morning Agent ─────────────────────────────────────────────────────── -->
+  <div class="agent-box">
+    <div class="agent-header">
+      <span style="font-size:20px;">☀️</span>
+      <h2>Morning Agent</h2>
+      <div class="agent-status" id="agent-status">
+        <div class="dot"></div>
+        <span id="agent-status-text">Pronto</span>
+      </div>
+    </div>
+    <div class="agent-body">
+      <p style="color:var(--muted);font-size:13px;line-height:1.6;">
+        Esegue il briefing completo: legge Gmail &amp; Calendar, genera brief AI per ogni riunione ed email,
+        calcola il tipo di giornata, cerca eventi networking, e invia la mail di riepilogo.
+      </p>
+      <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
+        <button class="agent-run-btn" id="run-agent-btn" onclick="runAgent()">
+          <span>▶ Esegui ora</span>
+        </button>
+        <span style="font-size:12px;color:var(--muted);" id="last-run-label"></span>
+      </div>
+      <div class="agent-log" id="agent-log"></div>
+      <div class="agent-summary" id="agent-summary"></div>
+    </div>
+  </div>
+
+  <!-- ── Profilo ─────────────────────────────────────────────────────────── -->
+  <div class="section">
+    <div class="section-header">
+      <span class="icon">👤</span>
+      <h2>Profilo</h2>
+    </div>
+    <div class="section-body">
+      <div id="google-connect-area"></div>
+      <div class="row row-2">
+        <div class="field">
+          <label>Nome</label>
+          <input type="text" id="s-userName" placeholder="Marco Giacomello"/>
+        </div>
+        <div class="field">
+          <label>Timezone</label>
+          <select id="s-timezone">
+            <option value="Europe/London">Europe/London (GMT/BST)</option>
+            <option value="Europe/Rome">Europe/Rome (CET/CEST)</option>
+            <option value="America/New_York">America/New_York (EST)</option>
+            <option value="America/Los_Angeles">America/Los_Angeles (PST)</option>
+            <option value="Asia/Tokyo">Asia/Tokyo (JST)</option>
+          </select>
+        </div>
+      </div>
+      <div class="row row-2">
+        <div class="field">
+          <label>Email briefing mattutino</label>
+          <input type="email" id="s-briefingEmail" placeholder="marco@esempio.com"/>
+          <span class="hint">L'agente manda il riepilogo a questo indirizzo ogni mattina</span>
+        </div>
+        <div class="field">
+          <label>Orario briefing</label>
+          <input type="time" id="s-briefingTime" value="06:30"/>
+        </div>
+      </div>
+      <div class="toggle-row">
+        <div class="tinfo">
+          <strong>Invia email di briefing</strong>
+          <span>Disabilita per usare solo il tracker web</span>
+        </div>
+        <label class="toggle">
+          <input type="checkbox" id="s-sendBriefingEmail" checked/>
+          <div class="toggle-track"></div>
+          <div class="toggle-thumb"></div>
+        </label>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Calendario ─────────────────────────────────────────────────────── -->
+  <div class="section">
+    <div class="section-header">
+      <span class="icon">📅</span>
+      <h2>Calendari Google</h2>
+    </div>
+    <div class="section-body">
+      <div class="field">
+        <label>Email calendario principale</label>
+        <input type="email" id="s-primaryEmail" placeholder="marco@gmail.com"/>
+        <span class="hint">Usata come ID del calendario primario</span>
+      </div>
+      <div class="field">
+        <label>Calendari aggiuntivi</label>
+        <div class="tag-input-wrap">
+          <input type="email" id="add-cal-input" placeholder="secondario@gmail.com" onkeydown="if(event.key==='Enter'){addTag('additionalCalendars','add-cal-input','cal-tags');event.preventDefault();}"/>
+          <button onclick="addTag('additionalCalendars','add-cal-input','cal-tags')">+</button>
+        </div>
+        <div class="tag-list" id="cal-tags"></div>
+        <span class="hint">L'agente includerà gli eventi di questi calendari nel briefing</span>
+      </div>
+      <div class="field">
+        <label>Calendari da escludere</label>
+        <div class="tag-input-wrap">
+          <input type="email" id="excl-cal-input" placeholder="laura@azienda.com" onkeydown="if(event.key==='Enter'){addTag('excludedCalendars','excl-cal-input','excl-tags');event.preventDefault();}"/>
+          <button onclick="addTag('excludedCalendars','excl-cal-input','excl-tags')">+</button>
+        </div>
+        <div class="tag-list" id="excl-tags"></div>
+        <span class="hint">Calendari condivisi di altri che non vuoi includere</span>
+      </div>
+      <div class="field">
+        <label>Città di residenza (base)</label>
+        <input type="text" id="s-homeCity" placeholder="London, UK"/>
+        <span class="hint">Usata per la ricerca eventi networking se non viene rilevata dal calendario</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Famiglia ─────────────────────────────────────────────────────────── -->
+  <div class="section">
+    <div class="section-header">
+      <span class="icon">👨‍👩‍👦</span>
+      <h2>Famiglia</h2>
+      <span class="badge">L'agente monitora i loro impegni</span>
+    </div>
+    <div class="section-body">
+      <div class="member-list" id="member-list"></div>
+      <button class="btn-add-member" onclick="addFamilyMember()">+ Aggiungi membro</button>
+    </div>
+  </div>
+
+  <!-- ── Interessi ─────────────────────────────────────────────────────── -->
+  <div class="section">
+    <div class="section-header">
+      <span class="icon">📚</span>
+      <h2>Interessi &amp; Newsletter</h2>
+    </div>
+    <div class="section-body">
+      <div class="field">
+        <label>Aree di interesse</label>
+        <div class="tag-input-wrap">
+          <input type="text" id="add-interest-input" placeholder="AI, startup, finanza..." onkeydown="if(event.key==='Enter'){addTag('interests','add-interest-input','interest-tags');event.preventDefault();}"/>
+          <button onclick="addTag('interests','add-interest-input','interest-tags')">+</button>
+        </div>
+        <div class="tag-list" id="interest-tags"></div>
+        <span class="hint">L'agente filtra le newsletter e suggerisce contenuti su questi temi</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Integrazioni ─────────────────────────────────────────────────── -->
+  <div class="section">
+    <div class="section-header">
+      <span class="icon">🔌</span>
+      <h2>Integrazioni</h2>
+    </div>
+    <div class="section-body">
+      <div class="field">
+        <label>Perplexity API Key <span style="color:var(--muted);font-weight:400;">(opzionale)</span></label>
+        <input type="password" id="s-perplexityApiKey" placeholder="pplx-..."/>
+        <span class="hint">Usata per cercare eventi networking in tempo reale nella tua città. Ottieni la key su <a href="https://www.perplexity.ai/settings/api" target="_blank" style="color:var(--accent);">perplexity.ai</a></span>
+      </div>
+    </div>
+  </div>
+
+</main>
+
+<!-- Save bar -->
+<div class="save-bar">
+  <button class="btn-save" onclick="saveSettings()">Salva impostazioni</button>
+  <button class="btn-cancel" onclick="loadSettings()">Annulla</button>
+  <span class="saved-msg" id="saved-msg">✓ Salvato</span>
+</div>
+
+<script>
+// ── State ─────────────────────────────────────────────────────────────────────
+let settings = {};
+const tagData = {
+  additionalCalendars: [],
+  excludedCalendars: [],
+  interests: []
+};
+let familyMembers = [];
+
+// ── Init ──────────────────────────────────────────────────────────────────────
+(async () => {
+  await loadSettings();
+  await checkGoogleStatus();
+  await checkAgentStatus();
+})();
+
+async function loadSettings() {
+  try {
+    const r = await fetch('/api/user/settings', { credentials: 'include' });
+    if (r.status === 401) { location.href = '/login.html'; return; }
+    settings = await r.json();
+    applySettingsToUI(settings);
+  } catch(e) { console.error('loadSettings', e); }
+}
+
+function applySettingsToUI(s) {
+  setVal('s-userName', s.userName || '');
+  setVal('s-timezone', s.timezone || 'Europe/London');
+  setVal('s-briefingEmail', s.briefingEmail || '');
+  setVal('s-briefingTime', s.briefingTime || '06:30');
+  setVal('s-primaryEmail', s.primaryEmail || '');
+  setVal('s-homeCity', s.homeCity || '');
+  setVal('s-perplexityApiKey', s.perplexityApiKey || '');
+  document.getElementById('s-sendBriefingEmail').checked = s.sendBriefingEmail !== false;
+
+  tagData.additionalCalendars = [...(s.additionalCalendars || [])];
+  tagData.excludedCalendars   = [...(s.excludedCalendars   || [])];
+  tagData.interests           = [...(s.interests           || [])];
+  renderTags('additionalCalendars', 'cal-tags');
+  renderTags('excludedCalendars',   'excl-tags');
+  renderTags('interests',           'interest-tags');
+
+  familyMembers = (s.familyMembers || []).map(m => ({ ...m, _id: Math.random().toString(36).slice(2) }));
+  renderFamilyMembers();
+}
+
+function collectSettings() {
+  return {
+    userName:             document.getElementById('s-userName').value.trim(),
+    timezone:             document.getElementById('s-timezone').value,
+    briefingEmail:        document.getElementById('s-briefingEmail').value.trim(),
+    briefingTime:         document.getElementById('s-briefingTime').value,
+    primaryEmail:         document.getElementById('s-primaryEmail').value.trim(),
+    homeCity:             document.getElementById('s-homeCity').value.trim(),
+    perplexityApiKey:     document.getElementById('s-perplexityApiKey').value.trim(),
+    sendBriefingEmail:    document.getElementById('s-sendBriefingEmail').checked,
+    additionalCalendars:  [...tagData.additionalCalendars],
+    excludedCalendars:    [...tagData.excludedCalendars],
+    interests:            [...tagData.interests],
+    familyMembers:        familyMembers.map(({ _id, ...rest }) => rest)
+  };
+}
+
+async function saveSettings() {
+  const payload = collectSettings();
+  try {
+    const r = await fetch('/api/user/settings', {
+      method: 'PUT',
+      credentials: 'include',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    });
+    const d = await r.json();
+    if (d.ok) {
+      const msg = document.getElementById('saved-msg');
+      msg.classList.add('show');
+      setTimeout(() => msg.classList.remove('show'), 2500);
+    }
+  } catch(e) { alert('Errore nel salvataggio: ' + e.message); }
+}
+
+// ── Tag helpers ───────────────────────────────────────────────────────────────
+function addTag(key, inputId, listId) {
+  const input = document.getElementById(inputId);
+  const val = input.value.trim();
+  if (!val || tagData[key].includes(val)) return;
+  tagData[key].push(val);
+  input.value = '';
+  renderTags(key, listId);
+}
+
+function removeTag(key, listId, val) {
+  tagData[key] = tagData[key].filter(v => v !== val);
+  renderTags(key, listId);
+}
+
+function renderTags(key, listId) {
+  const el = document.getElementById(listId);
+  if (!el) return;
+  el.innerHTML = tagData[key].map(v => `
+    <div class="tag">
+      <span>${escHtml(v)}</span>
+      <button onclick="removeTag('${key}','${listId}','${escAttr(v)}')" title="Rimuovi">×</button>
+    </div>`).join('');
+}
+
+// ── Family members ────────────────────────────────────────────────────────────
+const ROLE_EMOJI = { spouse: '💑', child: '👶', parent: '👴', sibling: '👫', other: '👤' };
+const ROLE_LABELS = { spouse: 'Coniuge / Partner', child: 'Figlio/a', parent: 'Genitore', sibling: 'Fratello/Sorella', other: 'Altro' };
+
+function addFamilyMember() {
+  familyMembers.push({ _id: Math.random().toString(36).slice(2), name: '', role: 'other', school: '', schoolEmail: '' });
+  renderFamilyMembers();
+}
+
+function removeFamilyMember(id) {
+  familyMembers = familyMembers.filter(m => m._id !== id);
+  renderFamilyMembers();
+}
+
+function updateMember(id, field, val) {
+  const m = familyMembers.find(m => m._id === id);
+  if (m) m[field] = val;
+  if (field === 'role') renderFamilyMembers();
+}
+
+function renderFamilyMembers() {
+  const el = document.getElementById('member-list');
+  if (!el) return;
+  if (familyMembers.length === 0) { el.innerHTML = ''; return; }
+  el.innerHTML = familyMembers.map(m => {
+    const emoji = ROLE_EMOJI[m.role] || '👤';
+    const isChild = m.role === 'child';
+    return `
+    <div class="member-card">
+      <div class="member-avatar">${emoji}</div>
+      <div class="member-info">
+        <div class="member-fields">
+          <input type="text" placeholder="Nome" value="${escAttr(m.name || '')}"
+                 oninput="updateMember('${m._id}','name',this.value)"/>
+          <select onchange="updateMember('${m._id}','role',this.value)">
+            ${Object.entries(ROLE_LABELS).map(([v, l]) =>
+              `<option value="${v}" ${m.role === v ? 'selected' : ''}>${l}</option>`
+            ).join('')}
+          </select>
+        </div>
+        ${isChild ? `<div class="member-fields">
+          <input type="text" placeholder="Scuola (es. SIAL)" value="${escAttr(m.school || '')}"
+                 oninput="updateMember('${m._id}','school',this.value)"/>
+          <input type="email" placeholder="Email scuola" value="${escAttr(m.schoolEmail || '')}"
+                 oninput="updateMember('${m._id}','schoolEmail',this.value)"/>
+        </div>` : ''}
+      </div>
+      <button class="member-remove" onclick="removeFamilyMember('${m._id}')" title="Rimuovi">×</button>
+    </div>`;
+  }).join('');
+}
+
+// ── Google connect status ──────────────────────────────────────────────────────
+async function checkGoogleStatus() {
+  try {
+    const r = await fetch('/auth/google/status', { credentials: 'include' });
+    const d = await r.json();
+    const area = document.getElementById('google-connect-area');
+    if (d.connected) {
+      area.innerHTML = `<div class="connected-badge">✅ Google connesso${d.lastSync ? ` · Ultimo sync: ${new Date(d.lastSync).toLocaleString('it-IT')}` : ''}&nbsp;<a href="/auth/google" style="color:var(--muted);font-size:12px;margin-left:8px;">Riconnetti</a></div>`;
+    } else {
+      area.innerHTML = `<div class="connect-banner"><span class="icon">⚠️</span><p>Google non connesso. L'agente non potrà accedere a Gmail, Calendar e Drive.</p><a href="/auth/google">Connetti Google</a></div>`;
+    }
+  } catch(e) { /* skip */ }
+}
+
+// ── Agent runner ──────────────────────────────────────────────────────────────
+async function checkAgentStatus() {
+  try {
+    const r = await fetch('/api/morning-agent/status', { credentials: 'include' });
+    const d = await r.json();
+    if (d.lastRun) {
+      document.getElementById('last-run-label').textContent = `Ultima esecuzione: ${new Date(d.lastRun).toLocaleString('it-IT')}`;
+    }
+  } catch(e) { /* skip */ }
+}
+
+async function runAgent() {
+  const btn = document.getElementById('run-agent-btn');
+  const logEl = document.getElementById('agent-log');
+  const summaryEl = document.getElementById('agent-summary');
+  const statusEl = document.getElementById('agent-status');
+  const statusText = document.getElementById('agent-status-text');
+
+  btn.disabled = true;
+  btn.innerHTML = '<span>⏳ In esecuzione...</span>';
+  logEl.innerHTML = '';
+  logEl.classList.add('active');
+  summaryEl.classList.remove('active');
+  statusEl.className = 'agent-status running';
+  statusText.textContent = 'In esecuzione...';
+
+  const date = new Date().toISOString().slice(0, 10);
+
+  try {
+    const r = await fetch(`/api/morning-agent/${date}/run`, {
+      method: 'POST',
+      credentials: 'include'
+    });
+
+    if (!r.ok) {
+      const err = await r.json();
+      throw new Error(err.error || `HTTP ${r.status}`);
+    }
+
+    const reader = r.body.getReader();
+    const decoder = new TextDecoder();
+    let buffer = '';
+
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      buffer += decoder.decode(value, { stream: true });
+      const lines = buffer.split('\n');
+      buffer = lines.pop();
+      for (const line of lines) {
+        if (!line.startsWith('data: ')) continue;
+        try {
+          const evt = JSON.parse(line.slice(6));
+          if (evt.log) {
+            const div = document.createElement('div');
+            div.className = 'log-line';
+            div.textContent = evt.log;
+            logEl.appendChild(div);
+            logEl.scrollTop = logEl.scrollHeight;
+          }
+          if (evt.error) {
+            const div = document.createElement('div');
+            div.className = 'log-line log-error';
+            div.textContent = '❌ ' + evt.error;
+            logEl.appendChild(div);
+            statusEl.className = 'agent-status error';
+            statusText.textContent = 'Errore';
+          }
+          if (evt.done && evt.summary) {
+            renderSummary(evt.summary);
+            statusEl.className = 'agent-status done';
+            statusText.textContent = 'Completato';
+            const div = document.createElement('div');
+            div.className = 'log-line log-done';
+            div.textContent = '✅ Agente completato con successo';
+            logEl.appendChild(div);
+            logEl.scrollTop = logEl.scrollHeight;
+            document.getElementById('last-run-label').textContent = `Ultima esecuzione: ${new Date().toLocaleString('it-IT')}`;
+          }
+        } catch(e) { /* malformed JSON line — skip */ }
+      }
+    }
+  } catch(e) {
+    const div = document.createElement('div');
+    div.className = 'log-line log-error';
+    div.textContent = '❌ ' + e.message;
+    logEl.appendChild(div);
+    statusEl.className = 'agent-status error';
+    statusText.textContent = 'Errore';
+  }
+
+  btn.disabled = false;
+  btn.innerHTML = '<span>▶ Esegui ora</span>';
+}
+
+function renderSummary(s) {
+  const el = document.getElementById('agent-summary');
+  const items = [
+    { val: s.events || 0,      lbl: 'eventi' },
+    { val: s.tasks || 0,       lbl: 'email' },
+    { val: s.dayType || '—',   lbl: 'tipo giornata' },
+    { val: s.studyItems || 0,  lbl: 'newsletter' },
+    { val: s.reminders || 0,   lbl: 'reminder' },
+    { val: s.emailSent ? '✓' : '✗', lbl: 'email inviata' }
+  ];
+  el.innerHTML = items.map(i => `
+    <div class="sum-item">
+      <span class="val">${i.val}</span>
+      <span class="lbl">${i.lbl}</span>
+    </div>`).join('');
+  el.classList.add('active');
+}
+
+// ── Utils ─────────────────────────────────────────────────────────────────────
+function setVal(id, val) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  if (el.tagName === 'SELECT') el.value = val;
+  else el.value = val;
+}
+
+function escHtml(s) {
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+function escAttr(s) {
+  return String(s).replace(/'/g,'&#39;').replace(/"/g,'&quot;');
+}
+</script>
+</body>
+</html>

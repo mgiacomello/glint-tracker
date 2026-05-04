@@ -5,20 +5,20 @@ services:
     plan: starter          # $7/mese — ha persistent disk
     buildCommand: npm install
     startCommand: node server.js
-    healthCheckPath: /api/me
+    healthCheckPath: /api/health
     envVars:
       - key: NODE_ENV
         value: production
       - key: PORT
         value: 10000
       - key: SESSION_SECRET
-        generateValue: true     # Render genera automaticamente
+        generateValue: true
       - key: GOOGLE_CLIENT_ID
-        sync: false             # Da inserire manualmente nel dashboard
+        sync: false
       - key: GOOGLE_CLIENT_SECRET
         sync: false
       - key: GOOGLE_REDIRECT_URI
-        sync: false             # es. https://glint-tracker.onrender.com/auth/google/callback
+        sync: false
       - key: SYSTEM_TOKEN
         generateValue: true
       - key: ANTHROPIC_API_KEY

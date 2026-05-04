@@ -1,3 +1,4 @@
+require('dotenv').config();
 const express = require('express');
 const fs = require('fs');
 const path = require('path');
@@ -36,7 +37,7 @@ app.use(session({
 app.use(express.static('public'));
 
 // ── Auth middleware ───────────────────────────────────────────────────────────
-const PUBLIC_API = ['/auth/google', '/api/me', '/api/logout'];
+const PUBLIC_API = ['/auth/google', '/api/me', '/api/logout', '/api/health'];
 app.use((req, res, next) => {
   // System token bypass (for scheduled tasks)
   const authHeader = req.headers.authorization || '';
@@ -1554,7 +1555,10 @@ const GOOGLE_SCOPES = [
   'https://www.googleapis.com/auth/classroom.coursework.me.readonly',
   'https://www.googleapis.com/auth/classroom.announcements.readonly',
   'https://www.googleapis.com/auth/gmail.readonly',
+  'https://www.googleapis.com/auth/gmail.send',
   'https://www.googleapis.com/auth/calendar.readonly',
+  'https://www.googleapis.com/auth/calendar.events',
+  'https://www.googleapis.com/auth/drive.readonly',
   'openid', 'email', 'profile'
 ].join(' ');
 
@@ -1617,7 +1621,7 @@ app.get('/auth/google/callback', async (req, res) => {
     req.session.userName = profile.name;
     req.session.userPicture = profile.picture;
 
-    res.redirect('/');
+    res.redirect('/app.html');
   } catch (e) { res.status(500).send('Errore login: ' + e.message); }
 });
 
@@ -1637,6 +1641,9 @@ app.delete('/auth/google', (req, res) => {
   writeDB(db);
   res.json({ ok: true });
 });
+
+// GET /api/health  → always 200, for Render health checks
+app.get('/api/health', (req, res) => res.json({ ok: true }));
 
 // GET /api/me  → current session user
 app.get('/api/me', (req, res) => {
@@ -3035,6 +3042,115 @@ app.get('/api/calendar/shared/:userId', (req, res) => {
   });
   events.sort((a, b) => (a.date + (a.time || '')).localeCompare(b.date + (b.time || '')));
   res.json(events);
+});
+
+// ── USER SETTINGS ─────────────────────────────────────────────────────────────
+
+const DEFAULT_SETTINGS = {
+  timezone: 'Europe/London',
+  briefingEmail: '',
+  briefingTime: '06:30',
+  primaryEmail: '',
+  additionalCalendars: [],
+  excludedCalendars: [],
+  familyMembers: [],
+  homeCity: '',
+  interests: ['business', 'AI', 'leadership', 'startup', 'tecnologia'],
+  perplexityApiKey: '',
+  sendBriefingEmail: true,
+  userName: ''
+};
+
+// GET /api/user/settings
+app.get('/api/user/settings', (req, res) => {
+  const db = readDB();
+  const uid = getCurrentUid();
+  const users = readUsers();
+  const user = users[uid] || {};
+  const merged = {
+    ...DEFAULT_SETTINGS,
+    userName: user.name || '',
+    briefingEmail: user.email || '',
+    primaryEmail: user.email || '',
+    ...(db.userSettings || {})
+  };
+  res.json(merged);
+});
+
+// PUT /api/user/settings
+app.put('/api/user/settings', (req, res) => {
+  const db = readDB();
+  db.userSettings = { ...(db.userSettings || {}), ...req.body };
+  writeDB(db);
+  res.json({ ok: true, settings: db.userSettings });
+});
+
+// ── MORNING AGENT ──────────────────────────────────────────────────────────────
+
+// POST /api/morning-agent/:date/run  → run the full 9-step morning briefing
+app.post('/api/morning-agent/:date/run', async (req, res) => {
+  const uid = getCurrentUid();
+  if (!uid) return res.status(401).json({ error: 'Non autenticato' });
+
+  const date = req.params.date;
+  const cfg  = readConfig();
+  if (!cfg.anthropicApiKey) return res.status(400).json({ error: 'Anthropic API key non configurata. Vai in Impostazioni AI.' });
+
+  const db    = readDB();
+  const users = readUsers();
+  const user  = users[uid] || {};
+
+  const settings = {
+    ...DEFAULT_SETTINGS,
+    userName: user.name || '',
+    briefingEmail: user.email || '',
+    primaryEmail: user.email || '',
+    ...(db.userSettings || {})
+  };
+
+  // Stream progress via SSE
+  res.setHeader('Content-Type', 'text/event-stream; charset=utf-8');
+  res.setHeader('Cache-Control', 'no-cache');
+  res.setHeader('Connection', 'keep-alive');
+  res.setHeader('X-Accel-Buffering', 'no');
+  res.flushHeaders?.();
+
+  const send = (obj) => {
+    try { res.write(`data: ${JSON.stringify(obj)}\n\n`); } catch(e) { /* client disconnected */ }
+  };
+
+  try {
+    const { runMorningAgent } = require('./agent/morning-agent');
+
+    const result = await als.run({ uid }, () => runMorningAgent({
+      uid, date, settings,
+      readDBForUid, writeDBForUid,
+      googleClientId: GOOGLE_CLIENT_ID,
+      googleClientSecret: GOOGLE_CLIENT_SECRET,
+      anthropicApiKey: cfg.anthropicApiKey,
+      perplexityApiKey: settings.perplexityApiKey || process.env.PERPLEXITY_API_KEY || '',
+      log: (msg) => send({ log: msg })
+    }));
+
+    send({ done: true, summary: result.summary });
+  } catch(e) {
+    console.error('[MorningAgent]', e.message);
+    send({ error: e.message });
+  }
+
+  res.end();
+});
+
+// GET /api/morning-agent/status  → last run info for current user
+app.get('/api/morning-agent/status', (req, res) => {
+  const db = readDB();
+  const today = new Date().toISOString().slice(0, 10);
+  const day = db.days?.[today];
+  res.json({
+    lastRun: db.morningAgentLastRun || null,
+    todayPopulated: !!(day?.tasks?.length || day?.events?.length),
+    dayType: day?.insights?.dayType || null
+  });
 });
 
 // ── START ─────────────────────────────────────────────────────────────────────
