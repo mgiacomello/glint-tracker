@@ -532,73 +532,54 @@ async function runMorningAgent({
 
   const aiKeys = { geminiApiKey, groqApiKey, anthropicApiKey };
 
-  // ── PASSO 1: AI filtra le actionable (tutti i soggetti in un colpo solo) ─────
-  let actionableIds = [];
-  if (emailHeaders.length > 0) {
-    emit(`  ↳ Passo 1/2: AI filtra le email actionable su ${emailHeaders.length} email...`);
-    try {
-      const headerList = emailHeaders.map((e, i) =>
-        `${i+1}. [${e.id}] [${e.category}] Da: ${e.from.slice(0,60)} | ${e.subject.slice(0,100)}`
-      ).join('\n');
-
-      const text1 = await aiCall(aiKeys,
-        `Sei l'assistente di ${settings.userName||'Marco'}. Data: ${date}.
-Queste sono tutte le email in Gmail divise per categoria. Identifica quelle che richiedono un'azione concreta.
-Includi: richieste di risposta, approvazioni, task, urgenze, accordi, preventivi, documenti da firmare, follow-up.
-Escludi: newsletter automatiche, ricevute di pagamento già processate, notifiche di sistema, spam, promo generiche.
-Rispondi SOLO con array JSON degli id: ["id1","id2",...]. Se nessuna: [].
-
-EMAIL:\n${headerList}`, 2048);
-
-      actionableIds = safeJsonParse(text1, []);
-      if (!Array.isArray(actionableIds)) actionableIds = [];
-      emit(`  ↳ ${actionableIds.length} email actionable identificate`);
-    } catch(e) { emit(`  ↳ Errore filtro AI: ${e.message?.slice(0,200)}`); }
-  }
-
-  // ── PASSO 2: scarica corpo completo solo delle email actionable e crea task ──
+  // ── Scarica il corpo delle prime 50 email (Principale prima, poi il resto) ───
   let emailTasks = [];
-  if (actionableIds.length > 0) {
-    emit(`  ↳ Passo 2/2: analisi dettagliata di ${actionableIds.length} email...`);
-    const actionableEmails = emailHeaders.filter(e => actionableIds.includes(e.id));
+  if (emailHeaders.length > 0) {
+    // Ordina: Principale prima, poi Aggiornamenti, poi Social/Promo
+    const ORDER = ['Principale', 'Aggiornamenti', 'Social', 'Promozioni', 'Forum'];
+    const sorted = [...emailHeaders].sort((a, b) =>
+      (ORDER.indexOf(a.category) ?? 99) - (ORDER.indexOf(b.category) ?? 99)
+    );
+    const toAnalyze = sorted.slice(0, 50);
+    emit(`  ↳ Scarico corpo di ${toAnalyze.length} email (priorità: Principale prima)...`);
+
     const emailsWithBody = [];
-    for (const e of actionableEmails) {
+    for (const e of toAnalyze) {
       try {
         const full = await gmailGetMessage(token, e.id);
-        emailsWithBody.push({ ...e, body: gmailBody(full, 800) });
+        emailsWithBody.push({ ...e, body: gmailBody(full, 600) });
       } catch { emailsWithBody.push({ ...e, body: '' }); }
     }
 
-    const emailList = emailsWithBody.map((e, i) =>
-      `EMAIL_${i+1} [id:${e.id}] [${e.category}]\nDa: ${e.from}\nOggetto: ${e.subject}\nData: ${e.date}\n${e.body}`
-    ).join('\n\n---\n\n');
-
+    emit(`  ↳ Analisi Gemini di ${emailsWithBody.length} email...`);
     try {
-      const text2 = await aiCall(aiKeys,
+      const emailList = emailsWithBody.map((e, i) =>
+        `EMAIL_${i+1} [id:${e.id}] [${e.category}]\nDa: ${e.from}\nOggetto: ${e.subject}\nData: ${e.date}\n${e.body}`
+      ).join('\n\n---\n\n');
+
+      const text = await aiCall(aiKeys,
         `Sei l'assistente personale di ${settings.userName||'Marco'} (${settings.primaryEmail||''}).
-Data: ${date}. Per ogni email crea un task JSON dettagliato:
-{
-  "id": "id tra [id:...]",
-  "title": "[Verbo] [oggetto] – [contatto] (max 60 car)",
-  "category": "categoria Gmail",
-  "quadrant": "Q1|Q2|Q3|Q4",
-  "brief": "CONTESTO: spiega il contesto in 2-3 frasi.\\nSITUAZIONE: cosa è successo/richiesto.\\nACTION: cosa fare esattamente e come.",
-  "actionPoints": ["azione concreta specifica 1", "azione 2", "azione 3", "azione 4 se necessaria"],
-  "from": "mittente"
-}
-Q1=urgente+importante, Q2=importante non urgente, Q3=urgente non importante, Q4=bassa priorità.
-Sii specifico negli action points. Rispondi SOLO con array JSON.
+Data oggi: ${date}.
 
-EMAIL:\n${emailList}`, 4096);
+Analizza TUTTE queste email e per ognuna crea un task JSON. Assegna un quadrante in base a urgenza e importanza.
+Per le email Principale assegna Q1 o Q2. Per Aggiornamenti usa Q3 o Q4. Per Promozioni/Social usa Q4 a meno che non siano rilevanti.
 
-      emailTasks = safeJsonParse(text2, []);
-      if (!Array.isArray(emailTasks)) emailTasks = [];
-      emit(`  ↳ ${emailTasks.length} task creati`);
-    } catch(e) { emit(`  ↳ Errore analisi dettaglio: ${e.message?.slice(0,200)}`); }
-  } else if (emailHeaders.length > 0) {
-    emit(`  ↳ Nessuna email richiede azione`);
+Formato JSON per ogni email:
+{"id":"id tra [id:...]","title":"titolo conciso max 60 car","category":"categoria","quadrant":"Q1|Q2|Q3|Q4","brief":"Descrizione del contenuto e perché è rilevante. Cosa richiede.","actionPoints":["Azione specifica 1","Azione 2","Azione 3"],"from":"mittente"}
+
+Rispondi SOLO con array JSON di TUTTI i task. Non saltare nessuna email.
+
+EMAIL:\n${emailList}`, 8192);
+
+      emailTasks = safeJsonParse(text, []);
+      if (!Array.isArray(emailTasks)) {
+        emit(`  ↳ Risposta AI non è array, raw: ${text.slice(0, 300)}`);
+        emailTasks = [];
+      }
+      emit(`  ↳ ${emailTasks.length} task creati da ${emailsWithBody.length} email`);
+    } catch(e) { emit(`  ↳ Errore analisi: ${e.message?.slice(0, 300)}`); }
   } else {
-    emit(`  ↳ Nessuna email nuova da analizzare`);
+    emit(`  ↳ Nessuna email da analizzare`);
   }
 
   result.tasks = emailTasks.map(t => ({
