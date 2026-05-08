@@ -62,12 +62,19 @@ app.use((req, res, next) => {
     const uid = req.session?.userId;
     if (!uid) return res.status(401).json({ error: 'Not authenticated', loginUrl: '/login.html' });
     const u = req.session;
-    return als.run({ uid, email: u.userEmail, name: u.userName, picture: u.userPicture }, next);
+    // Precarica dati utente da Redis se necessario (asincrono, poi esegue next)
+    preloadUserFromRedis(uid).then(() => {
+      als.run({ uid, email: u.userEmail, name: u.userName, picture: u.userPicture }, next);
+    }).catch(() => {
+      als.run({ uid, email: u.userEmail, name: u.userName, picture: u.userPicture }, next);
+    });
+    return;
   }
 
   // If logged in, inject context for non-API routes too
   if (req.session?.userId) {
     const u = req.session;
+    preloadUserFromRedis(u.userId).catch(() => {});
     return als.run({ uid: u.userId, email: u.userEmail, name: u.userName, picture: u.userPicture }, next);
   }
 
@@ -75,33 +82,106 @@ app.use((req, res, next) => {
 });
 
 // ── Users registry ─────────────────────────────────────────────────────────────
+// ── Storage layer: Upstash Redis (prod) + file system (dev) ──────────────────
+const UPSTASH_URL   = process.env.UPSTASH_REDIS_URL   || '';
+const UPSTASH_TOKEN = process.env.UPSTASH_REDIS_TOKEN || '';
+const USE_REDIS = !!(UPSTASH_URL && UPSTASH_TOKEN);
+
+if (USE_REDIS) console.log('💾  Storage: Upstash Redis');
+else           console.log('💾  Storage: filesystem locale');
+
+// In-memory write-behind cache per ridurre le chiamate Redis
+const _redisCache = new Map();
+
+async function redisGet(key) {
+  if (_redisCache.has(key)) return _redisCache.get(key);
+  try {
+    const r = await fetch(`${UPSTASH_URL}/get/${encodeURIComponent(key)}`, {
+      headers: { Authorization: `Bearer ${UPSTASH_TOKEN}` }
+    });
+    const j = await r.json();
+    const val = j.result ? JSON.parse(j.result) : null;
+    if (val) _redisCache.set(key, val);
+    return val;
+  } catch (e) { console.error('Redis GET error:', e.message); return null; }
+}
+
+async function redisSet(key, value) {
+  _redisCache.set(key, value);
+  try {
+    await fetch(`${UPSTASH_URL}/set/${encodeURIComponent(key)}`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${UPSTASH_TOKEN}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ value: JSON.stringify(value) })
+    });
+  } catch (e) { console.error('Redis SET error:', e.message); }
+}
+
+// ── Users registry ────────────────────────────────────────────────────────────
+const _usersCache = { data: null };
+
 function readUsers() {
+  if (USE_REDIS) {
+    // Redis: sincrono via cache (aggiornato da writeUsers)
+    return _usersCache.data || {};
+  }
   if (!fs.existsSync(USERS_PATH)) { fs.writeFileSync(USERS_PATH, '{}'); return {}; }
   try { return JSON.parse(fs.readFileSync(USERS_PATH, 'utf8')); } catch { return {}; }
 }
-function writeUsers(u) { fs.writeFileSync(USERS_PATH, JSON.stringify(u, null, 2)); }
+
+function writeUsers(u) {
+  _usersCache.data = u;
+  if (USE_REDIS) {
+    redisSet('glint:users', u).catch(() => {});
+    return;
+  }
+  fs.writeFileSync(USERS_PATH, JSON.stringify(u, null, 2));
+}
+
+// Inizializza cache utenti da Redis all'avvio
+if (USE_REDIS) {
+  redisGet('glint:users').then(u => { if (u) _usersCache.data = u; }).catch(() => {});
+}
 
 // ── DB helpers ────────────────────────────────────────────────────────────────
+const EMPTY_DB = () => ({ days: {}, months: {}, contacts: {}, projects: [], pipeline: { deals: [], invoices: [], targets: [] }, tasks: [], lists: [] });
 
 function userDbPath(uid) {
   return uid ? path.join(__dirname, 'data', 'users', uid, 'db.json') : DB_PATH;
 }
 
 function readDBForUid(uid) {
+  if (!uid) return EMPTY_DB();
+  if (USE_REDIS) {
+    return _redisCache.get(`glint:user:${uid}`) || EMPTY_DB();
+  }
   const p = userDbPath(uid);
   if (!fs.existsSync(p)) {
-    const empty = { days: {}, months: {}, contacts: {}, projects: [], pipeline: { deals: [], invoices: [], targets: [] }, tasks: [], lists: [] };
+    const empty = EMPTY_DB();
     fs.mkdirSync(path.dirname(p), { recursive: true });
     fs.writeFileSync(p, JSON.stringify(empty, null, 2));
     return empty;
   }
-  try { return JSON.parse(fs.readFileSync(p, 'utf8')); } catch { return { days: {}, months: {}, contacts: {}, projects: [], pipeline: { deals: [], invoices: [], targets: [] }, tasks: [], lists: [] }; }
+  try { return JSON.parse(fs.readFileSync(p, 'utf8')); } catch { return EMPTY_DB(); }
 }
 
 function writeDBForUid(uid, data) {
+  if (!uid) return;
+  if (USE_REDIS) {
+    redisSet(`glint:user:${uid}`, data).catch(() => {});
+    return;
+  }
   const p = userDbPath(uid);
   fs.mkdirSync(path.dirname(p), { recursive: true });
   fs.writeFileSync(p, JSON.stringify(data, null, 2));
+}
+
+// Precarica DB utente da Redis quando la sessione inizia
+async function preloadUserFromRedis(uid) {
+  if (!USE_REDIS || !uid) return;
+  if (_redisCache.has(`glint:user:${uid}`)) return;
+  const data = await redisGet(`glint:user:${uid}`);
+  if (data) _redisCache.set(`glint:user:${uid}`, data);
 }
 
 function readDB() { return readDBForUid(getCurrentUid()); }
