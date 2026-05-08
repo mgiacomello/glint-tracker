@@ -2318,8 +2318,14 @@ setInterval(async () => {
 const CONFIG_PATH = path.join(__dirname, 'config.json');
 
 function readConfig() {
-  if (!fs.existsSync(CONFIG_PATH)) return {};
-  try { return JSON.parse(fs.readFileSync(CONFIG_PATH, 'utf8')); } catch(e) { return {}; }
+  let cfg = {};
+  if (fs.existsSync(CONFIG_PATH)) {
+    try { cfg = JSON.parse(fs.readFileSync(CONFIG_PATH, 'utf8')); } catch(e) {}
+  }
+  // Fallback a variabili d'ambiente se non configurate nel file
+  if (!cfg.anthropicApiKey && process.env.ANTHROPIC_API_KEY) cfg.anthropicApiKey = process.env.ANTHROPIC_API_KEY;
+  if (!cfg.perplexityApiKey && process.env.PERPLEXITY_API_KEY) cfg.perplexityApiKey = process.env.PERPLEXITY_API_KEY;
+  return cfg;
 }
 
 function writeConfig(data) {
