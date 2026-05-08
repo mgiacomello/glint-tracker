@@ -83,8 +83,8 @@ app.use((req, res, next) => {
 
 // ── Users registry ─────────────────────────────────────────────────────────────
 // ── Storage layer: Upstash Redis (prod) + file system (dev) ──────────────────
-const UPSTASH_URL   = process.env.UPSTASH_REDIS_URL   || '';
-const UPSTASH_TOKEN = process.env.UPSTASH_REDIS_TOKEN || '';
+const UPSTASH_URL   = process.env.UPSTASH_REDIS_REST_URL   || process.env.UPSTASH_REDIS_URL   || '';
+const UPSTASH_TOKEN = process.env.UPSTASH_REDIS_REST_TOKEN || process.env.UPSTASH_REDIS_TOKEN || '';
 const USE_REDIS = !!(UPSTASH_URL && UPSTASH_TOKEN);
 
 if (USE_REDIS) console.log('💾  Storage: Upstash Redis');
