@@ -25,13 +25,36 @@ app.use(express.json());
 const SESSION_DIR = path.join(__dirname, 'data', 'sessions');
 fs.mkdirSync(SESSION_DIR, { recursive: true });
 
-// Session store: file-based con fallback memory se il disco non è disponibile
+// ── Session store: Redis (prod/Railway) o file (dev locale) ──────────────────
+const SESSION_TTL_SEC = 30 * 24 * 3600; // 30 giorni
+
+// Custom Redis session store — usa Upstash REST API (no dipendenze extra)
+// NB: redisGet/redisSetEx/redisDel sono function declaration → hoisted → disponibili qui
+class RedisSessionStore extends session.Store {
+  get(sid, cb) {
+    redisGet(`sess:${sid}`).then(d => cb(null, d || null)).catch(() => cb(null, null));
+  }
+  set(sid, sess, cb) {
+    redisSetEx(`sess:${sid}`, sess, SESSION_TTL_SEC).then(() => cb(null)).catch(() => cb(null));
+  }
+  destroy(sid, cb) {
+    redisDel(`sess:${sid}`).then(() => cb(null)).catch(() => cb(null));
+  }
+}
+
 let sessionStore;
-try {
-  sessionStore = new FileStore({ path: SESSION_DIR, ttl: 30 * 24 * 3600, reapInterval: 3600, logFn: () => {} });
-} catch (e) {
-  console.warn('⚠️  File session store non disponibile, uso memory store (non persistente)');
-  sessionStore = undefined; // express-session usa MemoryStore di default
+const _hasRedisConfig = !!(process.env.UPSTASH_REDIS_REST_URL || process.env.UPSTASH_REDIS_URL);
+if (_hasRedisConfig) {
+  sessionStore = new RedisSessionStore();
+  console.log('🔑  Sessions: Upstash Redis (persistenti tra deploy)');
+} else {
+  try {
+    sessionStore = new FileStore({ path: SESSION_DIR, ttl: 30 * 24 * 3600, reapInterval: 3600, logFn: () => {} });
+    console.log('🔑  Sessions: file store');
+  } catch (e) {
+    console.warn('⚠️  File session store non disponibile, uso memory store');
+    sessionStore = undefined;
+  }
 }
 
 app.use(session({
@@ -124,6 +147,28 @@ async function redisSet(key, value) {
       body: JSON.stringify(['SET', key, JSON.stringify(value)])
     });
   } catch (e) { console.error('Redis SET error:', e.message); }
+}
+
+async function redisSetEx(key, value, ttlSec) {
+  _redisCache.set(key, value);
+  try {
+    await fetch(UPSTASH_URL, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${UPSTASH_TOKEN}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify(['SET', key, JSON.stringify(value), 'EX', ttlSec])
+    });
+  } catch (e) { console.error('Redis SETEX error:', e.message); }
+}
+
+async function redisDel(key) {
+  _redisCache.delete(key);
+  try {
+    await fetch(UPSTASH_URL, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${UPSTASH_TOKEN}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify(['DEL', key])
+    });
+  } catch (e) { console.error('Redis DEL error:', e.message); }
 }
 
 // Versione sincrona per route che usano writeDB senza await
