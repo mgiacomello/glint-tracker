@@ -3354,7 +3354,7 @@ app.get('/api/diag', async (req, res) => {
   }
   // Controlla quale provider AI è configurato
   const cfg = readConfig();
-  const aiProvider = cfg.groqApiKey ? 'groq' : cfg.geminiApiKey ? 'gemini' : cfg.anthropicApiKey ? 'anthropic' : null;
+  const aiProvider = cfg.geminiApiKey ? 'gemini' : cfg.groqApiKey ? 'groq' : cfg.anthropicApiKey ? 'anthropic' : null;
   res.json({
     uid,
     storage: USE_REDIS ? 'redis' : 'filesystem',
