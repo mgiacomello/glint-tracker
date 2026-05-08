@@ -19,6 +19,7 @@ const als = new AsyncLocalStorage();
 function getCurrentUid() { return als.getStore()?.uid || null; }
 function getCurrentUser() { return als.getStore() || {}; }
 
+app.set('trust proxy', 1); // Railway/Render/Heroku sono dietro reverse proxy
 app.use(cors({ origin: true, credentials: true }));
 app.use(express.json());
 const SESSION_DIR = path.join(__dirname, 'data', 'sessions');
