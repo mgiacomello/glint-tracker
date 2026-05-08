@@ -2380,7 +2380,7 @@ async function callAI(prompt, { maxTokens = 2048 } = {}) {
   const contents = [{ role: 'user', parts: [{ text: prompt }] }];
   // Gemini con fallback automatico tra modelli e poi a Groq
   if (cfg.geminiApiKey) {
-    for (const model of ['gemini-1.5-flash', 'gemini-2.0-flash', 'gemini-1.5-flash-8b']) {
+    for (const model of ['gemini-2.0-flash', 'gemini-2.0-flash-lite', 'gemini-1.5-flash-8b', 'gemini-1.5-flash-latest']) {
       try {
         const r = await fetch(
           `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${cfg.geminiApiKey}`,
@@ -2389,7 +2389,7 @@ async function callAI(prompt, { maxTokens = 2048 } = {}) {
             signal: AbortSignal.timeout(60000) }
         );
         const d = await r.json();
-        if (d.error?.status === 'RESOURCE_EXHAUSTED') continue; // prova prossimo modello
+        if (['RESOURCE_EXHAUSTED','NOT_FOUND','PERMISSION_DENIED'].includes(d.error?.status)) continue;
         if (d.error) throw new Error(`Gemini: ${d.error.message}`);
         return d.candidates?.[0]?.content?.parts?.[0]?.text || '';
       } catch(e) { if (!e.message?.includes('RESOURCE_EXHAUSTED')) throw e; }

@@ -31,7 +31,7 @@ function makeAIClient({ anthropicApiKey, geminiApiKey, groqApiKey }) {
   // ── Gemini Flash — con fallback automatico a Groq su quota esaurita ──────────
   if (geminiApiKey) {
     // Prova tutti i modelli Gemini disponibili in ordine
-    const GEMINI_MODELS = ['gemini-1.5-flash', 'gemini-2.0-flash', 'gemini-1.5-flash-8b'];
+    const GEMINI_MODELS = ['gemini-2.0-flash', 'gemini-2.0-flash-lite', 'gemini-1.5-flash-8b', 'gemini-1.5-flash-latest'];
     return {
       _provider: 'gemini',
       messages: {
@@ -53,8 +53,8 @@ function makeAIClient({ anthropicApiKey, geminiApiKey, groqApiKey }) {
               const data = await resp.json();
               if (data.error) {
                 lastErr = new Error(`Gemini/${model}: ${data.error.status} — ${data.error.message}`);
-                // Su quota esaurita proviamo il modello successivo
-                if (data.error.status === 'RESOURCE_EXHAUSTED') continue;
+                // Su quota esaurita o modello non trovato, proviamo il successivo
+                if (['RESOURCE_EXHAUSTED','NOT_FOUND','PERMISSION_DENIED'].includes(data.error.status)) continue;
                 throw lastErr;
               }
               const text = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
