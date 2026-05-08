@@ -406,8 +406,15 @@ async function runMorningAgent({
 
   let inboxRaw = [];
   try {
-    inboxRaw = await gmailSearch(token, 'in:inbox -category:promotions -category:social -category:updates', 50);
-    emit(`  ↳ ${inboxRaw.length} messaggi trovati in inbox`);
+    // Query ampia: tutte le email inbox non lette o recenti degli ultimi 7 giorni
+    // L'AI decide quali richiedono azione — non filtriamo in anticipo
+    inboxRaw = await gmailSearch(token, 'in:inbox newer_than:7d', 50);
+    emit(`  ↳ ${inboxRaw.length} messaggi trovati in inbox (ultimi 7 giorni)`);
+    // Se 0, proviamo senza filtro data
+    if (inboxRaw.length === 0) {
+      inboxRaw = await gmailSearch(token, 'in:inbox', 50);
+      emit(`  ↳ Fallback: ${inboxRaw.length} messaggi totali in inbox`);
+    }
   } catch(e) {
     emit(`  ↳ ERRORE Gmail search: ${e.message}`);
   }
