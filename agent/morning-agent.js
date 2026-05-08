@@ -406,11 +406,11 @@ async function runMorningAgent({
 
   let inboxRaw = [];
   try {
-    // Query ampia: tutte le email inbox non lette o recenti degli ultimi 7 giorni
-    // L'AI decide quali richiedono azione — non filtriamo in anticipo
-    inboxRaw = await gmailSearch(token, 'in:inbox newer_than:7d', 50);
-    emit(`  ↳ ${inboxRaw.length} messaggi trovati in inbox (ultimi 7 giorni)`);
-    // Se 0, proviamo senza filtro data
+    // Query ampia: tutte le email inbox degli ultimi 30 giorni
+    // L'AI decide quali richiedono azione — non filtriamo per categoria
+    inboxRaw = await gmailSearch(token, 'in:inbox newer_than:30d', 50);
+    emit(`  ↳ ${inboxRaw.length} messaggi trovati in inbox (ultimi 30 giorni)`);
+    // Se ancora 0, prendi tutto l'inbox
     if (inboxRaw.length === 0) {
       inboxRaw = await gmailSearch(token, 'in:inbox', 50);
       emit(`  ↳ Fallback: ${inboxRaw.length} messaggi totali in inbox`);
@@ -471,10 +471,13 @@ EMAIL:\n${emailList}`
       });
 
       const rawText = resp.content[0]?.text || '[]';
+      emit(`  ↳ Groq raw (primi 300 car): ${rawText.slice(0, 300)}`);
       emailTasks = safeJsonParse(rawText, []);
       if (!Array.isArray(emailTasks)) {
-        emit(`  ↳ WARN: risposta AI non è array, testo: ${rawText.slice(0, 200)}`);
+        emit(`  ↳ WARN: risposta AI non è array, testo: ${rawText.slice(0, 300)}`);
         emailTasks = [];
+      } else {
+        emit(`  ↳ Parsed ${emailTasks.length} task dall'AI`);
       }
     } catch(e) { emit(`  ↳ Errore analisi AI: ${e.message}\n${e.stack?.slice(0,300)}`); }
   } else {

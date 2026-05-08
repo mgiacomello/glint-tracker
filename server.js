@@ -3368,6 +3368,76 @@ app.get('/api/diag', async (req, res) => {
   });
 });
 
+// GET /api/diag/deep  → test completo: Gmail query agente + test Groq
+app.get('/api/diag/deep', async (req, res) => {
+  const uid = getCurrentUid();
+  if (!uid) return res.status(401).json({ error: 'non autenticato' });
+  const db = readDB();
+  const gt = db.googleTokens || {};
+  const cfg = readConfig();
+  const out = { uid, steps: [] };
+
+  // 1. Token Google
+  let token = gt.access_token;
+  if (!token) { out.steps.push('❌ No Google token'); return res.json(out); }
+
+  // Refresh se scaduto
+  if (Date.now() > (gt.expires_at || 0) - 300000) {
+    try {
+      const r = await fetch('https://oauth2.googleapis.com/token', {
+        method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: new URLSearchParams({ refresh_token: gt.refresh_token, client_id: GOOGLE_CLIENT_ID, client_secret: GOOGLE_CLIENT_SECRET, grant_type: 'refresh_token' })
+      });
+      const j = await r.json();
+      token = j.access_token || token;
+      out.steps.push(j.access_token ? '✅ Token refreshato' : `⚠️ Refresh fallito: ${JSON.stringify(j.error)}`);
+    } catch(e) { out.steps.push(`❌ Refresh error: ${e.message}`); }
+  } else { out.steps.push('✅ Token valido'); }
+
+  // 2. Gmail query agent (inbox 7gg)
+  try {
+    const q1 = 'in:inbox newer_than:7d';
+    const r1 = await fetch(`https://gmail.googleapis.com/gmail/v1/users/me/messages?${new URLSearchParams({ q: q1, maxResults: '10' })}`, { headers: { Authorization: `Bearer ${token}` } });
+    const j1 = await r1.json();
+    out.steps.push(j1.error ? `❌ Gmail 7d: ${j1.error.message}` : `✅ Gmail "newer_than:7d": ${(j1.messages||[]).length} messaggi`);
+    out.gmailMessages7d = (j1.messages||[]).length;
+
+    // anche senza filtro data
+    const r2 = await fetch(`https://gmail.googleapis.com/gmail/v1/users/me/messages?${new URLSearchParams({ q: 'in:inbox', maxResults: '10' })}`, { headers: { Authorization: `Bearer ${token}` } });
+    const j2 = await r2.json();
+    out.steps.push(j2.error ? `❌ Gmail inbox: ${j2.error.message}` : `✅ Gmail inbox totale: ~${j2.resultSizeEstimate} (${(j2.messages||[]).length} paginati)`);
+    out.gmailInboxTotal = j2.resultSizeEstimate;
+
+    // soggetto prime 3 mail
+    const samples = (j1.messages || j2.messages || []).slice(0, 3);
+    out.sampleSubjects = [];
+    for (const m of samples) {
+      try {
+        const rm = await fetch(`https://gmail.googleapis.com/gmail/v1/users/me/messages/${m.id}?format=metadata&metadataHeaders=Subject&metadataHeaders=From`, { headers: { Authorization: `Bearer ${token}` } });
+        const jm = await rm.json();
+        const subj = jm.payload?.headers?.find(h => h.name === 'Subject')?.value || '(no subject)';
+        const from = jm.payload?.headers?.find(h => h.name === 'From')?.value || '';
+        out.sampleSubjects.push({ from: from.slice(0, 50), subject: subj.slice(0, 80) });
+      } catch {}
+    }
+  } catch(e) { out.steps.push(`❌ Gmail error: ${e.message}`); }
+
+  // 3. Test Groq
+  if (cfg.groqApiKey) {
+    try {
+      const rg = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${cfg.groqApiKey}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ model: 'llama-3.3-70b-versatile', messages: [{ role: 'user', content: 'Rispondi solo con: OK' }], max_tokens: 10 })
+      });
+      const jg = await rg.json();
+      out.steps.push(jg.error ? `❌ Groq: ${jg.error.message}` : `✅ Groq: ${jg.choices?.[0]?.message?.content}`);
+    } catch(e) { out.steps.push(`❌ Groq error: ${e.message}`); }
+  }
+
+  res.json(out);
+});
+
 // ── DEBUG (solo in development) ───────────────────────────────────────────────
 if (process.env.NODE_ENV !== 'production') {
   // GET /dev-login  → crea sessione demo senza OAuth (solo sviluppo)
