@@ -238,6 +238,7 @@ async function runMorningAgent({
   googleClientId, googleClientSecret,
   anthropicApiKey,
   geminiApiKey = '',
+  groqApiKey = '',
   perplexityApiKey = '',
   force = false,
   log = console.log
@@ -245,7 +246,7 @@ async function runMorningAgent({
   const logs = [];
   function emit(msg) { logs.push(msg); log(msg); }
 
-  const claude = makeAIClient({ anthropicApiKey, geminiApiKey });
+  const claude = makeAIClient({ anthropicApiKey, geminiApiKey, groqApiKey });
   emit(`  ↳ AI provider: ${claude._provider || 'anthropic'}`);
   const tz = settings.timezone || 'Europe/London';
 
