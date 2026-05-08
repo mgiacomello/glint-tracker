@@ -2341,6 +2341,7 @@ function readConfig() {
   // Fallback a variabili d'ambiente se non configurate nel file
   if (!cfg.anthropicApiKey && process.env.ANTHROPIC_API_KEY) cfg.anthropicApiKey = process.env.ANTHROPIC_API_KEY;
   if (!cfg.geminiApiKey && process.env.GEMINI_API_KEY) cfg.geminiApiKey = process.env.GEMINI_API_KEY;
+  if (!cfg.groqApiKey && process.env.GROQ_API_KEY) cfg.groqApiKey = process.env.GROQ_API_KEY;
   if (!cfg.perplexityApiKey && process.env.PERPLEXITY_API_KEY) cfg.perplexityApiKey = process.env.PERPLEXITY_API_KEY;
   return cfg;
 }
@@ -3214,7 +3215,7 @@ app.post('/api/morning-agent/:date/run', async (req, res) => {
 
   const date = req.params.date;
   const cfg  = readConfig();
-  if (!cfg.anthropicApiKey && !cfg.geminiApiKey) return res.status(400).json({ error: 'API AI non configurata. Aggiungi GEMINI_API_KEY (gratis) o ANTHROPIC_API_KEY nelle variabili d\'ambiente.' });
+  if (!cfg.anthropicApiKey && !cfg.geminiApiKey && !cfg.groqApiKey) return res.status(400).json({ error: 'API AI non configurata. Aggiungi GROQ_API_KEY (gratis su console.groq.com) nelle variabili Railway.' });
 
   const db    = readDB();
   const users = readUsers();
@@ -3252,6 +3253,7 @@ app.post('/api/morning-agent/:date/run', async (req, res) => {
       googleClientSecret: GOOGLE_CLIENT_SECRET,
       anthropicApiKey: cfg.anthropicApiKey,
       geminiApiKey: cfg.geminiApiKey,
+      groqApiKey: cfg.groqApiKey,
       perplexityApiKey: settings.perplexityApiKey || process.env.PERPLEXITY_API_KEY || '',
       force,
       log: (msg) => send({ log: msg })

@@ -9,9 +9,36 @@
 const Anthropic = require('@anthropic-ai/sdk');
 
 // ── AI client factory: Gemini (gratis) o Anthropic (a pagamento) ──────────────
-function makeAIClient({ anthropicApiKey, geminiApiKey }) {
+function makeAIClient({ anthropicApiKey, geminiApiKey, groqApiKey }) {
+
+  // ── Groq — gratis, 14.400 req/giorno, llama-3.3-70b ─────────────────────────
+  if (groqApiKey) {
+    return {
+      _provider: 'groq',
+      messages: {
+        create: async ({ messages, max_tokens = 4096 }) => {
+          const resp = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+            method: 'POST',
+            headers: { 'Authorization': `Bearer ${groqApiKey}`, 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              model: 'llama-3.3-70b-versatile',
+              messages: messages.map(m => ({ role: m.role, content: typeof m.content === 'string' ? m.content : JSON.stringify(m.content) })),
+              max_tokens,
+              temperature: 0.3
+            }),
+            signal: AbortSignal.timeout(60000)
+          });
+          const data = await resp.json();
+          if (data.error) throw new Error(`Groq: ${data.error.message}`);
+          const text = data.choices?.[0]?.message?.content || '';
+          return { content: [{ type: 'text', text }] };
+        }
+      }
+    };
+  }
+
+  // ── Gemini — gratis con chiave AI Studio ──────────────────────────────────────
   if (geminiApiKey) {
-    // Gemini 2.0 Flash — gratuito, 1M tokens/giorno
     return {
       _provider: 'gemini',
       messages: {
@@ -22,30 +49,26 @@ function makeAIClient({ anthropicApiKey, geminiApiKey }) {
           }));
           const resp = await fetch(
             `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${geminiApiKey}`,
-            {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({
-                contents: parts,
-                generationConfig: { maxOutputTokens: max_tokens, temperature: 0.3 }
-              }),
-              signal: AbortSignal.timeout(60000)
-            }
+            { method: 'POST', headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ contents: parts, generationConfig: { maxOutputTokens: max_tokens, temperature: 0.3 } }),
+              signal: AbortSignal.timeout(60000) }
           );
           const data = await resp.json();
           if (data.error) throw new Error(`${data.error.code} ${JSON.stringify(data.error)}`);
-          const text = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
-          return { content: [{ type: 'text', text }] };
+          return { content: [{ type: 'text', text: data.candidates?.[0]?.content?.parts?.[0]?.text || '' }] };
         }
       }
     };
   }
+
+  // ── Anthropic — a pagamento ───────────────────────────────────────────────────
   if (anthropicApiKey) {
     const client = new Anthropic({ apiKey: anthropicApiKey });
     client._provider = 'anthropic';
     return client;
   }
-  throw new Error('Nessuna API AI configurata. Imposta GEMINI_API_KEY o ANTHROPIC_API_KEY.');
+
+  throw new Error('Aggiungi GROQ_API_KEY (gratis su console.groq.com) nelle variabili Railway.');
 }
 
 // ── Google API low-level helpers ───────────────────────────────────────────────
@@ -415,7 +438,7 @@ async function runMorningAgent({
       ).join('\n\n---\n\n');
 
       const resp = await claude.messages.create({
-        model: claude._provider === 'gemini' ? 'gemini-1.5-flash' : 'claude-sonnet-4-6',
+        model: claude._provider === 'gemini' ? 'gemini-1.5-flash' : claude._provider === 'groq' ? 'llama-3.3-70b-versatile' : 'claude-sonnet-4-6',
         max_tokens: 4096,
         messages: [{
           role: 'user',
@@ -479,7 +502,7 @@ EMAIL:\n${emailList}`
     if (socialData.length > 0) {
       const interests = (settings.interests || ['business', 'AI', 'leadership', 'startup', 'tecnologia']).join(', ');
       const resp = await claude.messages.create({
-        model: claude._provider === 'gemini' ? 'gemini-1.5-flash' : 'claude-sonnet-4-6',
+        model: claude._provider === 'gemini' ? 'gemini-1.5-flash' : claude._provider === 'groq' ? 'llama-3.3-70b-versatile' : 'claude-sonnet-4-6',
         max_tokens: 2000,
         messages: [{
           role: 'user',
@@ -562,7 +585,7 @@ Rispondi SOLO con array JSON.`
       } catch(e) { /* Drive opzionale */ }
 
       const resp = await claude.messages.create({
-        model: claude._provider === 'gemini' ? 'gemini-1.5-flash' : 'claude-sonnet-4-6',
+        model: claude._provider === 'gemini' ? 'gemini-1.5-flash' : claude._provider === 'groq' ? 'llama-3.3-70b-versatile' : 'claude-sonnet-4-6',
         max_tokens: 700,
         messages: [{
           role: 'user',
@@ -708,7 +731,7 @@ Respond as valid JSON array only.`
     const top3 = result.tasks.filter(t => t.quadrant === 'Q1' || t.quadrant === 'Q2').slice(0, 3).map(t => t.title).join(', ');
     const sleepInfo = health ? `Sonno ${health.sleepScore || '?'}/100, Stress: ${health.stressLevel || '?'}` : 'Dati salute non disponibili';
     const resp = await claude.messages.create({
-      model: claude._provider === 'gemini' ? 'gemini-1.5-flash' : 'claude-sonnet-4-6',
+      model: claude._provider === 'gemini' ? 'gemini-1.5-flash' : claude._provider === 'groq' ? 'llama-3.3-70b-versatile' : 'claude-sonnet-4-6',
       max_tokens: 350,
       messages: [{
         role: 'user',
