@@ -126,6 +126,12 @@ async function redisSet(key, value) {
   } catch (e) { console.error('Redis SET error:', e.message); }
 }
 
+// Versione sincrona per route che usano writeDB senza await
+function redisSetSync(key, value) {
+  _redisCache.set(key, value);
+  redisSet(key, value).catch(e => console.error('Redis background SET error:', e.message));
+}
+
 // ── Users registry ────────────────────────────────────────────────────────────
 const _usersCache = { data: null };
 
@@ -1706,14 +1712,15 @@ app.get('/auth/google/callback', async (req, res) => {
     };
     writeUsers(users);
 
-    // Store Google tokens in user's own DB
+    // Store Google tokens in user's own DB — await Redis write (critico)
     const userDb = readDBForUid(uid);
     userDb.googleTokens = {
       refresh_token: tokens.refresh_token || userDb.googleTokens?.refresh_token,
       access_token: tokens.access_token,
       expires_at: Date.now() + (tokens.expires_in || 3600) * 1000
     };
-    writeDBForUid(uid, userDb);
+    if (USE_REDIS) await redisSet(`glint:user:${uid}`, userDb).catch(() => {});
+    else writeDBForUid(uid, userDb);
 
     // Create session — salva esplicitamente prima del redirect (critico in produzione)
     req.session.userId = uid;
@@ -3187,10 +3194,13 @@ app.get('/api/user/settings', (req, res) => {
 });
 
 // PUT /api/user/settings
-app.put('/api/user/settings', (req, res) => {
+app.put('/api/user/settings', async (req, res) => {
+  const uid = getCurrentUid();
   const db = readDB();
   db.userSettings = { ...(db.userSettings || {}), ...req.body };
-  writeDB(db);
+  // Await Redis write per garantire persistenza prima di rispondere
+  if (USE_REDIS && uid) await redisSet(`glint:user:${uid}`, db).catch(() => {});
+  else writeDB(db);
   res.json({ ok: true, settings: db.userSettings });
 });
 
