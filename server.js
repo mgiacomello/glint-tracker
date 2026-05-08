@@ -3307,11 +3307,16 @@ app.get('/api/diag', async (req, res) => {
       gmailTest = j.error ? `ERRORE: ${j.error.message}` : `OK - ${j.resultSizeEstimate || 0} messaggi stimati`;
     } catch(e) { gmailTest = `ERRORE fetch: ${e.message}`; }
   }
+  // Controlla quale provider AI è configurato
+  const cfg = readConfig();
+  const aiProvider = cfg.groqApiKey ? 'groq' : cfg.geminiApiKey ? 'gemini' : cfg.anthropicApiKey ? 'anthropic' : null;
   res.json({
     uid,
     storage: USE_REDIS ? 'redis' : 'filesystem',
     googleTokens: { presente: !!gt.access_token, scaduto: gt.expires_at ? Date.now() > gt.expires_at : null, refreshToken: !!gt.refresh_token },
     gmailTest,
+    aiProvider,
+    aiKeys: { groq: !!cfg.groqApiKey, gemini: !!cfg.geminiApiKey, anthropic: !!cfg.anthropicApiKey },
     oggi: { eventi: day?.events?.length || 0, task: day?.tasks?.length || 0, taskIds: (day?.tasks||[]).map(t=>t.id).slice(0,5) },
     agentLastRun: db.morningAgentLastRun || null,
     agentLastLog: db.morningAgentLastLog || []
