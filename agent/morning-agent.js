@@ -31,7 +31,7 @@ function makeAIClient({ anthropicApiKey, geminiApiKey, groqApiKey }) {
   // ── Gemini Flash — con fallback automatico a Groq su quota esaurita ──────────
   if (geminiApiKey) {
     // Prova tutti i modelli Gemini disponibili in ordine
-    const GEMINI_MODELS = ['gemini-2.0-flash', 'gemini-2.0-flash-lite', 'gemini-1.5-flash-8b', 'gemini-1.5-flash-latest'];
+    const GEMINI_MODELS = ['gemini-2.5-flash', 'gemini-2.0-flash', 'gemini-2.0-flash-lite'];
     return {
       _provider: 'gemini',
       messages: {
@@ -113,7 +113,7 @@ function makeAIClient({ anthropicApiKey, geminiApiKey, groqApiKey }) {
 
 // ── Chiamata AI diretta con fallback automatico Gemini→Groq ──────────────────
 async function aiCall({ geminiApiKey, groqApiKey, anthropicApiKey }, prompt, maxTokens = 2048) {
-  const GEMINI_MODELS = ['gemini-2.0-flash', 'gemini-2.0-flash-lite', 'gemini-1.5-flash-8b'];
+  const GEMINI_MODELS = ['gemini-2.5-flash', 'gemini-2.0-flash', 'gemini-2.0-flash-lite'];
   if (geminiApiKey) {
     for (const model of GEMINI_MODELS) {
       try {
