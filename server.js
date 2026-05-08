@@ -3245,6 +3245,14 @@ app.post('/api/morning-agent/:date/run', async (req, res) => {
       log: (msg) => send({ log: msg })
     }));
 
+    // Salva log nel DB per diagnostica
+    try {
+      const logDb = readDBForUid(uid);
+      logDb.morningAgentLastLog = result.logs?.slice(-50) || [];
+      logDb.morningAgentLastRun = new Date().toISOString();
+      writeDBForUid(uid, logDb);
+    } catch(e) { /* non bloccante */ }
+
     send({ done: true, summary: result.summary });
   } catch(e) {
     console.error('[MorningAgent]', e.message);
@@ -3263,6 +3271,36 @@ app.get('/api/morning-agent/status', (req, res) => {
     lastRun: db.morningAgentLastRun || null,
     todayPopulated: !!(day?.tasks?.length || day?.events?.length),
     dayType: day?.insights?.dayType || null
+  });
+});
+
+// GET /api/diag  → diagnostica completa (token, DB, last agent log)
+app.get('/api/diag', async (req, res) => {
+  const uid = getCurrentUid();
+  if (!uid) return res.status(401).json({ error: 'non autenticato' });
+  const db = readDB();
+  const today = new Date().toISOString().slice(0, 10);
+  const day = db.days?.[today];
+  const gt = db.googleTokens || {};
+  // Testa Gmail con il token attuale
+  let gmailTest = null;
+  if (gt.access_token) {
+    try {
+      const r = await fetch('https://gmail.googleapis.com/gmail/v1/users/me/messages?maxResults=3&q=in:inbox', {
+        headers: { Authorization: `Bearer ${gt.access_token}` }
+      });
+      const j = await r.json();
+      gmailTest = j.error ? `ERRORE: ${j.error.message}` : `OK - ${j.resultSizeEstimate || 0} messaggi stimati`;
+    } catch(e) { gmailTest = `ERRORE fetch: ${e.message}`; }
+  }
+  res.json({
+    uid,
+    storage: USE_REDIS ? 'redis' : 'filesystem',
+    googleTokens: { presente: !!gt.access_token, scaduto: gt.expires_at ? Date.now() > gt.expires_at : null, refreshToken: !!gt.refresh_token },
+    gmailTest,
+    oggi: { eventi: day?.events?.length || 0, task: day?.tasks?.length || 0, taskIds: (day?.tasks||[]).map(t=>t.id).slice(0,5) },
+    agentLastRun: db.morningAgentLastRun || null,
+    agentLastLog: db.morningAgentLastLog || []
   });
 });
 
