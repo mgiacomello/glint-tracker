@@ -23,8 +23,18 @@ app.use(cors({ origin: true, credentials: true }));
 app.use(express.json());
 const SESSION_DIR = path.join(__dirname, 'data', 'sessions');
 fs.mkdirSync(SESSION_DIR, { recursive: true });
+
+// Session store: file-based con fallback memory se il disco non è disponibile
+let sessionStore;
+try {
+  sessionStore = new FileStore({ path: SESSION_DIR, ttl: 30 * 24 * 3600, reapInterval: 3600, logFn: () => {} });
+} catch (e) {
+  console.warn('⚠️  File session store non disponibile, uso memory store (non persistente)');
+  sessionStore = undefined; // express-session usa MemoryStore di default
+}
+
 app.use(session({
-  store: new FileStore({ path: SESSION_DIR, ttl: 30 * 24 * 3600, reapInterval: 3600, logFn: () => {} }),
+  ...(sessionStore ? { store: sessionStore } : {}),
   secret: process.env.SESSION_SECRET || 'glint-tracker-secret-2026',
   resave: false,
   saveUninitialized: false,
@@ -1615,13 +1625,16 @@ app.get('/auth/google/callback', async (req, res) => {
     };
     writeDBForUid(uid, userDb);
 
-    // Create session
+    // Create session — salva esplicitamente prima del redirect (critico in produzione)
     req.session.userId = uid;
     req.session.userEmail = profile.email;
     req.session.userName = profile.name;
     req.session.userPicture = profile.picture;
 
-    res.redirect('/app.html');
+    req.session.save(err => {
+      if (err) console.error('Session save error:', err);
+      res.redirect('/app.html');
+    });
   } catch (e) { res.status(500).send('Errore login: ' + e.message); }
 });
 
