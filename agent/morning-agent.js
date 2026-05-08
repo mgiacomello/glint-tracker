@@ -8,6 +8,46 @@
 
 const Anthropic = require('@anthropic-ai/sdk');
 
+// ── AI client factory: Gemini (gratis) o Anthropic (a pagamento) ──────────────
+function makeAIClient({ anthropicApiKey, geminiApiKey }) {
+  if (geminiApiKey) {
+    // Gemini 2.0 Flash — gratuito, 1M tokens/giorno
+    return {
+      _provider: 'gemini',
+      messages: {
+        create: async ({ messages, max_tokens = 4096 }) => {
+          const parts = messages.map(m => ({
+            role: m.role === 'assistant' ? 'model' : 'user',
+            parts: [{ text: typeof m.content === 'string' ? m.content : JSON.stringify(m.content) }]
+          }));
+          const resp = await fetch(
+            `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${geminiApiKey}`,
+            {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                contents: parts,
+                generationConfig: { maxOutputTokens: max_tokens, temperature: 0.3 }
+              }),
+              signal: AbortSignal.timeout(60000)
+            }
+          );
+          const data = await resp.json();
+          if (data.error) throw new Error(`${data.error.code} ${JSON.stringify(data.error)}`);
+          const text = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
+          return { content: [{ type: 'text', text }] };
+        }
+      }
+    };
+  }
+  if (anthropicApiKey) {
+    const client = new Anthropic({ apiKey: anthropicApiKey });
+    client._provider = 'anthropic';
+    return client;
+  }
+  throw new Error('Nessuna API AI configurata. Imposta GEMINI_API_KEY o ANTHROPIC_API_KEY.');
+}
+
 // ── Google API low-level helpers ───────────────────────────────────────────────
 
 async function gcalEvents(token, calendarId, timeMin, timeMax) {
@@ -174,6 +214,7 @@ async function runMorningAgent({
   readDBForUid, writeDBForUid,
   googleClientId, googleClientSecret,
   anthropicApiKey,
+  geminiApiKey = '',
   perplexityApiKey = '',
   force = false,
   log = console.log
@@ -181,7 +222,8 @@ async function runMorningAgent({
   const logs = [];
   function emit(msg) { logs.push(msg); log(msg); }
 
-  const claude = new Anthropic({ apiKey: anthropicApiKey });
+  const claude = makeAIClient({ anthropicApiKey, geminiApiKey });
+  emit(`  ↳ AI provider: ${claude._provider || 'anthropic'}`);
   const tz = settings.timezone || 'Europe/London';
 
   const result = {
@@ -373,7 +415,7 @@ async function runMorningAgent({
       ).join('\n\n---\n\n');
 
       const resp = await claude.messages.create({
-        model: 'claude-sonnet-4-6',
+        model: claude._provider === 'gemini' ? 'gemini-2.0-flash' : 'claude-sonnet-4-6',
         max_tokens: 4096,
         messages: [{
           role: 'user',
@@ -437,7 +479,7 @@ EMAIL:\n${emailList}`
     if (socialData.length > 0) {
       const interests = (settings.interests || ['business', 'AI', 'leadership', 'startup', 'tecnologia']).join(', ');
       const resp = await claude.messages.create({
-        model: 'claude-sonnet-4-6',
+        model: claude._provider === 'gemini' ? 'gemini-2.0-flash' : 'claude-sonnet-4-6',
         max_tokens: 2000,
         messages: [{
           role: 'user',
@@ -520,7 +562,7 @@ Rispondi SOLO con array JSON.`
       } catch(e) { /* Drive opzionale */ }
 
       const resp = await claude.messages.create({
-        model: 'claude-sonnet-4-6',
+        model: claude._provider === 'gemini' ? 'gemini-2.0-flash' : 'claude-sonnet-4-6',
         max_tokens: 700,
         messages: [{
           role: 'user',
@@ -666,7 +708,7 @@ Respond as valid JSON array only.`
     const top3 = result.tasks.filter(t => t.quadrant === 'Q1' || t.quadrant === 'Q2').slice(0, 3).map(t => t.title).join(', ');
     const sleepInfo = health ? `Sonno ${health.sleepScore || '?'}/100, Stress: ${health.stressLevel || '?'}` : 'Dati salute non disponibili';
     const resp = await claude.messages.create({
-      model: 'claude-sonnet-4-6',
+      model: claude._provider === 'gemini' ? 'gemini-2.0-flash' : 'claude-sonnet-4-6',
       max_tokens: 350,
       messages: [{
         role: 'user',
