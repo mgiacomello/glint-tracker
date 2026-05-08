@@ -21,7 +21,7 @@ function makeAIClient({ anthropicApiKey, geminiApiKey }) {
             parts: [{ text: typeof m.content === 'string' ? m.content : JSON.stringify(m.content) }]
           }));
           const resp = await fetch(
-            `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${geminiApiKey}`,
+            `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${geminiApiKey}`,
             {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
@@ -415,7 +415,7 @@ async function runMorningAgent({
       ).join('\n\n---\n\n');
 
       const resp = await claude.messages.create({
-        model: claude._provider === 'gemini' ? 'gemini-2.0-flash' : 'claude-sonnet-4-6',
+        model: claude._provider === 'gemini' ? 'gemini-1.5-flash' : 'claude-sonnet-4-6',
         max_tokens: 4096,
         messages: [{
           role: 'user',
@@ -479,7 +479,7 @@ EMAIL:\n${emailList}`
     if (socialData.length > 0) {
       const interests = (settings.interests || ['business', 'AI', 'leadership', 'startup', 'tecnologia']).join(', ');
       const resp = await claude.messages.create({
-        model: claude._provider === 'gemini' ? 'gemini-2.0-flash' : 'claude-sonnet-4-6',
+        model: claude._provider === 'gemini' ? 'gemini-1.5-flash' : 'claude-sonnet-4-6',
         max_tokens: 2000,
         messages: [{
           role: 'user',
@@ -562,7 +562,7 @@ Rispondi SOLO con array JSON.`
       } catch(e) { /* Drive opzionale */ }
 
       const resp = await claude.messages.create({
-        model: claude._provider === 'gemini' ? 'gemini-2.0-flash' : 'claude-sonnet-4-6',
+        model: claude._provider === 'gemini' ? 'gemini-1.5-flash' : 'claude-sonnet-4-6',
         max_tokens: 700,
         messages: [{
           role: 'user',
@@ -708,7 +708,7 @@ Respond as valid JSON array only.`
     const top3 = result.tasks.filter(t => t.quadrant === 'Q1' || t.quadrant === 'Q2').slice(0, 3).map(t => t.title).join(', ');
     const sleepInfo = health ? `Sonno ${health.sleepScore || '?'}/100, Stress: ${health.stressLevel || '?'}` : 'Dati salute non disponibili';
     const resp = await claude.messages.create({
-      model: claude._provider === 'gemini' ? 'gemini-2.0-flash' : 'claude-sonnet-4-6',
+      model: claude._provider === 'gemini' ? 'gemini-1.5-flash' : 'claude-sonnet-4-6',
       max_tokens: 350,
       messages: [{
         role: 'user',
