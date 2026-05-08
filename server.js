@@ -96,23 +96,32 @@ const _redisCache = new Map();
 async function redisGet(key) {
   if (_redisCache.has(key)) return _redisCache.get(key);
   try {
-    const r = await fetch(`${UPSTASH_URL}/get/${encodeURIComponent(key)}`, {
-      headers: { Authorization: `Bearer ${UPSTASH_TOKEN}` }
+    const r = await fetch(UPSTASH_URL, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${UPSTASH_TOKEN}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify(['GET', key])
     });
     const j = await r.json();
-    const val = j.result ? JSON.parse(j.result) : null;
-    if (val) _redisCache.set(key, val);
-    return val;
+    if (!j.result) return null;
+    // gestisce sia il formato corretto (stringa JSON) che quello vecchio wrappato {value:...}
+    let parsed;
+    try { parsed = JSON.parse(j.result); } catch { return null; }
+    if (parsed && typeof parsed === 'object' && 'value' in parsed && Object.keys(parsed).length === 1) {
+      // vecchio formato buggy — estrai il valore interno
+      try { parsed = JSON.parse(parsed.value); } catch { return null; }
+    }
+    _redisCache.set(key, parsed);
+    return parsed;
   } catch (e) { console.error('Redis GET error:', e.message); return null; }
 }
 
 async function redisSet(key, value) {
   _redisCache.set(key, value);
   try {
-    await fetch(`${UPSTASH_URL}/set/${encodeURIComponent(key)}`, {
+    await fetch(UPSTASH_URL, {
       method: 'POST',
       headers: { Authorization: `Bearer ${UPSTASH_TOKEN}`, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ value: JSON.stringify(value) })
+      body: JSON.stringify(['SET', key, JSON.stringify(value)])
     });
   } catch (e) { console.error('Redis SET error:', e.message); }
 }
