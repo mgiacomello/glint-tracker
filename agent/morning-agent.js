@@ -400,79 +400,87 @@ async function runMorningAgent({
     emit('  ↳ Dati salute non disponibili (Apple Shortcut non ancora eseguito)');
   }
 
-  // ── STEP 3: Gmail full inbox analysis ─────────────────────────────────────────
-  emit('[3/9] Analisi inbox Gmail...');
-  // If force=true, clear previous email tasks so they get re-analyzed
+  // ── STEP 3: Gmail — tutte le categorie ────────────────────────────────────────
+  emit('[3/9] Lettura Gmail (tutte le categorie)...');
   if (force && dbNow.days?.[date]?.tasks) {
     dbNow.days[date].tasks = (dbNow.days[date].tasks || []).filter(t => !t.id.startsWith('mail-'));
-    emit('  ↳ Force refresh: task email precedenti rimossi per rianalisi');
+    emit('  ↳ Force refresh: task email precedenti rimossi');
   }
   const existingTaskIds = new Set((dbNow.days?.[date]?.tasks || []).map(t => t.id));
 
-  let inboxRaw = [];
-  try {
-    // Query ampia: tutte le email inbox degli ultimi 30 giorni
-    // L'AI decide quali richiedono azione — non filtriamo per categoria
-    inboxRaw = await gmailSearch(token, 'in:inbox newer_than:30d', 50);
-    emit(`  ↳ ${inboxRaw.length} messaggi trovati in inbox (ultimi 30 giorni)`);
-    // Se ancora 0, prendi tutto l'inbox
-    if (inboxRaw.length === 0) {
-      inboxRaw = await gmailSearch(token, 'in:inbox', 50);
-      emit(`  ↳ Fallback: ${inboxRaw.length} messaggi totali in inbox`);
-    }
-  } catch(e) {
-    emit(`  ↳ ERRORE Gmail search: ${e.message}`);
-  }
+  // Scarica da tutte le categorie Gmail in parallelo (100 per categoria)
+  const GMAIL_CATEGORIES = [
+    { label: 'Principale',   q: 'in:inbox category:primary',    max: 100 },
+    { label: 'Aggiornamenti',q: 'in:inbox category:updates',    max: 100 },
+    { label: 'Promozioni',   q: 'in:inbox category:promotions', max: 50  },
+    { label: 'Social',       q: 'in:inbox category:social',     max: 50  },
+    { label: 'Forum',        q: 'in:inbox category:forums',     max: 30  },
+  ];
 
-  // ── PASSO 1: scarica solo mittente+oggetto di tutte le email (pochi token) ───
+  const allRawByCategory = {};
+  await Promise.all(GMAIL_CATEGORIES.map(async cat => {
+    try {
+      const msgs = await gmailSearch(token, cat.q, cat.max);
+      allRawByCategory[cat.label] = msgs;
+      emit(`  ↳ ${cat.label}: ${msgs.length} email`);
+    } catch(e) { emit(`  ↳ ${cat.label}: errore (${e.message?.slice(0,60)})`); allRawByCategory[cat.label] = []; }
+  }));
+
+  // Scarica solo gli header (From, Subject, Date) di tutte le email non già elaborate
+  // Gemini 2.0 Flash gestisce 1M token → nessun limite pratico
   const emailHeaders = [];
   let skippedExisting = 0;
-  for (const msg of inboxRaw) {
-    if (existingTaskIds.has(`mail-${msg.id}`)) { skippedExisting++; continue; }
-    try {
-      const r = await fetch(
-        `https://gmail.googleapis.com/gmail/v1/users/me/messages/${msg.id}?format=metadata&metadataHeaders=Subject&metadataHeaders=From&metadataHeaders=Date`,
-        { headers: { Authorization: `Bearer ${token}` }, signal: AbortSignal.timeout(6000) }
-      );
-      const m = await r.json();
-      const hdrs = m.payload?.headers || [];
-      emailHeaders.push({
-        id: msg.id,
-        from: hdrs.find(h => h.name === 'From')?.value || '',
-        subject: hdrs.find(h => h.name === 'Subject')?.value || '(no subject)',
-        date: hdrs.find(h => h.name === 'Date')?.value || ''
-      });
-    } catch(e) { /* skip */ }
+  const seenIds = new Set();
+
+  for (const [catLabel, msgs] of Object.entries(allRawByCategory)) {
+    for (const msg of msgs) {
+      if (seenIds.has(msg.id)) continue;
+      seenIds.add(msg.id);
+      if (existingTaskIds.has(`mail-${msg.id}`)) { skippedExisting++; continue; }
+      try {
+        const r = await fetch(
+          `https://gmail.googleapis.com/gmail/v1/users/me/messages/${msg.id}?format=metadata&metadataHeaders=Subject&metadataHeaders=From&metadataHeaders=Date`,
+          { headers: { Authorization: `Bearer ${token}` }, signal: AbortSignal.timeout(6000) }
+        );
+        const m = await r.json();
+        const hdrs = m.payload?.headers || [];
+        emailHeaders.push({
+          id: msg.id,
+          category: catLabel,
+          from: hdrs.find(h => h.name === 'From')?.value || '',
+          subject: hdrs.find(h => h.name === 'Subject')?.value || '(no subject)',
+          date: hdrs.find(h => h.name === 'Date')?.value || ''
+        });
+      } catch { /* skip */ }
+    }
   }
   if (skippedExisting > 0) emit(`  ↳ ${skippedExisting} email già elaborate (skip)`);
-  emit(`  ↳ ${emailHeaders.length} email da valutare`);
+  emit(`  ↳ Totale: ${emailHeaders.length} email da analizzare`);
 
-  // ── PASSO 2: AI sceglie quali richiedono azione (solo soggetti = pochi token) ─
+  // ── PASSO 1: AI filtra le actionable (tutti i soggetti in un colpo solo) ─────
   let actionableIds = [];
   if (emailHeaders.length > 0) {
-    emit(`  ↳ Passo 1/2: AI filtra le email actionable...`);
+    emit(`  ↳ Passo 1/2: Gemini filtra le email actionable su ${emailHeaders.length} email...`);
     try {
-      // Manda SOLO soggetto+mittente — ~15 token per email → 50 email = ~750 token totali
       const headerList = emailHeaders.map((e, i) =>
-        `${i+1}. [${e.id}] Da: ${e.from.slice(0,60)} | ${e.subject.slice(0,80)}`
+        `${i+1}. [${e.id}] [${e.category}] Da: ${e.from.slice(0,60)} | ${e.subject.slice(0,100)}`
       ).join('\n');
 
       const r1 = await claude.messages.create({
-        model: 'llama-3.3-70b-versatile',
-        max_tokens: 1024,
+        max_tokens: 2048,
         messages: [{ role: 'user', content:
           `Sei l'assistente di ${settings.userName||'Marco'}. Data: ${date}.
-Queste sono email in inbox. Elenca SOLO i numeri di quelle che richiedono un'azione concreta da parte dell'utente.
-Escludi: newsletter, promo, ricevute automatiche, notifiche di sistema, conferme ordini, spam.
-Includi: richieste di risposta, approvazioni, task assegnati, urgenze, accordi da finalizzare.
-Rispondi SOLO con array JSON di id email es: ["id1","id2"]. Se nessuna: [].
+Queste sono tutte le email in Gmail divise per categoria. Identifica quelle che richiedono un'azione concreta.
+Includi: richieste di risposta, approvazioni, task, urgenze, accordi, preventivi, documenti da firmare, follow-up.
+Escludi: newsletter automatiche, ricevute di pagamento già processate, notifiche di sistema, spam, promo generiche.
+Rispondi SOLO con array JSON degli id: ["id1","id2",...]. Se nessuna: [].
 
 EMAIL:\n${headerList}` }]
       });
       actionableIds = safeJsonParse(r1.content[0]?.text || '[]', []);
       if (!Array.isArray(actionableIds)) actionableIds = [];
       emit(`  ↳ ${actionableIds.length} email actionable identificate`);
-    } catch(e) { emit(`  ↳ Errore filtro: ${e.message?.slice(0,150)}`); }
+    } catch(e) { emit(`  ↳ Errore filtro AI: ${e.message?.slice(0,200)}`); }
   }
 
   // ── PASSO 3: scarica corpo completo solo delle email actionable e crea task ──
@@ -491,19 +499,26 @@ EMAIL:\n${headerList}` }]
     }
 
     const emailList = emailsWithBody.map((e, i) =>
-      `EMAIL_${i+1} [id:${e.id}]\nDa: ${e.from}\nOggetto: ${e.subject}\nData: ${e.date}\n${e.body}`
+      `EMAIL_${i+1} [id:${e.id}] [${e.category}]\nDa: ${e.from}\nOggetto: ${e.subject}\nData: ${e.date}\n${e.body}`
     ).join('\n\n---\n\n');
 
     try {
       const r2 = await claude.messages.create({
-        model: 'llama-3.3-70b-versatile',
-        max_tokens: 2048,
+        max_tokens: 4096,
         messages: [{ role: 'user', content:
           `Sei l'assistente personale di ${settings.userName||'Marco'} (${settings.primaryEmail||''}).
-Data: ${date}. Per ogni email crea un task JSON:
-{"id":"id tra [id:...]","title":"[Verbo] [oggetto] – [contatto] (max 60 car)","quadrant":"Q1|Q2|Q3|Q4","brief":"CONTESTO: 1 frase.\\nACTION: cosa fare esattamente.","actionPoints":["azione concreta 1","azione 2","azione 3"],"from":"mittente"}
-Q1=urgente+importante, Q2=importante, Q3=urgente, Q4=bassa priorità.
-Rispondi SOLO con array JSON.
+Data: ${date}. Per ogni email crea un task JSON dettagliato:
+{
+  "id": "id tra [id:...]",
+  "title": "[Verbo] [oggetto] – [contatto] (max 60 car)",
+  "category": "categoria Gmail",
+  "quadrant": "Q1|Q2|Q3|Q4",
+  "brief": "CONTESTO: spiega il contesto in 2-3 frasi.\\nSITUAZIONE: cosa è successo/richiesto.\\nACTION: cosa fare esattamente e come.",
+  "actionPoints": ["azione concreta specifica 1", "azione 2", "azione 3", "azione 4 se necessaria"],
+  "from": "mittente"
+}
+Q1=urgente+importante, Q2=importante non urgente, Q3=urgente non importante, Q4=bassa priorità.
+Sii specifico negli action points. Rispondi SOLO con array JSON.
 
 EMAIL:\n${emailList}` }]
       });
@@ -511,7 +526,7 @@ EMAIL:\n${emailList}` }]
       emailTasks = safeJsonParse(rawText, []);
       if (!Array.isArray(emailTasks)) emailTasks = [];
       emit(`  ↳ ${emailTasks.length} task creati`);
-    } catch(e) { emit(`  ↳ Errore analisi dettaglio: ${e.message?.slice(0,150)}`); }
+    } catch(e) { emit(`  ↳ Errore analisi dettaglio: ${e.message?.slice(0,200)}`); }
   } else if (emailHeaders.length > 0) {
     emit(`  ↳ Nessuna email richiede azione`);
   } else {
@@ -521,7 +536,7 @@ EMAIL:\n${emailList}` }]
   result.tasks = emailTasks.map(t => ({
     id: `mail-${t.id}`,
     title: t.title || t.subject || 'Email',
-    due: `Oggi · ${t.from || ''}`,
+    due: `${t.category || 'Gmail'} · ${t.from || ''}`,
     quadrant: t.quadrant || 'Q2',
     brief: t.brief || '',
     link: `https://mail.google.com/mail/u/0/#inbox/${t.id}`,
