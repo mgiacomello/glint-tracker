@@ -430,12 +430,12 @@ async function runMorningAgent({
   // Gemini 2.0 Flash gestisce 1M token → nessun limite pratico
   const emailHeaders = [];
   let skippedExisting = 0;
-  const seenIds = new Set();
+  const seenMsgIds = new Set();
 
   for (const [catLabel, msgs] of Object.entries(allRawByCategory)) {
     for (const msg of msgs) {
-      if (seenIds.has(msg.id)) continue;
-      seenIds.add(msg.id);
+      if (seenMsgIds.has(msg.id)) continue;
+      seenMsgIds.add(msg.id);
       if (existingTaskIds.has(`mail-${msg.id}`)) { skippedExisting++; continue; }
       try {
         const r = await fetch(
