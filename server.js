@@ -2377,16 +2377,24 @@ function readConfig() {
 // ── Helper AI universale: Gemini > Groq > Anthropic ──────────────────────────
 async function callAI(prompt, { maxTokens = 2048 } = {}) {
   const cfg = readConfig();
+  const contents = [{ role: 'user', parts: [{ text: prompt }] }];
+  // Gemini con fallback automatico tra modelli e poi a Groq
   if (cfg.geminiApiKey) {
-    const r = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${cfg.geminiApiKey}`,
-      { method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ contents: [{ role: 'user', parts: [{ text: prompt }] }], generationConfig: { maxOutputTokens: maxTokens, temperature: 0.3 } }),
-        signal: AbortSignal.timeout(60000) }
-    );
-    const d = await r.json();
-    if (d.error) throw new Error(`Gemini: ${d.error.message}`);
-    return d.candidates?.[0]?.content?.parts?.[0]?.text || '';
+    for (const model of ['gemini-1.5-flash', 'gemini-2.0-flash', 'gemini-1.5-flash-8b']) {
+      try {
+        const r = await fetch(
+          `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${cfg.geminiApiKey}`,
+          { method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ contents, generationConfig: { maxOutputTokens: maxTokens, temperature: 0.3 } }),
+            signal: AbortSignal.timeout(60000) }
+        );
+        const d = await r.json();
+        if (d.error?.status === 'RESOURCE_EXHAUSTED') continue; // prova prossimo modello
+        if (d.error) throw new Error(`Gemini: ${d.error.message}`);
+        return d.candidates?.[0]?.content?.parts?.[0]?.text || '';
+      } catch(e) { if (!e.message?.includes('RESOURCE_EXHAUSTED')) throw e; }
+    }
+    // tutti i modelli Gemini esauriti, cade su Groq
   }
   if (cfg.groqApiKey) {
     const r = await fetch('https://api.groq.com/openai/v1/chat/completions', {

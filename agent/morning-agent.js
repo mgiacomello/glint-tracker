@@ -11,36 +11,71 @@ const Anthropic = require('@anthropic-ai/sdk');
 // ── AI client factory: Gemini > Groq > Anthropic ─────────────────────────────
 function makeAIClient({ anthropicApiKey, geminiApiKey, groqApiKey }) {
 
-  // ── Gemini 2.0 Flash — gratis, 1M token context, nessun limite TPM bloccante ──
+  // ── Helper Groq inline (usato anche come fallback Gemini) ────────────────────
+  async function callGroq(messages, max_tokens) {
+    const resp = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+      method: 'POST',
+      headers: { 'Authorization': `Bearer ${groqApiKey}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        model: 'llama-3.3-70b-versatile',
+        messages: messages.map(m => ({ role: m.role, content: typeof m.content === 'string' ? m.content : JSON.stringify(m.content) })),
+        max_tokens, temperature: 0.3
+      }),
+      signal: AbortSignal.timeout(60000)
+    });
+    const data = await resp.json();
+    if (data.error) throw new Error(`Groq: ${data.error.message}`);
+    return { content: [{ type: 'text', text: data.choices?.[0]?.message?.content || '' }] };
+  }
+
+  // ── Gemini Flash — con fallback automatico a Groq su quota esaurita ──────────
   if (geminiApiKey) {
+    // Prova tutti i modelli Gemini disponibili in ordine
+    const GEMINI_MODELS = ['gemini-1.5-flash', 'gemini-2.0-flash', 'gemini-1.5-flash-8b'];
     return {
       _provider: 'gemini',
       messages: {
         create: async ({ messages, max_tokens = 4096 }) => {
-          // Gemini vuole formato {role, parts} e il primo messaggio deve essere "user"
           const contents = messages.map(m => ({
             role: m.role === 'assistant' ? 'model' : 'user',
             parts: [{ text: typeof m.content === 'string' ? m.content : JSON.stringify(m.content) }]
           }));
-          const resp = await fetch(
-            `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${geminiApiKey}`,
-            {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ contents, generationConfig: { maxOutputTokens: max_tokens, temperature: 0.3 } }),
-              signal: AbortSignal.timeout(90000)
+          // Prova ogni modello Gemini finché uno funziona
+          let lastErr = null;
+          for (const model of GEMINI_MODELS) {
+            try {
+              const resp = await fetch(
+                `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${geminiApiKey}`,
+                { method: 'POST', headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({ contents, generationConfig: { maxOutputTokens: max_tokens, temperature: 0.3 } }),
+                  signal: AbortSignal.timeout(90000) }
+              );
+              const data = await resp.json();
+              if (data.error) {
+                lastErr = new Error(`Gemini/${model}: ${data.error.status} — ${data.error.message}`);
+                // Su quota esaurita proviamo il modello successivo
+                if (data.error.status === 'RESOURCE_EXHAUSTED') continue;
+                throw lastErr;
+              }
+              const text = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
+              return { content: [{ type: 'text', text }] };
+            } catch(e) {
+              lastErr = e;
+              if (e.message?.includes('RESOURCE_EXHAUSTED')) continue;
+              throw e;
             }
-          );
-          const data = await resp.json();
-          if (data.error) throw new Error(`Gemini: ${data.error.status} — ${data.error.message}`);
-          const text = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
-          return { content: [{ type: 'text', text }] };
+          }
+          // Tutti i modelli Gemini hanno quota 0 → fallback a Groq
+          if (groqApiKey) {
+            return callGroq(messages, max_tokens);
+          }
+          throw lastErr || new Error('Gemini: tutti i modelli esauriti');
         }
       }
     };
   }
 
-  // ── Groq — gratis, 14.400 req/giorno, llama-3.3-70b (fallback) ──────────────
+  // ── Groq — gratis, 14.400 req/giorno, llama-3.3-70b ─────────────────────────
   if (groqApiKey) {
     return {
       _provider: 'groq',
