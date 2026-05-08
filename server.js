@@ -403,10 +403,10 @@ app.patch('/api/day/:date/item/:itemId/action-point/:apId', (req, res) => {
   res.json({ ok: true });
 });
 
-// POST /api/day/:date/item/:id/analyze-recap → extract action points from a Gemini recap via Claude
+// POST /api/day/:date/item/:id/analyze-recap → extract action points via AI
 app.post('/api/day/:date/item/:id/analyze-recap', async (req, res) => {
   const cfg = readConfig();
-  if (!cfg.anthropicApiKey) return res.status(400).json({ error: 'No API key configured' });
+  if (!cfg.geminiApiKey && !cfg.groqApiKey && !cfg.anthropicApiKey) return res.status(400).json({ error: 'Nessuna API AI configurata' });
 
   const db = readDB();
   const day = ensureDay(db, req.params.date);
@@ -422,9 +422,6 @@ app.post('/api/day/:date/item/:id/analyze-recap', async (req, res) => {
   }
 
   try {
-    const { Anthropic } = require('@anthropic-ai/sdk');
-    const client = new Anthropic({ apiKey: cfg.anthropicApiKey });
-
     const prompt = `Sei un assistente che analizza trascrizioni e note di riunioni in italiano.
 Leggi il seguente recap/nota della call e identifica TUTTI gli action points (cose da fare / decisioni da implementare).
 Per ciascuno estrai:
@@ -439,13 +436,7 @@ Se non ci sono action points, rispondi: []
 RECAP DA ANALIZZARE:
 ${briefText.slice(0, 6000)}`;
 
-    const response = await client.messages.create({
-      model: cfg.aiModel || 'claude-3-5-sonnet-20241022',
-      max_tokens: 1024,
-      messages: [{ role: 'user', content: prompt }]
-    });
-
-    const raw = (response.content[0]?.text || '[]').trim();
+    const raw = (await callAI(prompt, { maxTokens: 1024 })).trim();
     let extracted = [];
     try {
       const jsonMatch = raw.match(/\[[\s\S]*\]/);
@@ -1226,11 +1217,8 @@ app.get('/api/day/:date/briefing/generate', async (req, res) => {
   // ── AI Executive Daily Brief ──────────────────────────────────────────────
   let narrative = null;
   const cfg = readConfig();
-  if (cfg.anthropicApiKey) {
+  if (cfg.geminiApiKey || cfg.groqApiKey || cfg.anthropicApiKey) {
     try {
-      const { default: Anthropic } = require('@anthropic-ai/sdk');
-      const client = new Anthropic({ apiKey: cfg.anthropicApiKey });
-
       // Build structured context
       const taskDetail = pendingTasks.slice(0, 20).map(t => {
         const q = (t.quadrant||'Q2').toUpperCase();
@@ -1296,12 +1284,7 @@ Scrivi un daily brief in italiano, in prosa continua, 3-4 paragrafi, 200-280 par
 
 Tono: diretto, da pari a pari — non servile. Come un ottimo COO che parla al CEO. Zero luoghi comuni, zero bullet points, solo prosa.`;
 
-      const resp = await client.messages.create({
-        model: cfg.aiModel || 'claude-3-5-sonnet-20241022',
-        max_tokens: 600,
-        messages: [{ role: 'user', content: prompt }]
-      });
-      narrative = resp.content[0]?.text || null;
+      narrative = await callAI(prompt, { maxTokens: 600 });
     } catch(e) {
       console.error('[Briefing AI]', e.message);
     }
@@ -2391,6 +2374,39 @@ function readConfig() {
   return cfg;
 }
 
+// ── Helper AI universale: Gemini > Groq > Anthropic ──────────────────────────
+async function callAI(prompt, { maxTokens = 2048 } = {}) {
+  const cfg = readConfig();
+  if (cfg.geminiApiKey) {
+    const r = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${cfg.geminiApiKey}`,
+      { method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ contents: [{ role: 'user', parts: [{ text: prompt }] }], generationConfig: { maxOutputTokens: maxTokens, temperature: 0.3 } }),
+        signal: AbortSignal.timeout(60000) }
+    );
+    const d = await r.json();
+    if (d.error) throw new Error(`Gemini: ${d.error.message}`);
+    return d.candidates?.[0]?.content?.parts?.[0]?.text || '';
+  }
+  if (cfg.groqApiKey) {
+    const r = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+      method: 'POST', headers: { Authorization: `Bearer ${cfg.groqApiKey}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ model: 'llama-3.3-70b-versatile', messages: [{ role: 'user', content: prompt }], max_tokens: maxTokens }),
+      signal: AbortSignal.timeout(60000)
+    });
+    const d = await r.json();
+    if (d.error) throw new Error(`Groq: ${d.error.message}`);
+    return d.choices?.[0]?.message?.content || '';
+  }
+  if (cfg.anthropicApiKey) {
+    const { default: Anthropic } = require('@anthropic-ai/sdk');
+    const client = new Anthropic({ apiKey: cfg.anthropicApiKey });
+    const msg = await client.messages.create({ model: 'claude-3-5-haiku-20241022', max_tokens: maxTokens, messages: [{ role: 'user', content: prompt }] });
+    return msg.content[0]?.text || '';
+  }
+  throw new Error('Nessuna API AI configurata. Aggiungi GEMINI_API_KEY nelle variabili Railway.');
+}
+
 function writeConfig(data) {
   fs.writeFileSync(CONFIG_PATH, JSON.stringify(data, null, 2));
 }
@@ -2652,9 +2668,8 @@ async function executeAiTool(toolName, toolInput, db, today) {
 // POST /api/ai/chat → agentic conversation with tool use
 app.post('/api/ai/chat', async (req, res) => {
   const cfg = readConfig();
-  const apiKey = cfg.anthropicApiKey;
-  if (!apiKey) {
-    return res.status(400).json({ error: 'API key Anthropic non configurata. Clicca su ⚙️ per aggiungerla.' });
+  if (!cfg.anthropicApiKey && !cfg.geminiApiKey && !cfg.groqApiKey) {
+    return res.status(400).json({ error: 'Nessuna API AI configurata. Aggiungi GEMINI_API_KEY nelle variabili Railway.' });
   }
 
   const { messages = [], date } = req.body;
@@ -3260,7 +3275,7 @@ app.post('/api/morning-agent/:date/run', async (req, res) => {
 
   const date = req.params.date;
   const cfg  = readConfig();
-  if (!cfg.anthropicApiKey && !cfg.geminiApiKey && !cfg.groqApiKey) return res.status(400).json({ error: 'API AI non configurata. Aggiungi GROQ_API_KEY (gratis su console.groq.com) nelle variabili Railway.' });
+  if (!cfg.anthropicApiKey && !cfg.geminiApiKey && !cfg.groqApiKey) return res.status(400).json({ error: 'API AI non configurata. Aggiungi GEMINI_API_KEY nelle variabili Railway.' });
 
   const db    = readDB();
   const users = readUsers();
