@@ -419,72 +419,98 @@ async function runMorningAgent({
     emit(`  ↳ ERRORE Gmail search: ${e.message}`);
   }
 
-  const emailsData = [];
+  // ── PASSO 1: scarica solo mittente+oggetto di tutte le email (pochi token) ───
+  const emailHeaders = [];
   let skippedExisting = 0;
-  // Prendi le prime 20 email non ancora elaborate (corpo ridotto a 400 car per rispettare i limiti Groq)
-  for (const msg of inboxRaw.slice(0, 20)) {
+  for (const msg of inboxRaw) {
     if (existingTaskIds.has(`mail-${msg.id}`)) { skippedExisting++; continue; }
     try {
-      const full = await gmailGetMessage(token, msg.id);
-      const h = gmailHeaders(full);
-      emailsData.push({
+      const r = await fetch(
+        `https://gmail.googleapis.com/gmail/v1/users/me/messages/${msg.id}?format=metadata&metadataHeaders=Subject&metadataHeaders=From&metadataHeaders=Date`,
+        { headers: { Authorization: `Bearer ${token}` }, signal: AbortSignal.timeout(6000) }
+      );
+      const m = await r.json();
+      const hdrs = m.payload?.headers || [];
+      emailHeaders.push({
         id: msg.id,
-        from: h.from || '',
-        subject: h.subject || '(no subject)',
-        date: h.date || '',
-        body: gmailBody(full, 400) // 400 char max per stare nel limite TPM Groq (12k/min)
+        from: hdrs.find(h => h.name === 'From')?.value || '',
+        subject: hdrs.find(h => h.name === 'Subject')?.value || '(no subject)',
+        date: hdrs.find(h => h.name === 'Date')?.value || ''
       });
-    } catch(e) { emit(`  ↳ Skip email ${msg.id}: ${e.message}`); }
+    } catch(e) { /* skip */ }
   }
-  if (skippedExisting > 0) emit(`  ↳ ${skippedExisting} email già elaborate in precedenza (skippate)`);
+  if (skippedExisting > 0) emit(`  ↳ ${skippedExisting} email già elaborate (skip)`);
+  emit(`  ↳ ${emailHeaders.length} email da valutare`);
 
-  // Analisi in batch da 10 per rispettare il limite TPM Groq (12.000 token/min)
-  const BATCH_SIZE = 10;
+  // ── PASSO 2: AI sceglie quali richiedono azione (solo soggetti = pochi token) ─
+  let actionableIds = [];
+  if (emailHeaders.length > 0) {
+    emit(`  ↳ Passo 1/2: AI filtra le email actionable...`);
+    try {
+      // Manda SOLO soggetto+mittente — ~15 token per email → 50 email = ~750 token totali
+      const headerList = emailHeaders.map((e, i) =>
+        `${i+1}. [${e.id}] Da: ${e.from.slice(0,60)} | ${e.subject.slice(0,80)}`
+      ).join('\n');
+
+      const r1 = await claude.messages.create({
+        model: 'llama-3.3-70b-versatile',
+        max_tokens: 1024,
+        messages: [{ role: 'user', content:
+          `Sei l'assistente di ${settings.userName||'Marco'}. Data: ${date}.
+Queste sono email in inbox. Elenca SOLO i numeri di quelle che richiedono un'azione concreta da parte dell'utente.
+Escludi: newsletter, promo, ricevute automatiche, notifiche di sistema, conferme ordini, spam.
+Includi: richieste di risposta, approvazioni, task assegnati, urgenze, accordi da finalizzare.
+Rispondi SOLO con array JSON di id email es: ["id1","id2"]. Se nessuna: [].
+
+EMAIL:\n${headerList}` }]
+      });
+      actionableIds = safeJsonParse(r1.content[0]?.text || '[]', []);
+      if (!Array.isArray(actionableIds)) actionableIds = [];
+      emit(`  ↳ ${actionableIds.length} email actionable identificate`);
+    } catch(e) { emit(`  ↳ Errore filtro: ${e.message?.slice(0,150)}`); }
+  }
+
+  // ── PASSO 3: scarica corpo completo solo delle email actionable e crea task ──
   let emailTasks = [];
-  if (emailsData.length > 0) {
-    emit(`  ↳ Analisi AI di ${emailsData.length} email nuove (batch da ${BATCH_SIZE})...`);
-    for (let b = 0; b < emailsData.length; b += BATCH_SIZE) {
-      const batch = emailsData.slice(b, b + BATCH_SIZE);
-      emit(`  ↳ Batch ${Math.floor(b/BATCH_SIZE)+1}/${Math.ceil(emailsData.length/BATCH_SIZE)}: ${batch.length} email`);
+  if (actionableIds.length > 0) {
+    emit(`  ↳ Passo 2/2: analisi dettagliata di ${actionableIds.length} email...`);
+    // Pausa per rispettare rate limit TPM (abbiamo appena fatto una richiesta)
+    await new Promise(r => setTimeout(r, 3000));
+    const actionableEmails = emailHeaders.filter(e => actionableIds.includes(e.id));
+    const emailsWithBody = [];
+    for (const e of actionableEmails) {
       try {
-        const emailList = batch.map((e, i) =>
-          `EMAIL_${b+i+1} [id:${e.id}]\nDa: ${e.from}\nOggetto: ${e.subject}\nData: ${e.date}\n${e.body}`
-        ).join('\n\n---\n\n');
-
-        const resp = await claude.messages.create({
-          model: claude._provider === 'groq' ? 'llama-3.3-70b-versatile' : claude._provider === 'gemini' ? 'gemini-1.5-flash' : 'claude-sonnet-4-6',
-          max_tokens: 2048,
-          messages: [{
-            role: 'user',
-            content: `Sei l'assistente personale di ${settings.userName || 'Marco'} (${settings.primaryEmail || ''}).
-Data oggi: ${date}. Analizza queste email e identifica SOLO quelle che richiedono un'azione concreta.
-
-Per ogni email che richiede azione, crea un oggetto JSON:
-{"id":"id email tra [id:...]","title":"[Verbo] [oggetto] – [contatto] (max 60 car)","quadrant":"Q1|Q2|Q3|Q4","brief":"CONTESTO: ...\\nACTION: cosa fare (max 100 parole)","actionPoints":["azione 1","azione 2"],"from":"mittente"}
-
-Q1=urgente+importante, Q2=importante, Q3=urgente, Q4=bassa priorità.
-Ignora newsletter, promo, ricevute, notifiche auto. Rispondi SOLO con array JSON ([] se nessuna).
-
-EMAIL:\n${emailList}`
-          }]
-        });
-
-        const rawText = resp.content[0]?.text || '[]';
-        emit(`  ↳ Groq risposta batch: ${rawText.slice(0, 200)}`);
-        const batchTasks = safeJsonParse(rawText, []);
-        if (Array.isArray(batchTasks)) {
-          emailTasks.push(...batchTasks);
-          emit(`  ↳ ${batchTasks.length} task trovati in questo batch`);
-        } else {
-          emit(`  ↳ WARN: risposta non è array: ${rawText.slice(0, 200)}`);
-        }
-        // Pausa tra batch per non eccedere il rate limit TPM
-        if (b + BATCH_SIZE < emailsData.length) await new Promise(r => setTimeout(r, 5000));
-      } catch(e) { emit(`  ↳ Errore analisi batch: ${e.message?.slice(0, 200)}`); }
+        const full = await gmailGetMessage(token, e.id);
+        emailsWithBody.push({ ...e, body: gmailBody(full, 600) });
+      } catch { emailsWithBody.push({ ...e, body: '' }); }
     }
-    emit(`  ↳ Totale task email: ${emailTasks.length}`);
+
+    const emailList = emailsWithBody.map((e, i) =>
+      `EMAIL_${i+1} [id:${e.id}]\nDa: ${e.from}\nOggetto: ${e.subject}\nData: ${e.date}\n${e.body}`
+    ).join('\n\n---\n\n');
+
+    try {
+      const r2 = await claude.messages.create({
+        model: 'llama-3.3-70b-versatile',
+        max_tokens: 2048,
+        messages: [{ role: 'user', content:
+          `Sei l'assistente personale di ${settings.userName||'Marco'} (${settings.primaryEmail||''}).
+Data: ${date}. Per ogni email crea un task JSON:
+{"id":"id tra [id:...]","title":"[Verbo] [oggetto] – [contatto] (max 60 car)","quadrant":"Q1|Q2|Q3|Q4","brief":"CONTESTO: 1 frase.\\nACTION: cosa fare esattamente.","actionPoints":["azione concreta 1","azione 2","azione 3"],"from":"mittente"}
+Q1=urgente+importante, Q2=importante, Q3=urgente, Q4=bassa priorità.
+Rispondi SOLO con array JSON.
+
+EMAIL:\n${emailList}` }]
+      });
+      const rawText = r2.content[0]?.text || '[]';
+      emailTasks = safeJsonParse(rawText, []);
+      if (!Array.isArray(emailTasks)) emailTasks = [];
+      emit(`  ↳ ${emailTasks.length} task creati`);
+    } catch(e) { emit(`  ↳ Errore analisi dettaglio: ${e.message?.slice(0,150)}`); }
+  } else if (emailHeaders.length > 0) {
+    emit(`  ↳ Nessuna email richiede azione`);
   } else {
-    emit(`  ↳ Nessuna email nuova da analizzare (inboxRaw: ${inboxRaw.length})`);
+    emit(`  ↳ Nessuna email nuova da analizzare`);
   }
 
   result.tasks = emailTasks.map(t => ({
