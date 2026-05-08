@@ -421,7 +421,8 @@ async function runMorningAgent({
 
   const emailsData = [];
   let skippedExisting = 0;
-  for (const msg of inboxRaw.slice(0, 35)) {
+  // Prendi le prime 20 email non ancora elaborate (corpo ridotto a 400 car per rispettare i limiti Groq)
+  for (const msg of inboxRaw.slice(0, 20)) {
     if (existingTaskIds.has(`mail-${msg.id}`)) { skippedExisting++; continue; }
     try {
       const full = await gmailGetMessage(token, msg.id);
@@ -431,55 +432,57 @@ async function runMorningAgent({
         from: h.from || '',
         subject: h.subject || '(no subject)',
         date: h.date || '',
-        body: gmailBody(full, 1200)
+        body: gmailBody(full, 400) // 400 char max per stare nel limite TPM Groq (12k/min)
       });
     } catch(e) { emit(`  ↳ Skip email ${msg.id}: ${e.message}`); }
   }
   if (skippedExisting > 0) emit(`  ↳ ${skippedExisting} email già elaborate in precedenza (skippate)`);
 
+  // Analisi in batch da 10 per rispettare il limite TPM Groq (12.000 token/min)
+  const BATCH_SIZE = 10;
   let emailTasks = [];
   if (emailsData.length > 0) {
-    emit(`  ↳ Analisi AI di ${emailsData.length} email nuove...`);
-    try {
-      const emailList = emailsData.map((e, i) =>
-        `EMAIL_${i + 1} [id:${e.id}]\nDa: ${e.from}\nOggetto: ${e.subject}\nData: ${e.date}\n${e.body}`
-      ).join('\n\n---\n\n');
+    emit(`  ↳ Analisi AI di ${emailsData.length} email nuove (batch da ${BATCH_SIZE})...`);
+    for (let b = 0; b < emailsData.length; b += BATCH_SIZE) {
+      const batch = emailsData.slice(b, b + BATCH_SIZE);
+      emit(`  ↳ Batch ${Math.floor(b/BATCH_SIZE)+1}/${Math.ceil(emailsData.length/BATCH_SIZE)}: ${batch.length} email`);
+      try {
+        const emailList = batch.map((e, i) =>
+          `EMAIL_${b+i+1} [id:${e.id}]\nDa: ${e.from}\nOggetto: ${e.subject}\nData: ${e.date}\n${e.body}`
+        ).join('\n\n---\n\n');
 
-      const resp = await claude.messages.create({
-        model: claude._provider === 'gemini' ? 'gemini-1.5-flash' : claude._provider === 'groq' ? 'llama-3.3-70b-versatile' : 'claude-sonnet-4-6',
-        max_tokens: 4096,
-        messages: [{
-          role: 'user',
-          content: `Sei l'assistente personale di ${settings.userName || 'Marco'} (${settings.primaryEmail || ''}).
+        const resp = await claude.messages.create({
+          model: claude._provider === 'groq' ? 'llama-3.3-70b-versatile' : claude._provider === 'gemini' ? 'gemini-1.5-flash' : 'claude-sonnet-4-6',
+          max_tokens: 2048,
+          messages: [{
+            role: 'user',
+            content: `Sei l'assistente personale di ${settings.userName || 'Marco'} (${settings.primaryEmail || ''}).
 Data oggi: ${date}. Analizza queste email e identifica SOLO quelle che richiedono un'azione concreta.
 
 Per ogni email che richiede azione, crea un oggetto JSON:
-{
-  "id": "id dell'email (quello tra [id:...])",
-  "title": "titolo task max 60 caratteri: [Verbo] [oggetto] – [nome contatto]",
-  "quadrant": "Q1|Q2|Q3|Q4",
-  "brief": "CONTESTO: ...\\nSVILUPPO: ...\\nACTION: cosa fare esattamente (max 200 parole totali)",
-  "actionPoints": ["azione concreta 1 (<15 min)", "azione concreta 2", "azione concreta 3"],
-  "from": "email mittente"
-}
+{"id":"id email tra [id:...]","title":"[Verbo] [oggetto] – [contatto] (max 60 car)","quadrant":"Q1|Q2|Q3|Q4","brief":"CONTESTO: ...\\nACTION: cosa fare (max 100 parole)","actionPoints":["azione 1","azione 2"],"from":"mittente"}
 
-Quadranti: Q1=urgente+importante, Q2=importante non urgente, Q3=urgente non importante, Q4=bassa priorità.
-Ignora newsletter, ricevute automatiche, notifiche sistemi. Rispondi SOLO con array JSON.
+Q1=urgente+importante, Q2=importante, Q3=urgente, Q4=bassa priorità.
+Ignora newsletter, promo, ricevute, notifiche auto. Rispondi SOLO con array JSON ([] se nessuna).
 
 EMAIL:\n${emailList}`
-        }]
-      });
+          }]
+        });
 
-      const rawText = resp.content[0]?.text || '[]';
-      emit(`  ↳ Groq raw (primi 300 car): ${rawText.slice(0, 300)}`);
-      emailTasks = safeJsonParse(rawText, []);
-      if (!Array.isArray(emailTasks)) {
-        emit(`  ↳ WARN: risposta AI non è array, testo: ${rawText.slice(0, 300)}`);
-        emailTasks = [];
-      } else {
-        emit(`  ↳ Parsed ${emailTasks.length} task dall'AI`);
-      }
-    } catch(e) { emit(`  ↳ Errore analisi AI: ${e.message}\n${e.stack?.slice(0,300)}`); }
+        const rawText = resp.content[0]?.text || '[]';
+        emit(`  ↳ Groq risposta batch: ${rawText.slice(0, 200)}`);
+        const batchTasks = safeJsonParse(rawText, []);
+        if (Array.isArray(batchTasks)) {
+          emailTasks.push(...batchTasks);
+          emit(`  ↳ ${batchTasks.length} task trovati in questo batch`);
+        } else {
+          emit(`  ↳ WARN: risposta non è array: ${rawText.slice(0, 200)}`);
+        }
+        // Pausa tra batch per non eccedere il rate limit TPM
+        if (b + BATCH_SIZE < emailsData.length) await new Promise(r => setTimeout(r, 5000));
+      } catch(e) { emit(`  ↳ Errore analisi batch: ${e.message?.slice(0, 200)}`); }
+    }
+    emit(`  ↳ Totale task email: ${emailTasks.length}`);
   } else {
     emit(`  ↳ Nessuna email nuova da analizzare (inboxRaw: ${inboxRaw.length})`);
   }
