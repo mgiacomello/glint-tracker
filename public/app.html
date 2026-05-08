@@ -283,7 +283,7 @@
 
 <!-- TOPBAR -->
 <header class="topbar">
-  <a class="tb-logo" href="/"><div class="gem">✦</div><span>Glint</span></a>
+  <a class="tb-logo" href="/app.html"><div class="gem">✦</div><span>Glint</span></a>
   <span class="tb-date" id="tb-date"></span>
   <div class="tb-right">
     <button class="btn-run" id="run-btn" onclick="runAgent(false)">☀️ Briefing</button>
@@ -716,8 +716,9 @@ function closeUserMenu() {
   document.getElementById('overlay').style.display = 'none';
 }
 async function logout() {
+  if (!confirm('Sei sicuro di voler uscire da Glint?')) return;
   await fetch('/api/logout', { method: 'POST', credentials: 'include' });
-  location.href = '/';
+  location.href = '/login.html';
 }
 
 // ── Utils ──────────────────────────────────────────────────────────────────────
