@@ -111,6 +111,44 @@ function makeAIClient({ anthropicApiKey, geminiApiKey, groqApiKey }) {
   throw new Error('Configura almeno una API key AI: GEMINI_API_KEY (consigliato), GROQ_API_KEY o ANTHROPIC_API_KEY.');
 }
 
+// ── Chiamata AI diretta con fallback automatico Gemini→Groq ──────────────────
+async function aiCall({ geminiApiKey, groqApiKey, anthropicApiKey }, prompt, maxTokens = 2048) {
+  const GEMINI_MODELS = ['gemini-2.0-flash', 'gemini-2.0-flash-lite', 'gemini-1.5-flash-8b'];
+  if (geminiApiKey) {
+    for (const model of GEMINI_MODELS) {
+      try {
+        const r = await fetch(
+          `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${geminiApiKey}`,
+          { method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ contents: [{ role: 'user', parts: [{ text: prompt }] }], generationConfig: { maxOutputTokens: maxTokens, temperature: 0.3 } }),
+            signal: AbortSignal.timeout(90000) }
+        );
+        const d = await r.json();
+        if (d.error) {
+          if (['RESOURCE_EXHAUSTED','NOT_FOUND','PERMISSION_DENIED'].includes(d.error.status)) continue;
+          throw new Error(`Gemini/${model}: ${d.error.status} — ${d.error.message}`);
+        }
+        return d.candidates?.[0]?.content?.parts?.[0]?.text || '';
+      } catch(e) {
+        if (e.message?.includes('RESOURCE_EXHAUSTED') || e.message?.includes('NOT_FOUND')) continue;
+        throw e;
+      }
+    }
+  }
+  if (groqApiKey) {
+    const r = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+      method: 'POST',
+      headers: { 'Authorization': `Bearer ${groqApiKey}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ model: 'llama-3.3-70b-versatile', messages: [{ role: 'user', content: prompt }], max_tokens: maxTokens, temperature: 0.3 }),
+      signal: AbortSignal.timeout(60000)
+    });
+    const d = await r.json();
+    if (d.error) throw new Error(`Groq: ${d.error.message}`);
+    return d.choices?.[0]?.message?.content || '';
+  }
+  throw new Error('Nessuna API AI configurata');
+}
+
 // ── Google API low-level helpers ───────────────────────────────────────────────
 
 async function gcalEvents(token, calendarId, timeMin, timeMax) {
@@ -492,44 +530,42 @@ async function runMorningAgent({
   if (skippedExisting > 0) emit(`  ↳ ${skippedExisting} email già elaborate (skip)`);
   emit(`  ↳ Totale: ${emailHeaders.length} email da analizzare`);
 
+  const aiKeys = { geminiApiKey, groqApiKey, anthropicApiKey };
+
   // ── PASSO 1: AI filtra le actionable (tutti i soggetti in un colpo solo) ─────
   let actionableIds = [];
   if (emailHeaders.length > 0) {
-    emit(`  ↳ Passo 1/2: Gemini filtra le email actionable su ${emailHeaders.length} email...`);
+    emit(`  ↳ Passo 1/2: AI filtra le email actionable su ${emailHeaders.length} email...`);
     try {
       const headerList = emailHeaders.map((e, i) =>
         `${i+1}. [${e.id}] [${e.category}] Da: ${e.from.slice(0,60)} | ${e.subject.slice(0,100)}`
       ).join('\n');
 
-      const r1 = await claude.messages.create({
-        max_tokens: 2048,
-        messages: [{ role: 'user', content:
-          `Sei l'assistente di ${settings.userName||'Marco'}. Data: ${date}.
+      const text1 = await aiCall(aiKeys,
+        `Sei l'assistente di ${settings.userName||'Marco'}. Data: ${date}.
 Queste sono tutte le email in Gmail divise per categoria. Identifica quelle che richiedono un'azione concreta.
 Includi: richieste di risposta, approvazioni, task, urgenze, accordi, preventivi, documenti da firmare, follow-up.
 Escludi: newsletter automatiche, ricevute di pagamento già processate, notifiche di sistema, spam, promo generiche.
 Rispondi SOLO con array JSON degli id: ["id1","id2",...]. Se nessuna: [].
 
-EMAIL:\n${headerList}` }]
-      });
-      actionableIds = safeJsonParse(r1.content[0]?.text || '[]', []);
+EMAIL:\n${headerList}`, 2048);
+
+      actionableIds = safeJsonParse(text1, []);
       if (!Array.isArray(actionableIds)) actionableIds = [];
       emit(`  ↳ ${actionableIds.length} email actionable identificate`);
     } catch(e) { emit(`  ↳ Errore filtro AI: ${e.message?.slice(0,200)}`); }
   }
 
-  // ── PASSO 3: scarica corpo completo solo delle email actionable e crea task ──
+  // ── PASSO 2: scarica corpo completo solo delle email actionable e crea task ──
   let emailTasks = [];
   if (actionableIds.length > 0) {
     emit(`  ↳ Passo 2/2: analisi dettagliata di ${actionableIds.length} email...`);
-    // Pausa per rispettare rate limit TPM (abbiamo appena fatto una richiesta)
-    await new Promise(r => setTimeout(r, 3000));
     const actionableEmails = emailHeaders.filter(e => actionableIds.includes(e.id));
     const emailsWithBody = [];
     for (const e of actionableEmails) {
       try {
         const full = await gmailGetMessage(token, e.id);
-        emailsWithBody.push({ ...e, body: gmailBody(full, 600) });
+        emailsWithBody.push({ ...e, body: gmailBody(full, 800) });
       } catch { emailsWithBody.push({ ...e, body: '' }); }
     }
 
@@ -538,10 +574,8 @@ EMAIL:\n${headerList}` }]
     ).join('\n\n---\n\n');
 
     try {
-      const r2 = await claude.messages.create({
-        max_tokens: 4096,
-        messages: [{ role: 'user', content:
-          `Sei l'assistente personale di ${settings.userName||'Marco'} (${settings.primaryEmail||''}).
+      const text2 = await aiCall(aiKeys,
+        `Sei l'assistente personale di ${settings.userName||'Marco'} (${settings.primaryEmail||''}).
 Data: ${date}. Per ogni email crea un task JSON dettagliato:
 {
   "id": "id tra [id:...]",
@@ -555,10 +589,9 @@ Data: ${date}. Per ogni email crea un task JSON dettagliato:
 Q1=urgente+importante, Q2=importante non urgente, Q3=urgente non importante, Q4=bassa priorità.
 Sii specifico negli action points. Rispondi SOLO con array JSON.
 
-EMAIL:\n${emailList}` }]
-      });
-      const rawText = r2.content[0]?.text || '[]';
-      emailTasks = safeJsonParse(rawText, []);
+EMAIL:\n${emailList}`, 4096);
+
+      emailTasks = safeJsonParse(text2, []);
       if (!Array.isArray(emailTasks)) emailTasks = [];
       emit(`  ↳ ${emailTasks.length} task creati`);
     } catch(e) { emit(`  ↳ Errore analisi dettaglio: ${e.message?.slice(0,200)}`); }
