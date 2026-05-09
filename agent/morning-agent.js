@@ -810,37 +810,51 @@ Rispondi in italiano.`
     }
   }
 
-  // ── STEP 6b: Networking events via Perplexity ──────────────────────────────────
+  // ── STEP 6b: Networking events via Gemini + Google Search Grounding ────────────
   emit('[6b] Ricerca eventi networking...');
   const networkEvents = [];
-  if (detectedCity && perplexityApiKey) {
+  if (detectedCity && geminiApiKey) {
     try {
-      const cityQuery = /london/i.test(detectedCity)
-        ? `networking events London entrepreneurs this week OR next week`
-        : `networking eventi Milano imprenditori questa settimana prossima settimana`;
+      const isLondon = /london/i.test(detectedCity);
+      const weekFwd = new Date(date + 'T12:00:00Z'); weekFwd.setDate(weekFwd.getDate() + 7);
+      const prompt = `Find 5 real upcoming networking events for entrepreneurs, founders and startup people in ${detectedCity} happening between ${date} and ${weekFwd.toISOString().slice(0,10)}.
+Include: tech meetups, startup events, pitch nights, founder dinners, accelerator demo days, VC events.
+For each event return a JSON object with these exact fields:
+{"title":"event name","date":"dd Month yyyy","time":"HH:MM or TBD","description":"one sentence about the event","link":"https://... registration or info page","location":"venue name or area","tags":["startup","tech"]}
+Return ONLY a valid JSON array. No text before or after.`;
 
-      const pResp = await fetch('https://api.perplexity.ai/chat/completions', {
-        method: 'POST',
-        headers: { Authorization: `Bearer ${perplexityApiKey}`, 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          model: 'sonar-pro',
-          messages: [{
-            role: 'user',
-            content: `Find 3-5 networking events in ${detectedCity} this week or next week.
-For each: title, date (dd month yyyy · HH:MM), description (1 sentence), registration link, tags array.
-Respond as valid JSON array only.`
-          }],
-          search_recency_filter: 'week'
-        }),
-        signal: AbortSignal.timeout(15000)
-      });
-      const pData = await pResp.json();
-      const pText = pData.choices?.[0]?.message?.content || '[]';
-      networkEvents.push(...safeJsonParse(pText, []).slice(0, 5));
-      emit(`  ↳ ${networkEvents.length} eventi trovati in ${detectedCity}`);
-    } catch(e) { emit(`  ↳ Errore Perplexity: ${e.message}`); }
-  } else if (detectedCity) {
-    emit(`  ↳ Posizione: ${detectedCity} (Perplexity non configurata — aggiungi API key nelle impostazioni)`);
+      const r = await fetch(
+        `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${geminiApiKey}`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            contents: [{ role: 'user', parts: [{ text: prompt }] }],
+            tools: [{ googleSearch: {} }],
+            generationConfig: { maxOutputTokens: 2048, temperature: 0.1 }
+          }),
+          signal: AbortSignal.timeout(25000)
+        }
+      );
+      const d = await r.json();
+      if (d.error) {
+        emit(`  ↳ Gemini Search: ${d.error.message?.slice(0,100)}`);
+      } else {
+        const text = d.candidates?.[0]?.content?.parts?.[0]?.text || '[]';
+        emit(`  ↳ Gemini Search risposta (prime 150 car): ${text.slice(0,150)}`);
+        const parsed = safeJsonParse(text, []);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          networkEvents.push(...parsed.slice(0, 5));
+          emit(`  ↳ ✅ ${networkEvents.length} eventi trovati in ${detectedCity}`);
+        } else {
+          emit(`  ↳ Nessun evento strutturato trovato`);
+        }
+      }
+    } catch(e) { emit(`  ↳ Errore networking: ${e.message?.slice(0,100)}`); }
+  } else if (!detectedCity) {
+    emit('  ↳ Posizione non rilevata (aggiungi homeCity in Impostazioni o voli nel Calendar)');
+  } else {
+    emit('  ↳ Gemini API key non configurata');
   }
 
   // ── STEP 7: Populate tracker ───────────────────────────────────────────────────

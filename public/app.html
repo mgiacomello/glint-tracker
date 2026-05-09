@@ -20,7 +20,7 @@
     /* ── TOPBAR ── */
     .topbar {
       position: sticky; top: 0; z-index: 100;
-      background: rgba(9,9,11,.9); backdrop-filter: blur(16px);
+      background: rgba(9,9,11,.92); backdrop-filter: blur(16px);
       border-bottom: 1px solid var(--border);
       height: 56px; padding: 0 20px;
       display: flex; align-items: center; gap: 12px;
@@ -53,43 +53,63 @@
     .avatar img { width: 100%; height: 100%; object-fit: cover; }
 
     /* ── LAYOUT ── */
-    .layout { display: grid; grid-template-columns: 260px 1fr; min-height: calc(100vh - 56px); }
+    .layout { display: grid; grid-template-columns: 240px 1fr; min-height: calc(100vh - 56px); }
 
     /* ── SIDEBAR ── */
     .sidebar {
       border-right: 1px solid var(--border);
-      padding: 20px 16px;
-      display: flex; flex-direction: column; gap: 6px;
+      padding: 16px 12px;
+      display: flex; flex-direction: column; gap: 2px;
       position: sticky; top: 56px; height: calc(100vh - 56px); overflow-y: auto;
     }
-    .sidebar-section { font-size: 11px; font-weight: 600; color: var(--subtle); text-transform: uppercase; letter-spacing: .06em; padding: 12px 8px 4px; }
+    .sidebar-section { font-size: 10px; font-weight: 700; color: var(--subtle); text-transform: uppercase; letter-spacing: .08em; padding: 14px 10px 6px; }
     .sidebar-item {
-      display: flex; align-items: center; gap: 10px;
-      padding: 8px 10px; border-radius: 8px;
+      display: flex; align-items: center; gap: 9px;
+      padding: 7px 10px; border-radius: 8px;
       cursor: pointer; color: var(--muted); font-size: 13px; font-weight: 500;
-      transition: background .15s, color .15s; text-decoration: none;
+      transition: background .12s, color .12s; text-decoration: none;
     }
     .sidebar-item:hover { background: var(--card); color: var(--text); }
     .sidebar-item.active { background: rgba(99,102,241,.12); color: #a5b4fc; }
-    .sidebar-item .icon { font-size: 15px; width: 20px; text-align: center; }
-    .sidebar-item .badge { margin-left: auto; background: var(--red); color: #fff; font-size: 10px; font-weight: 700; padding: 1px 6px; border-radius: 10px; }
+    .sidebar-item .icon { font-size: 14px; width: 18px; text-align: center; flex-shrink: 0; }
+    .sidebar-item .sb-label { flex: 1; }
+    .sidebar-item .badge { background: var(--red); color: #fff; font-size: 10px; font-weight: 700; padding: 1px 6px; border-radius: 10px; min-width: 18px; text-align: center; }
     .sidebar-item .badge.blue { background: var(--accent); }
+    .sidebar-item .badge.grey { background: var(--subtle); }
+    .sidebar-item .badge.amber { background: var(--amber); color: #000; }
 
     /* ── MAIN ── */
-    .main { padding: 24px; max-width: 900px; display: flex; flex-direction: column; gap: 20px; }
+    .main { padding: 24px; max-width: 900px; display: flex; flex-direction: column; gap: 18px; }
 
-    /* ── DAY HEADER ── */
-    .day-header { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
-    .day-title { font-size: 22px; font-weight: 800; letter-spacing: -.02em; }
+    /* ── GREETING ROW ── */
+    .greeting-row { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+    .greeting-title { font-size: 22px; font-weight: 800; letter-spacing: -.02em; }
     .day-type-badge {
       display: flex; align-items: center; gap: 6px;
-      padding: 5px 12px; border-radius: 20px; font-size: 12px; font-weight: 600;
+      padding: 4px 11px; border-radius: 20px; font-size: 12px; font-weight: 600;
     }
     .day-type-badge.focus  { background: rgba(34,197,94,.12);  color: #86efac; }
     .day-type-badge.maker  { background: rgba(245,158,11,.12); color: #fde68a; }
     .day-type-badge.manager{ background: rgba(99,102,241,.12); color: #a5b4fc; }
-    .day-header-right { margin-left: auto; display: flex; align-items: center; gap: 10px; }
-    .progress-ring { font-size: 12px; color: var(--muted); }
+    .greeting-progress { margin-left: auto; font-size: 12px; color: var(--muted); }
+
+    /* ── STATS STRIP ── */
+    .stats-strip {
+      display: flex; gap: 8px; flex-wrap: wrap;
+    }
+    .stat-chip {
+      display: flex; align-items: center; gap: 7px;
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: 10px; padding: 8px 14px;
+      font-size: 13px; font-weight: 500; color: var(--muted);
+      flex: 1; min-width: 110px;
+    }
+    .stat-chip .sv { font-size: 16px; font-weight: 700; color: var(--text); }
+    .stat-chip .sl { font-size: 11px; color: var(--subtle); margin-top: 1px; }
+    .stat-chip .sicon { font-size: 16px; }
+    .stat-chip-inner { display: flex; flex-direction: column; gap: 0; }
+    .stat-chip.red-chip { border-color: rgba(239,68,68,.25); }
+    .stat-chip.red-chip .sv { color: #f87171; }
 
     /* ── AGENT LOG (run panel) ── */
     .agent-panel {
@@ -117,24 +137,11 @@
     .sum-chip .v { font-size: 18px; font-weight: 800; color: #a5b4fc; }
     .sum-chip .l { font-size: 11px; color: var(--subtle); }
 
-    /* ── SECTION CARD ── */
-    .card {
-      background: var(--surface); border: 1px solid var(--border);
-      border-radius: var(--radius); overflow: hidden;
-    }
-    .card-header {
-      padding: 14px 18px; border-bottom: 1px solid var(--border);
-      display: flex; align-items: center; gap: 8px;
-    }
-    .card-header h2 { font-size: 13px; font-weight: 600; flex: 1; }
-    .card-header .count { font-size: 12px; color: var(--subtle); }
-    .card-body { padding: 0; }
-
     /* ── COACHING STRIP ── */
     .coaching-strip {
-      background: linear-gradient(135deg, rgba(99,102,241,.08), rgba(139,92,246,.08));
-      border: 1px solid rgba(99,102,241,.2);
-      border-radius: var(--radius); padding: 14px 18px;
+      background: linear-gradient(135deg, rgba(99,102,241,.07), rgba(139,92,246,.07));
+      border: 1px solid rgba(99,102,241,.18);
+      border-radius: var(--radius); padding: 13px 18px;
       font-size: 13px; color: #c4b5fd; line-height: 1.7;
     }
 
@@ -149,16 +156,48 @@
     .health-metric .hl { font-size: 11px; color: var(--muted); }
     .health-recs { flex: 1; min-width: 200px; font-size: 12px; color: var(--muted); line-height: 1.8; border-left: 1px solid var(--border); padding-left: 16px; }
 
+    /* ── SECTION CARD ── */
+    .card {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: var(--radius); overflow: hidden;
+    }
+    .card-header {
+      padding: 13px 18px; border-bottom: 1px solid var(--border);
+      display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+    }
+    .card-header h2 { font-size: 13px; font-weight: 600; }
+    .card-header .count { font-size: 12px; color: var(--subtle); }
+    .card-body { padding: 0; }
+
+    /* ── QUADRANT TABS ── */
+    .q-tabs {
+      display: flex; gap: 6px; flex-wrap: wrap;
+      margin-left: auto;
+    }
+    .q-tab {
+      display: flex; align-items: center; gap: 4px;
+      padding: 3px 10px; border-radius: 20px;
+      font-size: 11px; font-weight: 600; cursor: pointer;
+      border: 1px solid var(--border); background: transparent;
+      color: var(--subtle); transition: all .14s;
+    }
+    .q-tab:hover { color: var(--muted); border-color: var(--subtle); }
+    .q-tab.active { color: var(--text); border-color: var(--subtle); background: rgba(255,255,255,.05); }
+    .q-tab.q1-tab.active { border-color: rgba(239,68,68,.5); background: rgba(239,68,68,.1); color: #fca5a5; }
+    .q-tab.q2-tab.active { border-color: rgba(96,165,250,.5); background: rgba(96,165,250,.1); color: #93c5fd; }
+    .q-tab.q3-tab.active { border-color: rgba(245,158,11,.5); background: rgba(245,158,11,.1); color: #fde68a; }
+    .q-tab.q4-tab.active { border-color: rgba(82,82,91,.6); background: rgba(82,82,91,.15); color: var(--muted); }
+
     /* ── EVENT ITEM ── */
     .event-item {
-      padding: 14px 18px; border-bottom: 1px solid var(--border);
+      padding: 13px 18px; border-bottom: 1px solid var(--border);
       display: flex; gap: 14px; align-items: flex-start;
       transition: background .1s; cursor: pointer;
     }
     .event-item:last-child { border-bottom: none; }
     .event-item:hover { background: rgba(255,255,255,.02); }
     .event-item.done { opacity: .5; }
-    .event-time { font-size: 12px; color: var(--muted); white-space: nowrap; min-width: 90px; padding-top: 2px; }
+    .event-time { font-size: 12px; color: var(--muted); white-space: nowrap; min-width: 80px; padding-top: 2px; }
     .event-info { flex: 1; }
     .event-title { font-size: 14px; font-weight: 600; margin-bottom: 3px; }
     .event-participants { font-size: 12px; color: var(--muted); margin-bottom: 4px; }
@@ -181,23 +220,26 @@
 
     /* ── TASK ITEM ── */
     .task-item {
-      padding: 14px 18px; border-bottom: 1px solid var(--border);
+      padding: 13px 18px; border-bottom: 1px solid var(--border);
       display: flex; gap: 12px; align-items: flex-start;
       transition: background .1s;
     }
     .task-item:last-child { border-bottom: none; }
     .task-item:hover { background: rgba(255,255,255,.02); }
     .task-item.done { opacity: .45; }
+    .task-item.q1 { border-left: 3px solid rgba(239,68,68,.8); background: rgba(239,68,68,.03); padding-left: 15px; }
+    .task-item.q1:hover { background: rgba(239,68,68,.05); }
     .q-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; margin-top: 5px; }
-    .q-dot.Q1 { background: var(--red); box-shadow: 0 0 6px rgba(239,68,68,.4); }
+    .q-dot.Q1 { background: var(--red); box-shadow: 0 0 6px rgba(239,68,68,.5); }
     .q-dot.Q2 { background: var(--blue); }
     .q-dot.Q3 { background: var(--amber); }
     .q-dot.Q4 { background: var(--subtle); }
     .task-info { flex: 1; min-width: 0; }
-    .task-title { font-size: 13px; font-weight: 600; margin-bottom: 3px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .task-title { font-size: 14px; font-weight: 600; margin-bottom: 3px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .task-item.q1 .task-title { color: #fef2f2; }
     .task-due { font-size: 11px; color: var(--muted); }
-    .task-brief { font-size: 12px; color: var(--subtle); margin-top: 4px; line-height: 1.5; display: none; }
-    .task-brief.open { display: block; }
+    .task-brief { font-size: 12px; color: var(--subtle); margin-top: 5px; line-height: 1.55; display: none; overflow: hidden; max-height: 0; transition: max-height .2s ease, opacity .2s ease; opacity: 0; }
+    .task-brief.open { display: block; max-height: 500px; opacity: 1; }
     .task-aps { margin-top: 8px; display: none; flex-direction: column; gap: 4px; }
     .task-aps.open { display: flex; }
     .ap-item {
@@ -207,22 +249,18 @@
     .ap-cb { width: 14px; height: 14px; border-radius: 3px; border: 1.5px solid var(--border); background: none; cursor: pointer; flex-shrink: 0; margin-top: 1px; transition: background .1s, border-color .1s; }
     .ap-cb.done { background: var(--green); border-color: var(--green); }
     .ap-text.done { text-decoration: line-through; opacity: .5; }
-    .task-link-btn {
-      background: none; border: none; color: var(--subtle);
-      font-size: 11px; cursor: pointer; padding: 0;
-      transition: color .15s; white-space: nowrap;
-    }
-    .task-link-btn:hover { color: var(--muted); }
     .task-actions { display: flex; gap: 6px; align-items: flex-start; flex-shrink: 0; margin-top: 1px; }
     .btn-expand {
       background: none; border: none; color: var(--subtle); font-size: 15px;
-      cursor: pointer; padding: 0; transition: color .15s;
+      cursor: pointer; padding: 2px; transition: color .15s, transform .18s;
+      line-height: 1;
     }
     .btn-expand:hover { color: var(--muted); }
+    .btn-expand.open { transform: rotate(180deg); color: var(--muted); }
 
     /* ── STUDY ITEMS ── */
     .study-item {
-      padding: 14px 18px; border-bottom: 1px solid var(--border);
+      padding: 13px 18px; border-bottom: 1px solid var(--border);
       display: flex; gap: 12px; align-items: flex-start;
     }
     .study-item:last-child { border-bottom: none; }
@@ -240,9 +278,6 @@
     .study-tag.low   { background: rgba(107,114,128,.15); color: #9ca3af; }
     .study-tag.cat   { background: rgba(99,102,241,.12); color: #a5b4fc; }
     .study-tag.gmail { background: rgba(52,211,153,.1);  color: #6ee7b7; }
-    .study-filter { display: flex; gap: 8px; padding: 10px 18px; border-bottom: 1px solid var(--border); flex-wrap: wrap; align-items: center; }
-    .study-filter-btn { font-size: 11px; padding: 3px 10px; border-radius: 20px; border: 1px solid var(--border); background: transparent; color: var(--subtle); cursor: pointer; transition: all .15s; }
-    .study-filter-btn.active { background: rgba(99,102,241,.2); border-color: #6366f1; color: #a5b4fc; }
 
     /* ── FAMILY ── */
     .family-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0; }
@@ -253,18 +288,27 @@
     .family-item .alert { color: var(--amber); font-size: 12px; margin-top: 4px; }
 
     /* ── NETWORK ── */
-    .network-item { padding: 12px 18px; border-bottom: 1px solid var(--border); display: flex; gap: 12px; align-items: flex-start; }
+    .network-item { padding: 13px 18px; border-bottom: 1px solid var(--border); display: flex; gap: 12px; align-items: flex-start; }
     .network-item:last-child { border-bottom: none; }
     .network-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--accent); flex-shrink: 0; margin-top: 5px; }
     .network-info { flex: 1; }
-    .network-title { font-size: 13px; font-weight: 600; margin-bottom: 2px; }
-    .network-date { font-size: 11px; color: var(--muted); }
-    .network-link { font-size: 11px; color: var(--accent); text-decoration: none; }
-    .network-link:hover { text-decoration: underline; }
+    .network-title { font-size: 13px; font-weight: 600; margin-bottom: 3px; }
+    .network-meta { font-size: 11px; color: var(--muted); margin-bottom: 3px; }
+    .network-desc { font-size: 12px; color: var(--subtle); line-height: 1.5; }
+    .network-tags { display: flex; gap: 5px; flex-wrap: wrap; margin-top: 5px; }
+    .network-tag { font-size: 10px; padding: 1px 7px; border-radius: 10px; background: rgba(99,102,241,.12); color: #a5b4fc; font-weight: 600; }
+    .btn-register {
+      display: inline-flex; align-items: center; gap: 3px;
+      font-size: 11px; font-weight: 600; padding: 4px 10px;
+      border-radius: 6px; background: rgba(99,102,241,.15); border: 1px solid rgba(99,102,241,.25);
+      color: #a5b4fc; text-decoration: none; white-space: nowrap;
+      transition: background .12s;
+    }
+    .btn-register:hover { background: rgba(99,102,241,.25); }
 
     /* ── EMPTY STATE ── */
     .empty { padding: 32px; text-align: center; color: var(--subtle); font-size: 13px; line-height: 1.7; }
-    .empty-section { padding: 16px 0; color: var(--subtle); font-size: 13px; line-height: 1.7; }
+    .empty-section { padding: 18px 18px; color: var(--subtle); font-size: 13px; line-height: 1.7; }
     .empty .big { font-size: 28px; margin-bottom: 8px; }
 
     /* ── USER MENU ── */
@@ -286,6 +330,8 @@
       .sidebar { display: none; }
       .family-grid { grid-template-columns: 1fr; }
       .family-col:first-child { border-right: none; border-bottom: 1px solid var(--border); }
+      .stats-strip { gap: 6px; }
+      .stat-chip { min-width: 80px; }
     }
   </style>
 </head>
@@ -298,7 +344,7 @@
   <div class="tb-right">
     <button class="btn-run" id="run-btn" onclick="runAgent(false)">☀️ Briefing</button>
     <button class="btn-run" onclick="runAgent(true)" style="background:#3f3f46;font-size:12px;padding:5px 10px;" title="Rianalizza tutte le email da capo">⚡</button>
-    <a href="/wellness.html" class="btn-settings" title="Wellness & Brain Training" style="font-size:16px">🧠</a>
+    <a href="/wellness.html" class="btn-settings" title="Wellness &amp; Brain Training" style="font-size:16px">🧠</a>
     <a href="/settings.html" class="btn-settings">⚙️</a>
     <div class="avatar" id="avatar-btn" onclick="toggleUserMenu()">?
       <img id="avatar-img" src="" style="display:none"/>
@@ -306,7 +352,7 @@
   </div>
   <div class="user-menu" id="user-menu">
     <div class="um-name" id="um-name">Caricamento...</div>
-    <a href="/wellness.html" class="um-item">🧠 Wellness & Brain</a>
+    <a href="/wellness.html" class="um-item">🧠 Wellness &amp; Brain</a>
     <a href="/settings.html" class="um-item">⚙️ Impostazioni</a>
     <div class="um-item" onclick="logout()">↩ Esci</div>
   </div>
@@ -316,13 +362,29 @@
   <!-- SIDEBAR -->
   <aside class="sidebar">
     <div class="sidebar-section">Oggi</div>
-    <div class="sidebar-item active" onclick="showSection('all')"><span class="icon">📋</span> Tutto il giorno</div>
-    <div class="sidebar-item" onclick="showSection('events')"><span class="icon">📅</span> Riunioni <span class="badge blue" id="sb-events">0</span></div>
-    <div class="sidebar-item" onclick="showSection('tasks')"><span class="icon">📧</span> Email <span class="badge" id="sb-tasks">0</span></div>
-    <div class="sidebar-section">Extra</div>
-    <div class="sidebar-item" onclick="showSection('growth')"><span class="icon">📚</span> Crescita</div>
-    <div class="sidebar-item" onclick="showSection('family')"><span class="icon">👨‍👩‍👦</span> Famiglia</div>
-    <div class="sidebar-item" onclick="showSection('network')"><span class="icon">🌐</span> Network</div>
+    <div class="sidebar-item active" onclick="showSection('all', this)">
+      <span class="icon">📋</span><span class="sb-label">Panoramica</span>
+    </div>
+    <div class="sidebar-item" onclick="showSection('events', this)">
+      <span class="icon">📅</span><span class="sb-label">Riunioni</span>
+      <span class="badge blue" id="sb-events">0</span>
+    </div>
+    <div class="sidebar-item" onclick="showSection('tasks', this)">
+      <span class="icon">📧</span><span class="sb-label">Email</span>
+      <span class="badge" id="sb-tasks">0</span>
+    </div>
+    <div class="sidebar-section">Altro</div>
+    <div class="sidebar-item" onclick="showSection('growth', this)">
+      <span class="icon">📚</span><span class="sb-label">Crescita</span>
+      <span class="badge grey" id="sb-growth" style="display:none">0</span>
+    </div>
+    <div class="sidebar-item" onclick="showSection('family', this)">
+      <span class="icon">👨‍👩‍👦</span><span class="sb-label">Famiglia</span>
+    </div>
+    <div class="sidebar-item" onclick="showSection('network', this)">
+      <span class="icon">🌐</span><span class="sb-label">Network</span>
+      <span class="badge blue" id="sb-network" style="display:none">0</span>
+    </div>
   </aside>
 
   <!-- MAIN -->
@@ -339,6 +401,7 @@ const today = new Date().toISOString().slice(0,10);
 let dayData = null;
 let currentSection = 'all';
 let userName = '';
+let qFilter = 'all';
 
 // ── Init ──────────────────────────────────────────────────────────────────────
 (async () => {
@@ -358,7 +421,7 @@ let userName = '';
       const img = document.getElementById('avatar-img');
       img.src = u.picture; img.style.display = 'block';
     }
-    document.getElementById('um-name').innerHTML = `${u.name || ''}<div class="um-email">${u.email || ''}</div>`;
+    document.getElementById('um-name').innerHTML = `${esc(u.name || '')}<div class="um-email">${esc(u.email || '')}</div>`;
   } catch(e) { location.href = '/login.html'; return; }
 
   await loadDay();
@@ -368,10 +431,21 @@ async function loadDay() {
   try {
     const r = await fetch(`/api/day/${today}`, { credentials: 'include' });
     dayData = await r.json();
+    // Set default qFilter based on whether there are Q1 tasks
+    const tasks = dayData?.tasks || [];
+    const items = dayData?.items || {};
+    const hasQ1 = tasks.some(t => (t.quadrant||'Q2').toUpperCase() === 'Q1' && !items[t.id]?.done);
+    if (qFilter === 'all' && hasQ1) qFilter = 'Q1';
     render();
   } catch(e) {
     renderEmpty();
   }
+}
+
+// ── setQFilter ─────────────────────────────────────────────────────────────────
+function setQFilter(q) {
+  qFilter = q;
+  render();
 }
 
 // ── Render ────────────────────────────────────────────────────────────────────
@@ -384,29 +458,76 @@ function render() {
   const family   = d.family   || {};
   const network  = d.network  || {};
   const health   = d.health   || null;
+  const study    = insights.studyItems || [];
+  const networkEvts = network.events || [];
 
-  // Update sidebar badges
+  // ── Compute stats ──
+  const q1Tasks  = tasks.filter(t => (t.quadrant||'Q2').toUpperCase() === 'Q1');
+  const q2Tasks  = tasks.filter(t => (t.quadrant||'Q2').toUpperCase() === 'Q2');
+  const q3Tasks  = tasks.filter(t => (t.quadrant||'Q2').toUpperCase() === 'Q3');
+  const q4Tasks  = tasks.filter(t => (t.quadrant||'Q2').toUpperCase() === 'Q4');
+  const q1Count  = q1Tasks.filter(t => !items[t.id]?.done).length;
+  const networkCount = networkEvts.length;
+  const growthCount  = study.length;
+
+  // ── Update sidebar badges ──
   document.getElementById('sb-events').textContent = events.length;
-  document.getElementById('sb-tasks').textContent  = tasks.filter(t => !items[t.id]?.done).length;
+  const tasksBadge = q1Count > 0 ? q1Count : tasks.filter(t => !items[t.id]?.done).length;
+  const tasksEl = document.getElementById('sb-tasks');
+  tasksEl.textContent = tasksBadge;
+  if (q1Count > 0) {
+    tasksEl.className = 'badge';
+  } else {
+    tasksEl.className = 'badge blue';
+  }
+
+  const growthEl = document.getElementById('sb-growth');
+  if (growthCount > 0) { growthEl.textContent = growthCount; growthEl.style.display = ''; }
+  else { growthEl.style.display = 'none'; }
+
+  const networkEl = document.getElementById('sb-network');
+  if (networkCount > 0) { networkEl.textContent = networkCount; networkEl.style.display = ''; }
+  else { networkEl.style.display = 'none'; }
 
   const main = document.getElementById('main-content');
   let html = '';
 
-  if (currentSection === 'all' || currentSection === 'header') {
-    // Day header
+  // ── PANORAMICA / ALL header ──
+  if (currentSection === 'all' || currentSection === 'panoramica') {
     const dayType = insights.dayType || '';
-    const dayTypeHtml = dayType ? `<div class="day-type-badge ${dayType}">${{focus:'🧘 Focus Day', maker:'🛠️ Maker Day', manager:'👔 Manager Day'}[dayType] || dayType}</div>` : '';
+    const dayTypeHtml = dayType
+      ? `<div class="day-type-badge ${dayType}">${{focus:'🧘 Focus Day', maker:'🛠️ Maker Day', manager:'👔 Manager Day'}[dayType] || dayType}</div>`
+      : '';
     const done  = Object.values(items).filter(i => i.done).length;
     const total = events.length + tasks.length;
-    html += `<div class="day-header">
-      <div class="day-title">Buongiorno${userName ? ', ' + userName.split(' ')[0] : ''} 👋</div>
+
+    html += `<div class="greeting-row">
+      <div class="greeting-title">Buongiorno${userName ? ', ' + esc(userName.split(' ')[0]) : ''} 👋</div>
       ${dayTypeHtml}
-      <div class="day-header-right">
-        <span class="progress-ring">${done}/${total} completati</span>
+      <span class="greeting-progress">${done}/${total} completati</span>
+    </div>`;
+
+    // Stats strip
+    html += `<div class="stats-strip">
+      <div class="stat-chip">
+        <span class="sicon">📅</span>
+        <div class="stat-chip-inner"><span class="sv">${events.length}</span><span class="sl">riunioni</span></div>
+      </div>
+      <div class="stat-chip ${q1Count > 0 ? 'red-chip' : ''}">
+        <span class="sicon">🔴</span>
+        <div class="stat-chip-inner"><span class="sv">${q1Count}</span><span class="sl">urgenti Q1</span></div>
+      </div>
+      <div class="stat-chip">
+        <span class="sicon">📧</span>
+        <div class="stat-chip-inner"><span class="sv">${tasks.length}</span><span class="sl">email</span></div>
+      </div>
+      <div class="stat-chip">
+        <span class="sicon">📚</span>
+        <div class="stat-chip-inner"><span class="sv">${growthCount}</span><span class="sl">da leggere</span></div>
       </div>
     </div>`;
 
-    // Agent panel (hidden by default)
+    // Agent panel (hidden by default, shown when running)
     html += `<div class="agent-panel" id="agent-panel">
       <div class="agent-panel-header">
         <span>☀️ Morning Agent</span>
@@ -418,7 +539,7 @@ function render() {
 
     // Coaching strip
     if (insights.growthBrief) {
-      html += `<div class="coaching-strip">✦ ${insights.growthBrief}</div>`;
+      html += `<div class="coaching-strip">✦ ${esc(insights.growthBrief)}</div>`;
     }
 
     // Health bar
@@ -430,12 +551,22 @@ function render() {
         <div class="health-metric"><div class="hv">${hrv||'?'} ms</div><div class="hl">HRV</div></div>
         <div class="health-metric"><div class="hv">${health.restingHR||'?'} bpm</div><div class="hl">FC riposo</div></div>
         <div class="health-metric"><div class="hv">${stress||'?'}</div><div class="hl">Stress</div></div>
-        ${recs ? `<div class="health-recs">🏃 ${recs.activity}<br/>🧠 ${recs.mindset}</div>` : ''}
+        ${recs ? `<div class="health-recs">🏃 ${esc(recs.activity)}<br/>🧠 ${esc(recs.mindset)}</div>` : ''}
       </div>`;
     }
+  } else {
+    // In single-section views still show the agent panel so it can appear
+    html += `<div class="agent-panel" id="agent-panel">
+      <div class="agent-panel-header">
+        <span>☀️ Morning Agent</span>
+        <button class="agent-close" onclick="closeAgentPanel()">×</button>
+      </div>
+      <div class="agent-log-box" id="agent-log"></div>
+      <div class="agent-summary-bar" id="agent-summary"></div>
+    </div>`;
   }
 
-  // Events
+  // ── EVENTS ──
   if (currentSection === 'all' || currentSection === 'events') {
     if (events.length > 0) {
       html += `<div class="card">
@@ -444,59 +575,67 @@ function render() {
       for (const evt of events) {
         const st = items[evt.id] || {};
         const brief = st.brief || evt.brief || '';
-        html += `<div class="event-item ${st.done ? 'done' : ''}" id="ei-${evt.id}">
-          <div class="event-time">${evt.time || ''}</div>
+        html += `<div class="event-item ${st.done ? 'done' : ''}" id="ei-${esc(evt.id)}">
+          <div class="event-time">${esc(evt.time || '')}</div>
           <div class="event-info">
             <div class="event-title">${esc(evt.title)}</div>
             ${evt.participants ? `<div class="event-participants">👥 ${esc(evt.participants)}</div>` : ''}
             ${brief ? `<div class="event-brief">${esc(brief).slice(0,200)}…</div>` : ''}
           </div>
           <div class="event-actions">
-            ${evt.meetLink ? `<a href="${evt.meetLink}" target="_blank" class="btn-meet">Join ↗</a>` : ''}
-            <button class="btn-done ${st.done ? 'checked' : ''}" onclick="toggleDone('${evt.id}','event')">${st.done ? '✓' : ''}</button>
+            ${evt.meetLink ? `<a href="${esc(evt.meetLink)}" target="_blank" class="btn-meet">Join ↗</a>` : ''}
+            <button class="btn-done ${st.done ? 'checked' : ''}" onclick="toggleDone('${esc(evt.id)}','event')">${st.done ? '✓' : ''}</button>
           </div>
         </div>`;
       }
       html += `</div></div>`;
+    } else if (currentSection === 'events') {
+      html += `<div class="card"><div class="empty"><div class="big">📅</div>Nessuna riunione per oggi.</div></div>`;
     }
   }
 
-  // Tasks by quadrant
+  // ── TASKS with quadrant tabs ──
   if (currentSection === 'all' || currentSection === 'tasks') {
-    const q1 = tasks.filter(t => (t.quadrant||'Q2').toUpperCase() === 'Q1');
-    const q2 = tasks.filter(t => (t.quadrant||'Q2').toUpperCase() === 'Q2');
-    const q3 = tasks.filter(t => (t.quadrant||'Q2').toUpperCase() === 'Q3');
-    const q4 = tasks.filter(t => (t.quadrant||'Q2').toUpperCase() === 'Q4');
+    // Build tab HTML
+    const countFor = q => tasks.filter(t => (t.quadrant||'Q2').toUpperCase() === q).length;
+    const allCount = tasks.length;
+    const qTabsHtml = `<div class="q-tabs">
+      <button class="q-tab ${qFilter==='all'?'active':''}" onclick="setQFilter('all')">Tutti (${allCount})</button>
+      <button class="q-tab q1-tab ${qFilter==='Q1'?'active':''}" onclick="setQFilter('Q1')">🔴 Q1 (${countFor('Q1')})</button>
+      <button class="q-tab q2-tab ${qFilter==='Q2'?'active':''}" onclick="setQFilter('Q2')">🔵 Q2 (${countFor('Q2')})</button>
+      <button class="q-tab q3-tab ${qFilter==='Q3'?'active':''}" onclick="setQFilter('Q3')">🟠 Q3 (${countFor('Q3')})</button>
+      <button class="q-tab q4-tab ${qFilter==='Q4'?'active':''}" onclick="setQFilter('Q4')">⚫ Q4 (${countFor('Q4')})</button>
+    </div>`;
 
-    const renderTaskSection = (list, qLabel, qColor, icon) => {
-      if (!list.length) return '';
-      return `<div class="card">
-        <div class="card-header" style="border-left:3px solid ${qColor};">
-          <h2>${icon} ${qLabel}</h2><span class="count">${list.filter(t => !items[t.id]?.done).length} attivi</span>
-        </div>
-        <div class="card-body">
-          ${list.map(t => renderTask(t, items[t.id] || {})).join('')}
-        </div>
-      </div>`;
-    };
+    const filteredTasks = qFilter === 'all' ? tasks : tasks.filter(t => (t.quadrant||'Q2').toUpperCase() === qFilter);
+    // Sort: Q1 first when showing all
+    const sortedTasks = qFilter === 'all'
+      ? [...q1Tasks, ...q2Tasks, ...q3Tasks, ...q4Tasks]
+      : filteredTasks;
 
-    html += renderTaskSection(q1, 'Q1 — Urgente + Importante', '#ef4444', '🔴');
-    html += renderTaskSection(q2, 'Q2 — Importante', '#60a5fa', '🔵');
-    html += renderTaskSection(q3, 'Q3 — Urgente (delega)', '#f59e0b', '🟠');
-    html += renderTaskSection(q4, 'Q4 — Bassa priorità', '#52525b', '⚫');
+    html += `<div class="card">
+      <div class="card-header">
+        <h2>📧 Email</h2>
+        <span class="count">${tasks.filter(t => !items[t.id]?.done).length} attivi</span>
+        ${qTabsHtml}
+      </div>
+      <div class="card-body">`;
 
-    if (!tasks.length) {
-      html += `<div class="card"><div class="empty"><div class="big">📧</div>Nessuna email da gestire.<br/>Clicca <strong>☀️ Briefing</strong> per analizzare la tua inbox.</div></div>`;
+    if (sortedTasks.length > 0) {
+      html += sortedTasks.map(t => renderTask(t, items[t.id] || {})).join('');
+    } else if (tasks.length === 0) {
+      html += `<div class="empty"><div class="big">📧</div>Nessuna email da gestire.<br/>Clicca <strong>☀️ Briefing</strong> per analizzare la tua inbox.</div>`;
+    } else {
+      html += `<div class="empty"><div class="big">✅</div>Nessun task in questa categoria.</div>`;
     }
+    html += `</div></div>`;
   }
 
-  // Growth / study items
+  // ── GROWTH / STUDY ──
   if (currentSection === 'all' || currentSection === 'growth') {
-    const study = insights.studyItems || [];
     const highItems   = study.filter(s => s.priority === 'high');
     const mediumItems = study.filter(s => s.priority === 'medium');
     const lowItems    = study.filter(s => s.priority === 'low' || !s.priority);
-    // Conteggi per Gmail category
     const byGmailCat = {};
     study.forEach(s => { const k = s.gmailCategory||s.source||''; byGmailCat[k] = (byGmailCat[k]||0)+1; });
     const catSummary = ['Aggiornamenti','Social','Promozioni','Forum']
@@ -509,7 +648,7 @@ function render() {
         <div class="study-num">${i+1}</div>
         <div class="study-info">
           <div class="study-title">
-            ${s.link ? `<a href="${s.link}" target="_blank" style="color:inherit;text-decoration:none;">${esc(s.title||'')}</a>` : esc(s.title||'')}
+            ${s.link ? `<a href="${esc(s.link)}" target="_blank" style="color:inherit;text-decoration:none;">${esc(s.title||'')}</a>` : esc(s.title||'')}
           </div>
           <div class="study-source">${esc(s.source||'')}${s.gmailCategory ? ` · Gmail: ${esc(s.gmailCategory)}` : ''}</div>
           <div class="study-summary">${esc(s.summary||'')}</div>
@@ -528,25 +667,19 @@ function render() {
       <div class="card-header">
         <h2>📚 Crescita · Da leggere</h2>
         ${study.length ? `<span class="count">${study.length}</span>` : ''}
+        ${study.length && catSummary ? `<span style="font-size:11px;color:var(--subtle);margin-left:4px;">${esc(catSummary)}</span>` : ''}
       </div>
-      ${study.length ? `
-      <div class="study-filter">
-        <span style="font-size:11px;color:var(--subtle);">
-          ${highItems.length ? `🔴 ${highItems.length} alta · ` : ''}${mediumItems.length ? `🟡 ${mediumItems.length} media · ` : ''}${lowItems.length ? `⚫ ${lowItems.length} bassa` : ''}
-          ${catSummary ? `&nbsp;—&nbsp;${esc(catSummary)}` : ''}
-        </span>
-      </div>` : ''}
       <div class="card-body">
         ${study.length ? [
-            ...highItems.map((s,_) => renderStudyItem(s, study.indexOf(s))),
-            ...mediumItems.map((s,_) => renderStudyItem(s, study.indexOf(s))),
-            ...lowItems.map((s,_) => renderStudyItem(s, study.indexOf(s)))
+            ...highItems.map((s) => renderStudyItem(s, study.indexOf(s))),
+            ...mediumItems.map((s) => renderStudyItem(s, study.indexOf(s))),
+            ...lowItems.map((s) => renderStudyItem(s, study.indexOf(s)))
           ].join('') : `<div class="empty-section">Nessun contenuto trovato in Aggiornamenti, Social o Promozioni.<br/><span style="font-size:12px;color:var(--subtle)">Clicca ⚡ per avviare l'agente che analizza tutte le categorie Gmail.</span></div>`}
       </div>
     </div>`;
   }
 
-  // Family
+  // ── FAMILY ──
   if (currentSection === 'all' || currentSection === 'family') {
     const al = family.alessandraEvents || [];
     const tm = family.tommasoAlerts   || [];
@@ -557,38 +690,70 @@ function render() {
       <div class="family-grid">
         <div class="family-col">
           <div class="family-label">${esc(spouseName)}</div>
-          <div class="family-item">${al.length ? al.map(e => `${e.time ? e.time + ' · ' : ''}${esc(e.title)}${e.isAway ? '<div class="alert">⚠️ Non sarà a casa</div>' : ''}`).join('<br/>') : '<span style="color:var(--subtle)">Nessun impegno rilevato oggi</span>'}</div>
+          <div class="family-item">${al.length
+            ? al.map(e => `${e.time ? esc(e.time) + ' · ' : ''}${esc(e.title)}${e.isAway ? '<div class="alert">⚠️ Non sarà a casa</div>' : ''}`).join('<br/>')
+            : '<span style="color:var(--subtle)">Nessun impegno rilevato oggi</span>'}</div>
         </div>
         <div class="family-col">
           <div class="family-label">${esc(childName)} · Scuola</div>
-          <div class="family-item">${tm.length ? tm.map(t => `<a href="${t.link}" target="_blank" style="color:var(--blue);text-decoration:none;">${esc(t.title)}</a>${t.priority === 'high' ? ' 🔴' : ''}`).join('<br/>') : '<span style="color:var(--subtle)">Nessuna comunicazione recente</span>'}</div>
+          <div class="family-item">${tm.length
+            ? tm.map(t => `<a href="${esc(t.link)}" target="_blank" style="color:var(--blue);text-decoration:none;">${esc(t.title)}</a>${t.priority === 'high' ? ' 🔴' : ''}`).join('<br/>')
+            : '<span style="color:var(--subtle)">Nessuna comunicazione recente</span>'}</div>
         </div>
       </div>
-      ${!al.length && !tm.length ? `<div style="padding:8px 0 0;font-size:12px;color:var(--subtle)">Configura i membri della famiglia in <a href="/settings.html" style="color:var(--accent);text-decoration:none;">Impostazioni → Famiglia</a> per abilitare il monitoraggio.</div>` : ''}
+      ${!al.length && !tm.length ? `<div style="padding:8px 18px 14px;font-size:12px;color:var(--subtle)">Configura i membri della famiglia in <a href="/settings.html" style="color:var(--accent);text-decoration:none;">Impostazioni → Famiglia</a> per abilitare il monitoraggio.</div>` : ''}
     </div>`;
   }
 
-  // Network
+  // ── NETWORK ──
   if (currentSection === 'all' || currentSection === 'network') {
-    const evts = network.events || [];
     const city = network.city || '';
     html += `<div class="card">
-      <div class="card-header"><h2>🌐 Network${city ? ' · ' + esc(city) : ''}</h2>${evts.length ? `<span class="count">${evts.length} eventi</span>` : ''}</div>
+      <div class="card-header">
+        <h2>🌐 Network${city ? ' · ' + esc(city) : ''}</h2>
+        ${networkEvts.length ? `<span class="count">${networkEvts.length} eventi</span>` : ''}
+      </div>
       <div class="card-body">
-        ${evts.length ? evts.map(e => `<div class="network-item">
-          <div class="network-dot"></div>
-          <div class="network-info">
-            <div class="network-title">${esc(e.title||'')}</div>
-            <div class="network-date">${esc(e.date||'')} ${e.description ? '· ' + esc(e.description) : ''}</div>
-          </div>
-          ${e.link ? `<a href="${e.link}" target="_blank" class="network-link">↗ Info</a>` : ''}
-        </div>`).join('') : `<div class="empty-section">Nessun evento networking trovato.${!city ? '<br/><span style="font-size:12px;color:var(--subtle)">La città viene rilevata automaticamente dagli eventi Calendar con voli.</span>' : `<br/><span style="font-size:12px;color:var(--subtle)">Posizione: ${esc(city)}. Aggiungi la Perplexity API key in <a href="/settings.html" style="color:var(--accent);text-decoration:none;">Impostazioni</a> per abilitare la ricerca.</span>`}</div>`}
+        ${networkEvts.length
+          ? networkEvts.map(e => `<div class="network-item">
+              <div class="network-dot"></div>
+              <div class="network-info">
+                <div class="network-title">${esc(e.title||'')}</div>
+                <div class="network-meta">${esc(e.date||'')}${e.time ? ' · ' + esc(e.time) : ''}${e.location ? ' · ' + esc(e.location) : ''}</div>
+                ${e.description ? `<div class="network-desc">${esc(e.description)}</div>` : ''}
+                ${(e.tags && e.tags.length) ? `<div class="network-tags">${e.tags.slice(0,4).map(tag=>`<span class="network-tag">${esc(tag)}</span>`).join('')}</div>` : ''}
+              </div>
+              ${e.link ? `<a href="${esc(e.link)}" target="_blank" class="btn-register">↗ Registrati</a>` : ''}
+            </div>`).join('')
+          : `<div class="empty-section">Nessun evento trovato. Clicca ☀️ Briefing per cercare eventi ${city ? 'a ' + esc(city) : 'nella tua città'}.</div>`
+        }
       </div>
     </div>`;
   }
 
   if (!html) html = renderEmpty(true);
   main.innerHTML = html;
+
+  // Restore agent panel visibility if it was visible before re-render
+  if (_agentPanelVisible) {
+    const p = document.getElementById('agent-panel');
+    if (p) p.classList.add('visible');
+    const logEl = document.getElementById('agent-log');
+    if (logEl && _agentLogLines.length) {
+      _agentLogLines.forEach(line => {
+        const div = document.createElement('div');
+        if (line.cls) div.className = line.cls;
+        div.textContent = line.text;
+        logEl.appendChild(div);
+      });
+      logEl.scrollTop = logEl.scrollHeight;
+    }
+    const sumEl = document.getElementById('agent-summary');
+    if (sumEl && _agentSummaryHtml) {
+      sumEl.innerHTML = _agentSummaryHtml;
+      sumEl.classList.add('visible');
+    }
+  }
 }
 
 function renderEmpty(ret = false) {
@@ -603,39 +768,42 @@ function renderEmpty(ret = false) {
 
 function renderTask(t, st) {
   const aps = st.actionPoints || [];
-  return `<div class="task-item ${st.done ? 'done' : ''}" id="ti-${t.id}">
-    <div class="q-dot ${(t.quadrant||'Q2').toUpperCase()}"></div>
+  const q = (t.quadrant || 'Q2').toUpperCase();
+  return `<div class="task-item ${st.done ? 'done' : ''} ${q === 'Q1' ? 'q1' : ''}" id="ti-${esc(t.id)}">
+    <div class="q-dot ${q}"></div>
     <div class="task-info">
       <div class="task-title">${esc(t.title)}</div>
-      <div class="task-due">${esc(t.due||'')} ${t.link ? `<a href="${t.link}" target="_blank" style="color:var(--accent);text-decoration:none;margin-left:4px;">↗ Apri</a>` : ''}</div>
-      <div class="task-brief" id="brief-${t.id}">${esc(t.brief||'').replace(/\n/g,'<br/>')}</div>
-      ${aps.length ? `<div class="task-aps" id="aps-${t.id}">
+      <div class="task-due">${esc(t.due||'')} ${t.link ? `<a href="${esc(t.link)}" target="_blank" style="color:var(--accent);text-decoration:none;margin-left:4px;">↗ Apri</a>` : ''}</div>
+      <div class="task-brief" id="brief-${esc(t.id)}">${esc(t.brief||'').replace(/\n/g,'<br/>')}</div>
+      ${aps.length ? `<div class="task-aps" id="aps-${esc(t.id)}">
         ${aps.map((ap,i) => `<div class="ap-item">
-          <div class="ap-cb ${ap.done ? 'done' : ''}" onclick="toggleAp('${t.id}','${ap.id}',${i})"></div>
+          <div class="ap-cb ${ap.done ? 'done' : ''}" onclick="toggleAp('${esc(t.id)}','${esc(ap.id)}',${i})"></div>
           <span class="ap-text ${ap.done ? 'done' : ''}">${esc(ap.text||'')}</span>
         </div>`).join('')}
       </div>` : ''}
     </div>
     <div class="task-actions">
-      <button class="btn-expand" onclick="expandTask('${t.id}')" title="Espandi">⌄</button>
-      <button class="btn-done ${st.done ? 'checked' : ''}" onclick="toggleDone('${t.id}','task')">${st.done ? '✓' : ''}</button>
+      <button class="btn-expand" id="exp-${esc(t.id)}" onclick="expandTask('${esc(t.id)}')" title="Espandi">⌄</button>
+      <button class="btn-done ${st.done ? 'checked' : ''}" onclick="toggleDone('${esc(t.id)}','task')">${st.done ? '✓' : ''}</button>
     </div>
   </div>`;
 }
 
 // ── Interactions ──────────────────────────────────────────────────────────────
-function showSection(s) {
+function showSection(s, el) {
   currentSection = s;
-  document.querySelectorAll('.sidebar-item').forEach(el => el.classList.remove('active'));
-  event.currentTarget.classList.add('active');
+  document.querySelectorAll('.sidebar-item').forEach(item => item.classList.remove('active'));
+  if (el) el.classList.add('active');
   render();
 }
 
 function expandTask(id) {
-  const brief = document.getElementById(`brief-${id}`);
-  const aps   = document.getElementById(`aps-${id}`);
+  const brief  = document.getElementById(`brief-${id}`);
+  const aps    = document.getElementById(`aps-${id}`);
+  const expBtn = document.getElementById(`exp-${id}`);
   if (brief) brief.classList.toggle('open');
   if (aps)   aps.classList.toggle('open');
+  if (expBtn) expBtn.classList.toggle('open');
 }
 
 async function toggleDone(id, type) {
@@ -676,18 +844,36 @@ async function toggleStudy(idx) {
   });
 }
 
+// ── Agent panel state (persists across renders) ────────────────────────────────
+let _agentPanelVisible = false;
+let _agentLogLines = [];
+let _agentSummaryHtml = '';
+
 // ── Morning Agent runner ───────────────────────────────────────────────────────
 async function runAgent(force = false) {
-  const btn    = document.getElementById('run-btn');
-  const panel  = document.getElementById('agent-panel');
-  const logEl  = document.getElementById('agent-log');
-  const sumEl  = document.getElementById('agent-summary');
+  const btn = document.getElementById('run-btn');
+  _agentPanelVisible = true;
+  _agentLogLines = [];
+  _agentSummaryHtml = '';
 
   btn.disabled = true;
   btn.textContent = force ? '⚡ Force refresh...' : '⏳ In esecuzione...';
-  panel.classList.add('visible');
-  logEl.innerHTML = '';
-  sumEl.classList.remove('visible');
+
+  // Make sure we're on panoramica so panel is visible
+  if (currentSection !== 'all' && currentSection !== 'panoramica') {
+    currentSection = 'all';
+    document.querySelectorAll('.sidebar-item').forEach((el, i) => {
+      el.classList.toggle('active', i === 0);
+    });
+  }
+  render();
+
+  const panel  = document.getElementById('agent-panel');
+  const logEl  = document.getElementById('agent-log');
+  const sumEl  = document.getElementById('agent-summary');
+  if (panel) panel.classList.add('visible');
+  if (logEl) logEl.innerHTML = '';
+  if (sumEl) sumEl.classList.remove('visible');
 
   const url = force
     ? `/api/morning-agent/${today}/run?force=true`
@@ -709,37 +895,55 @@ async function runAgent(force = false) {
         try {
           const ev = JSON.parse(line.slice(6));
           if (ev.log) {
-            const d = document.createElement('div');
-            d.textContent = ev.log;
-            logEl.appendChild(d); logEl.scrollTop = logEl.scrollHeight;
+            const currentLog = document.getElementById('agent-log');
+            if (currentLog) {
+              const dv = document.createElement('div');
+              dv.textContent = ev.log;
+              currentLog.appendChild(dv);
+              currentLog.scrollTop = currentLog.scrollHeight;
+            }
+            _agentLogLines.push({ text: ev.log, cls: null });
           }
           if (ev.error) {
-            const d = document.createElement('div');
-            d.className = 'log-err'; d.textContent = '❌ ' + ev.error;
-            logEl.appendChild(d);
+            const currentLog = document.getElementById('agent-log');
+            if (currentLog) {
+              const dv = document.createElement('div');
+              dv.className = 'log-err'; dv.textContent = '❌ ' + ev.error;
+              currentLog.appendChild(dv);
+            }
+            _agentLogLines.push({ text: '❌ ' + ev.error, cls: 'log-err' });
           }
           if (ev.done && ev.summary) {
             const s = ev.summary;
-            const d = document.createElement('div');
-            d.className = 'log-done'; d.textContent = '✅ Completato';
-            logEl.appendChild(d);
-            sumEl.innerHTML = [
+            const currentLog = document.getElementById('agent-log');
+            if (currentLog) {
+              const dv = document.createElement('div');
+              dv.className = 'log-done'; dv.textContent = '✅ Completato';
+              currentLog.appendChild(dv);
+            }
+            _agentLogLines.push({ text: '✅ Completato', cls: 'log-done' });
+            _agentSummaryHtml = [
               { v: s.events||0,     l: 'eventi' },
               { v: s.tasks||0,      l: 'email' },
               { v: s.dayType||'—',  l: 'giornata' },
               { v: s.studyItems||0, l: 'newsletter' },
               { v: s.emailSent ? '✓':'✗', l: 'email inviata' }
             ].map(x => `<div class="sum-chip"><div class="v">${x.v}</div><div class="l">${x.l}</div></div>`).join('');
-            sumEl.classList.add('visible');
+            const currentSum = document.getElementById('agent-summary');
+            if (currentSum) { currentSum.innerHTML = _agentSummaryHtml; currentSum.classList.add('visible'); }
             await loadDay();
           }
         } catch(e) { /* skip */ }
       }
     }
   } catch(e) {
-    const d = document.createElement('div');
-    d.className = 'log-err'; d.textContent = '❌ ' + e.message;
-    logEl.appendChild(d);
+    const currentLog = document.getElementById('agent-log');
+    if (currentLog) {
+      const dv = document.createElement('div');
+      dv.className = 'log-err'; dv.textContent = '❌ ' + e.message;
+      currentLog.appendChild(dv);
+    }
+    _agentLogLines.push({ text: '❌ ' + e.message, cls: 'log-err' });
   }
 
   btn.disabled = false;
@@ -747,6 +951,9 @@ async function runAgent(force = false) {
 }
 
 function closeAgentPanel() {
+  _agentPanelVisible = false;
+  _agentLogLines = [];
+  _agentSummaryHtml = '';
   document.getElementById('agent-panel')?.classList.remove('visible');
 }
 
