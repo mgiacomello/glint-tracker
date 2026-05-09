@@ -308,11 +308,21 @@ function ensureMonth(db, ym) {
 
 // ── DAY ROUTES ────────────────────────────────────────────────────────────────
 
-// GET /api/day/:date  → full day data
+// GET /api/day/:date  → full day data (includes userSettings for family names etc.)
 app.get('/api/day/:date', (req, res) => {
   const db = readDB();
+  const uid = getCurrentUid();
+  const users = readUsers();
+  const user = users[uid] || {};
   const day = db.days[req.params.date] || { events: [], tasks: [], items: {}, reflection: '', briefing: '' };
-  res.json(day);
+  const userSettings = {
+    ...DEFAULT_SETTINGS,
+    userName: user.name || '',
+    briefingEmail: user.email || '',
+    primaryEmail: user.email || '',
+    ...(db.userSettings || {})
+  };
+  res.json({ ...day, userSettings });
 });
 
 // POST /api/day/:date/populate  → called by scheduled task to seed the day
