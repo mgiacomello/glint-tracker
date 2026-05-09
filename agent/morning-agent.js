@@ -420,6 +420,16 @@ async function runMorningAgent({
       if (LONDON.test(text)) { detectedCity = 'London, UK'; break; }
       if (MILAN.test(text))  { detectedCity = 'Milan, Italy'; break; }
     }
+    // Fallback: inferisci città da timezone se ancora non rilevata
+    if (!detectedCity) {
+      if (/europe\/(rome|milan|paris|berlin|madrid|brussels|amsterdam|vienna|zurich)/i.test(tz))
+        detectedCity = 'Milano, Italy';
+      else if (/europe\/(london|dublin)/i.test(tz))
+        detectedCity = 'London, UK';
+      if (detectedCity) emit(`  ↳ Posizione inferita da timezone: ${detectedCity} (puoi sovrascriverla in Impostazioni → Home City)`);
+    } else {
+      emit(`  ↳ Posizione: ${detectedCity}`);
+    }
 
     if (spouse) {
       const spouseName = spouse.name.toLowerCase();

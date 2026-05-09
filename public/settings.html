@@ -524,7 +524,7 @@
       <div class="field">
         <label>Città di residenza (base)</label>
         <input type="text" id="s-homeCity" placeholder="London, UK"/>
-        <span class="hint">Usata per la ricerca eventi networking se non viene rilevata dal calendario</span>
+        <span class="hint">Usata da Gemini per cercare eventi networking reali nella tua città. Es: <strong>Milano, Italy</strong> oppure <strong>London, UK</strong>. Se non impostata, viene inferita dalla timezone.</span>
       </div>
     </div>
   </div>
@@ -569,9 +569,9 @@
     </div>
     <div class="section-body">
       <div class="field">
-        <label>Perplexity API Key <span style="color:var(--muted);font-weight:400;">(opzionale)</span></label>
-        <input type="password" id="s-perplexityApiKey" placeholder="pplx-..."/>
-        <span class="hint">Usata per cercare eventi networking in tempo reale nella tua città. Ottieni la key su <a href="https://www.perplexity.ai/settings/api" target="_blank" style="color:var(--accent);">perplexity.ai</a></span>
+        <label>Perplexity API Key <span style="color:var(--muted);font-weight:400;">(non più necessaria)</span></label>
+        <input type="password" id="s-perplexityApiKey" placeholder="pplx-..." disabled style="opacity:.4;cursor:not-allowed"/>
+        <span class="hint">⚠️ La ricerca eventi networking usa ora <strong>Gemini + Google Search</strong> (gratis, nessuna key richiesta). Puoi ignorare questo campo.</span>
       </div>
     </div>
   </div>

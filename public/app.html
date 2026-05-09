@@ -539,7 +539,7 @@ function render() {
 
     // Coaching strip
     if (insights.growthBrief) {
-      html += `<div class="coaching-strip">✦ ${esc(insights.growthBrief)}</div>`;
+      html += `<div class="coaching-strip">✦ ${esc(insights.growthBrief).replace(/\n/g,'<br/>')}</div>`;
     }
 
     // Health bar
