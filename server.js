@@ -3575,10 +3575,10 @@ app.get('/auth/oura/callback', async (req, res) => {
       db.ouraTokens = { ...tokens, connectedAt: new Date().toISOString() };
       writeDB(db);
     });
-    res.redirect('/wellness.html?oura=connected');
+    res.redirect('/settings.html?oura=connected');
   } catch (e) {
     console.error('Oura OAuth error:', e);
-    res.redirect('/wellness.html?oura=error');
+    res.redirect('/settings.html?oura=error');
   }
 });
 

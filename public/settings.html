@@ -561,6 +561,20 @@
     </div>
   </div>
 
+  <!-- ── Oura Ring ─────────────────────────────────────────────────────── -->
+  <div class="section">
+    <div class="section-header">
+      <span class="icon">💍</span>
+      <h2>Oura Ring</h2>
+      <span class="badge">Sonno · HRV · FC riposo · Stress</span>
+    </div>
+    <div class="section-body">
+      <div id="oura-connect-area">
+        <div style="color:var(--muted);font-size:13px">Caricamento...</div>
+      </div>
+    </div>
+  </div>
+
   <!-- ── Integrazioni ─────────────────────────────────────────────────── -->
   <div class="section">
     <div class="section-header">
@@ -599,7 +613,17 @@ let familyMembers = [];
 (async () => {
   await loadSettings();
   await checkGoogleStatus();
+  await checkOuraStatus();
   await checkAgentStatus();
+  // Show feedback after OAuth redirects
+  const p = new URLSearchParams(location.search);
+  if (p.get('oura') === 'connected') {
+    alert('💍 Oura Ring connesso con successo!');
+    history.replaceState({}, '', '/settings.html');
+  } else if (p.get('oura') === 'error') {
+    alert('⚠️ Errore durante la connessione a Oura. Riprova.');
+    history.replaceState({}, '', '/settings.html');
+  }
 })();
 
 async function loadSettings() {
@@ -744,6 +768,34 @@ function renderFamilyMembers() {
       <button class="member-remove" onclick="removeFamilyMember('${m._id}')" title="Rimuovi">×</button>
     </div>`;
   }).join('');
+}
+
+// ── Oura connect status ───────────────────────────────────────────────────────
+async function checkOuraStatus() {
+  const area = document.getElementById('oura-connect-area');
+  if (!area) return;
+  try {
+    const r = await fetch('/api/oura/status', { credentials: 'include' });
+    const d = await r.json();
+    if (d.connected) {
+      area.innerHTML = `<div class="connected-badge">
+        💍 Oura connesso${d.connectedAt ? ` · dal ${new Date(d.connectedAt).toLocaleDateString('it-IT')}` : ''}
+        &nbsp;<a href="/auth/oura" style="color:var(--muted);font-size:12px;margin-left:8px;">Riconnetti</a>
+      </div>`;
+    } else {
+      area.innerHTML = `<div class="connect-banner">
+        <span class="icon">💍</span>
+        <p>Oura Ring non connesso. L'agente non potrà leggere sonno, HRV e stress.</p>
+        <a href="/auth/oura">Connetti Oura Ring</a>
+      </div>`;
+    }
+  } catch(e) {
+    area.innerHTML = `<div class="connect-banner">
+      <span class="icon">💍</span>
+      <p>Oura Ring non connesso.</p>
+      <a href="/auth/oura">Connetti Oura Ring</a>
+    </div>`;
+  }
 }
 
 // ── Google connect status ──────────────────────────────────────────────────────
