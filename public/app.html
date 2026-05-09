@@ -265,6 +265,32 @@
     .fw-sub { margin-left: auto; font-size: 12px; color: var(--t2); }
     .card { background: var(--s1); border: 1px solid var(--line); border-radius: var(--r); overflow: hidden; }
 
+    /* ── ACTIVITIES ── */
+    .act-sections { display: flex; flex-direction: column; gap: 20px; }
+    .act-group-title { font-size: 13px; font-weight: 700; color: var(--t1); text-transform: uppercase; letter-spacing: .06em; margin-bottom: 10px; display: flex; align-items: center; gap: 8px; }
+    .act-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+    .act-card {
+      background: var(--s1); border: 1px solid var(--line); border-radius: var(--r);
+      padding: 16px 18px; display: flex; flex-direction: column; gap: 8px;
+      transition: border-color .15s;
+    }
+    .act-card:hover { border-color: rgba(255,255,255,.1); }
+    .act-card-top { display: flex; align-items: flex-start; gap: 10px; }
+    .act-price { font-size: 11px; font-weight: 700; color: var(--t2); flex-shrink: 0; margin-top: 2px; }
+    .act-title { font-size: 14px; font-weight: 700; flex: 1; line-height: 1.3; }
+    .act-location { font-size: 11px; color: var(--t2); }
+    .act-desc { font-size: 12px; color: var(--t1); line-height: 1.6; }
+    .act-why { font-size: 11px; color: var(--green); font-style: italic; }
+    .act-footer { display: flex; align-items: center; gap: 6px; margin-top: 2px; }
+    .act-cat { font-size: 10px; font-weight: 600; padding: 1px 7px; border-radius: 10px; background: rgba(255,255,255,.05); color: var(--t2); text-transform: uppercase; letter-spacing: .2px; }
+    .act-link { margin-left: auto; font-size: 11px; font-weight: 600; color: var(--accent); text-decoration: none; }
+    .act-link:hover { text-decoration: underline; }
+    /* type accent colors */
+    .act-card.solo     { border-top: 2px solid rgba(59,130,246,.4); }
+    .act-card.couple   { border-top: 2px solid rgba(255,100,130,.4); }
+    .act-card.family   { border-top: 2px solid rgba(0,208,132,.4); }
+    .act-card.restaurant { border-top: 2px solid rgba(255,184,0,.4); }
+
     /* ── RESPONSIVE ── */
     @media (max-width: 860px) {
       .bento { grid-template-columns: 1fr 1fr; }
@@ -289,6 +315,7 @@
   <div class="tab-nav">
     <button class="tnav on" onclick="nav('all',this)">Oggi</button>
     <button class="tnav" onclick="nav('growth',this)">Crescita <span id="tnav-growth" style="display:none"></span></button>
+    <button class="tnav" onclick="nav('activities',this)">Vita locale</button>
     <button class="tnav" onclick="nav('network',this)">Network</button>
     <button class="tnav" onclick="nav('family',this)">Famiglia</button>
   </div>
@@ -374,7 +401,7 @@ function render() {
 
   // update tab active state
   document.querySelectorAll('.tnav').forEach(b=>b.classList.remove('on'));
-  const tabMap = {'all':0,'growth':1,'network':2,'family':3};
+  const tabMap = {'all':0,'growth':1,'activities':2,'network':3,'family':4};
   const tabIdx = tabMap[section]??0;
   document.querySelectorAll('.tnav')[tabIdx]?.classList.add('on');
 
@@ -424,6 +451,54 @@ function render() {
     return;
   }
 
+  // ── SECTION: VITA LOCALE (full width) ──
+  if (section==='activities') {
+    const act   = d.localActivities||{};
+    const items = act.items||[];
+    const city  = act.city||net.city||'';
+    const byType = t => items.filter(a=>a.type===t);
+    const groups = [
+      { type:'solo',       icon:'🚶', label:'Solo',               color:'#3b82f6' },
+      { type:'couple',     icon:'💑', label:`Con ${(dayData?.userSettings?.familyMembers||[]).find(f=>f.role==='spouse')?.name||'partner'}`, color:'#ff6482' },
+      { type:'family',     icon:'👨‍👩‍👦', label:`Con ${(dayData?.userSettings?.familyMembers||[]).find(f=>f.role==='child')?.name||'figlio'} (${(dayData?.userSettings?.familyMembers||[]).find(f=>f.role==='child')?.age||8} anni)`, color:'#00d084' },
+      { type:'restaurant', icon:'🍽️', label:'Ristoranti',         color:'#ffb800' },
+    ];
+    const actCard = a => `<div class="act-card ${esc(a.type||'')}">
+      <div class="act-card-top">
+        <div class="act-price">${esc(a.price||'')}</div>
+        <div class="act-title">${esc(a.title||'')}</div>
+      </div>
+      ${a.location?`<div class="act-location">📍 ${esc(a.location)}</div>`:''}
+      <div class="act-desc">${esc(a.description||'')}</div>
+      ${a.why?`<div class="act-why">💡 ${esc(a.why)}</div>`:''}
+      <div class="act-footer">
+        ${a.category?`<span class="act-cat">${esc(a.category)}</span>`:''}
+        ${a.link?`<a href="${esc(a.link)}" target="_blank" class="act-link">↗ Info</a>`:''}
+      </div>
+    </div>`;
+    page.innerHTML = `
+      ${_panelHtml()}
+      <div class="fw-section">
+        <div class="fw-head">
+          <span class="fw-title">🗺️ Vita locale${city?' · '+esc(city):''}</span>
+          ${items.length?`<span class="fw-count">${items.length} idee</span>`:''}
+        </div>
+        ${items.length ? `<div class="act-sections">
+          ${groups.map(g=>{
+            const gItems = byType(g.type);
+            if(!gItems.length) return '';
+            return `<div>
+              <div class="act-group-title"><span>${g.icon}</span><span style="color:${g.color}">${g.label}</span></div>
+              <div class="act-grid">${gItems.map(actCard).join('')}</div>
+            </div>`;
+          }).join('')}
+        </div>`
+        : `<div class="card"><div class="empty"><div class="ei">🗺️</div>Nessuna attività trovata${city?' per '+esc(city):''}.<br/>Clicca <strong>☀️ Briefing</strong> per cercare attività locali.</div></div>`}
+      </div>`;
+    _restorePanel();
+    return;
+  }
+
   // ── SECTION: FAMIGLIA (full width) ──
   if (section==='family') {
     const al=family.alessandraEvents||[], tm=family.tommasoAlerts||[];
@@ -459,6 +534,8 @@ function render() {
   const filteredTasks = qFilter==='all'?[...q1,...q2,...q3,...q4]:tasks.filter(t=>(t.quadrant||'Q2').toUpperCase()===qFilter);
   const studyPreview = study.slice(0,3);
   const netPreview   = netEvts.slice(0,3);
+  const actData      = d.localActivities||{};
+  const actPreview   = (actData.items||[]).slice(0,3);
   const sp=(dayData?.userSettings?.familyMembers||[]).find(f=>f.role==='spouse')?.name||'Partner';
   const ch=(dayData?.userSettings?.familyMembers||[]).find(f=>f.role==='child')?.name||'Figli';
   const al=family.alessandraEvents||[], tm=family.tommasoAlerts||[];
@@ -576,15 +653,33 @@ function render() {
           : `<div class="empty"><div class="ei">📚</div>Nessuna newsletter.<br/>Clicca <strong>⚡</strong> per analizzare.</div>`}
       </div>
 
-      <!-- Network preview span2 -->
-      <div class="bc s2">
+      <!-- Network preview span1 -->
+      <div class="bc">
         <div class="bc-head">
           <span class="bc-title">🌐 Network${net.city?' · '+esc(net.city):''}</span>
           ${netEvts.length?`<span class="bc-badge blue">${netEvts.length}</span>`:''}
-          ${netEvts.length>3?`<button class="bc-more" onclick="nav('network',null)">Vedi tutti →</button>`:''}
+          ${netEvts.length>2?`<button class="bc-more" onclick="nav('network',null)">Tutti →</button>`:''}
         </div>
         ${netPreview.length ? netPreview.map(e=>netRow(e)).join('')
-          : `<div class="empty"><div class="ei">🌐</div>Nessun evento trovato.<br/>Clicca <strong>☀️ Briefing</strong> per cercare networking.</div>`}
+          : `<div class="empty"><div class="ei">🌐</div>Nessun evento.<br/><span style="font-size:11px">Avvia briefing per cercare</span></div>`}
+      </div>
+
+      <!-- Vita locale preview span1 -->
+      <div class="bc">
+        <div class="bc-head">
+          <span class="bc-title">🗺️ Vita locale</span>
+          ${actData.items?.length?`<span class="bc-badge pur">${actData.items.length}</span>`:''}
+          ${actData.items?.length>3?`<button class="bc-more" onclick="nav('activities',null)">Tutti →</button>`:''}
+        </div>
+        ${actPreview.length ? actPreview.map(a=>`
+          <div style="display:flex;gap:10px;align-items:flex-start;padding:9px 16px;border-bottom:1px solid var(--line2);">
+            <div style="width:6px;height:6px;border-radius:50%;flex-shrink:0;margin-top:5px;background:${{solo:'#3b82f6',couple:'#ff6482',family:'#00d084',restaurant:'#ffb800'}[a.type]||'var(--accent)'};"></div>
+            <div style="flex:1;min-width:0;">
+              <div style="font-size:12px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${esc(a.title||'')}</div>
+              <div style="font-size:11px;color:var(--t2)">${esc(a.location||'')}${a.price?' · '+esc(a.price):''}</div>
+            </div>
+          </div>`).join('')
+        : `<div class="empty"><div class="ei">🗺️</div>Nessuna idea locale.<br/><span style="font-size:11px">Avvia briefing per cercare</span></div>`}
       </div>
 
       <!-- Famiglia span1 -->

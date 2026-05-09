@@ -867,6 +867,65 @@ Return ONLY a valid JSON array. No text before or after.`;
     emit('  ↳ Gemini API key non configurata');
   }
 
+  // ── STEP 6c: Local activities via Gemini + Google Search Grounding ────────────
+  emit('[6c] Ricerca attività locali...');
+  const localActivities = [];
+  if (detectedCity && geminiApiKey) {
+    try {
+      const spouseName  = (settings.familyMembers || []).find(f => f.role === 'spouse')?.name || 'partner';
+      const childMember = (settings.familyMembers || []).find(f => f.role === 'child');
+      const childName   = childMember?.name || 'figlio';
+      const childAge    = childMember?.age  || 8;
+      const isLondon    = /london/i.test(detectedCity);
+      const lang        = isLondon ? 'English' : 'Italian';
+
+      const prompt = `Suggest local activities and places in ${detectedCity} worth doing this week or weekend.
+Return exactly 12 suggestions as a JSON array in ${lang}.
+Split as follows:
+- 3 items type "solo": interesting solo activities (museums, walks, experiences, cultural events)
+- 3 items type "couple": romantic or fun things to do with a partner named ${spouseName} (nice restaurants, experiences, walks)
+- 3 items type "family": kid-friendly activities for a ${childAge}-year-old named ${childName} (parks, museums, fun places)
+- 3 items type "restaurant": restaurant recommendations (mix: romantic, family-friendly, solo lunch spot)
+
+Each item must have these exact fields:
+{"type":"solo|couple|family|restaurant","title":"name","description":"2 sentences max","category":"food|culture|outdoor|sport|art|entertainment|nature","location":"neighborhood or address","price":"€|€€|€€€","why":"short personal note why it's recommended","link":"https://..."}
+
+Use real, currently operating places. Search the web for accuracy.
+Return ONLY a valid JSON array — no text, no markdown.`;
+
+      const r = await fetch(
+        `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${geminiApiKey}`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            contents: [{ role: 'user', parts: [{ text: prompt }] }],
+            tools: [{ googleSearch: {} }],
+            generationConfig: { maxOutputTokens: 3000, temperature: 0.3 }
+          }),
+          signal: AbortSignal.timeout(30000)
+        }
+      );
+      const d = await r.json();
+      if (d.error) {
+        emit(`  ↳ Errore attività: ${d.error.message?.slice(0,100)}`);
+      } else {
+        const text = d.candidates?.[0]?.content?.parts?.[0]?.text || '[]';
+        const parsed = safeJsonParse(text, []);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          localActivities.push(...parsed.slice(0, 12));
+          emit(`  ↳ ✅ ${localActivities.length} attività trovate in ${detectedCity}`);
+        } else {
+          emit(`  ↳ Nessuna attività strutturata trovata`);
+        }
+      }
+    } catch(e) { emit(`  ↳ Errore attività locali: ${e.message?.slice(0,100)}`); }
+  } else if (!detectedCity) {
+    emit('  ↳ Posizione non rilevata — configura homeCity in Impostazioni');
+  } else {
+    emit('  ↳ Gemini API key non configurata');
+  }
+
   // ── STEP 7: Populate tracker ───────────────────────────────────────────────────
   emit('[7/9] Salvataggio nel tracker...');
   const saveDb = readDBForUid(uid);
@@ -926,8 +985,9 @@ In italiano, concreto e azionabile.`
   } catch(e) { growthBrief = `Oggi è una ${dayType} day. Buona giornata, ${settings.userName || 'Marco'}!`; }
 
   saveDb.days[date].insights = { dayType, growthBrief, driveFiles, studyItems };
-  saveDb.days[date].family   = { alessandraEvents, tommasoAlerts };
-  saveDb.days[date].network  = { city: detectedCity, events: networkEvents };
+  saveDb.days[date].family          = { alessandraEvents, tommasoAlerts };
+  saveDb.days[date].network         = { city: detectedCity, events: networkEvents };
+  saveDb.days[date].localActivities = { city: detectedCity, items: localActivities };
   saveDb.googleLastSync = new Date().toISOString();
   writeDBForUid(uid, saveDb);
   emit('  ↳ Dati salvati');

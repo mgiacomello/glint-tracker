@@ -733,6 +733,8 @@ function renderFamilyMembers() {
           </select>
         </div>
         ${isChild ? `<div class="member-fields">
+          <input type="number" placeholder="Età" min="1" max="18" value="${escAttr(m.age || '')}"
+                 oninput="updateMember('${m._id}','age',+this.value)" style="width:80px"/>
           <input type="text" placeholder="Scuola (es. SIAL)" value="${escAttr(m.school || '')}"
                  oninput="updateMember('${m._id}','school',this.value)"/>
           <input type="email" placeholder="Email scuola" value="${escAttr(m.schoolEmail || '')}"
