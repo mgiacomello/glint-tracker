@@ -104,9 +104,12 @@
     .kpi-l { font-size: 11px; color: var(--t2); margin-top: 4px; font-weight: 500; }
 
     /* ── COACHING BRIEF ── */
-    .brief-card { background: var(--s1); border: 1px solid var(--line); border-radius: var(--r); padding: 18px 22px; display: flex; gap: 14px; align-items: flex-start; }
-    .brief-icon { font-size: 18px; flex-shrink: 0; }
-    .brief-text { font-size: 13px; color: var(--t1); line-height: 1.8; }
+    .brief-card { background: var(--s1); border: 1px solid var(--line); border-radius: var(--r); overflow: hidden; }
+    .brief-head { display: flex; align-items: center; gap: 8px; padding: 11px 18px 10px; border-bottom: 1px solid var(--line2); }
+    .brief-head-label { font-size: 11px; font-weight: 700; color: var(--t2); text-transform: uppercase; letter-spacing: .07em; }
+    .brief-body { padding: 14px 18px; display: flex; gap: 12px; align-items: flex-start; }
+    .brief-icon { font-size: 16px; flex-shrink: 0; margin-top: 2px; }
+    .brief-text { font-size: 13px; color: var(--t1); line-height: 1.85; }
     .brief-text strong { color: var(--t0); }
 
     /* ── AGENT PANEL ── */
@@ -194,8 +197,7 @@
     .tk-meta { font-size: 11px; color: var(--t2); }
     .tk-meta a { color: var(--accent); text-decoration: none; }
     .tk-meta a:hover { text-decoration: underline; }
-    .tk-brief { font-size: 12px; color: var(--t1); margin-top: 5px; line-height: 1.55; display: none; }
-    .tk-brief.open { display: block; }
+    .tk-brief { font-size: 12px; color: var(--t1); margin-top: 5px; line-height: 1.55; }
     .tk-aps { margin-top: 7px; display: none; flex-direction: column; gap: 3px; }
     .tk-aps.open { display: flex; }
     .ap-row { display: flex; align-items: flex-start; gap: 8px; font-size: 12px; color: var(--t1); padding: 2px 0; }
@@ -484,7 +486,10 @@ function render() {
       </div>
     </div>
 
-    ${ins.growthBrief?`<div class="brief-card"><div class="brief-icon">💡</div><div class="brief-text">${esc(ins.growthBrief).replace(/\n/g,'<br/>')}</div></div>`:''}
+    ${ins.growthBrief?`<div class="brief-card">
+      <div class="brief-head"><span class="brief-head-label">☀️ Briefing del giorno</span></div>
+      <div class="brief-body"><div class="brief-icon">💡</div><div class="brief-text">${esc(ins.growthBrief).replace(/\n/g,'<br/>')}</div></div>
+    </div>`:''}
 
     ${health?`
     <div class="brief-card" style="gap:0;padding:0;overflow:hidden;">
@@ -605,12 +610,13 @@ function render() {
 // ── Row builders ───────────────────────────────────────────────────────────
 function tkRow(t, st) {
   const aps=st.actionPoints||[], q=(t.quadrant||'Q2').toUpperCase();
+  const brief = esc(t.brief||'').replace(/\n/g,'<br/>');
   return `<div class="tk-row ${st.done?'done':''} ${q==='Q1'?'is-q1':''}" id="ti-${esc(t.id)}">
     <div class="q-dot ${q}"></div>
     <div class="tk-body">
       <div class="tk-title">${esc(t.title)}</div>
       <div class="tk-meta">${esc(t.due||'')}${t.link?` &nbsp;<a href="${esc(t.link)}" target="_blank">↗ Apri email</a>`:''}</div>
-      <div class="tk-brief" id="br-${esc(t.id)}">${esc(t.brief||'').replace(/\n/g,'<br/>')}</div>
+      ${brief?`<div class="tk-brief">${brief}</div>`:''}
       ${aps.length?`<div class="tk-aps" id="ap-${esc(t.id)}">${aps.map((a,i)=>`
         <div class="ap-row">
           <div class="ap-cb ${a.done?'done':''}" onclick="toggleAp('${esc(t.id)}','${esc(a.id)}',${i})"></div>
@@ -618,7 +624,7 @@ function tkRow(t, st) {
         </div>`).join('')}</div>`:''}
     </div>
     <div class="tk-acts">
-      <button class="btn-exp" id="ex-${esc(t.id)}" onclick="expandTask('${esc(t.id)}')">⌄</button>
+      ${aps.length?`<button class="btn-exp" id="ex-${esc(t.id)}" onclick="expandTask('${esc(t.id)}')">⌄</button>`:''}
       <button class="btn-circle ${st.done?'done':''}" onclick="toggleDone('${esc(t.id)}','task')">${st.done?'✓':''}</button>
     </div>
   </div>`;
@@ -698,7 +704,6 @@ function setQ(q) { qFilter=q; render(); }
 
 // ── Toggles ────────────────────────────────────────────────────────────────
 function expandTask(id) {
-  document.getElementById(`br-${id}`)?.classList.toggle('open');
   document.getElementById(`ap-${id}`)?.classList.toggle('open');
   document.getElementById(`ex-${id}`)?.classList.toggle('open');
 }
