@@ -571,12 +571,13 @@ Rispondi SOLO con array JSON di TUTTI i task. Non saltare nessuna email.
 
 EMAIL:\n${emailList}`, 8192);
 
+      emit(`  ↳ Gemini risposta (prime 200 car): ${text.slice(0, 200)}`);
       emailTasks = safeJsonParse(text, []);
       if (!Array.isArray(emailTasks)) {
-        emit(`  ↳ Risposta AI non è array, raw: ${text.slice(0, 300)}`);
+        emit(`  ↳ WARN: risposta non parseable come array`);
         emailTasks = [];
       }
-      emit(`  ↳ ${emailTasks.length} task creati da ${emailsWithBody.length} email`);
+      emit(`  ↳ ✅ ${emailTasks.length} task parsati da ${emailsWithBody.length} email`);
     } catch(e) { emit(`  ↳ Errore analisi: ${e.message?.slice(0, 300)}`); }
   } else {
     emit(`  ↳ Nessuna email da analizzare`);
