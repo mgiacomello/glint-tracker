@@ -615,6 +615,15 @@ let familyMembers = [];
   await checkGoogleStatus();
   await checkOuraStatus();
   await checkAgentStatus();
+
+  // Auto-save on input for all text/email/time fields
+  ['s-userName','s-briefingEmail','s-briefingTime','s-primaryEmail','s-homeCity'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.addEventListener('input', scheduleAutoSave);
+  });
+  document.getElementById('s-timezone')?.addEventListener('change', scheduleAutoSave);
+  document.getElementById('s-sendBriefingEmail')?.addEventListener('change', scheduleAutoSave);
+
   // Show feedback after OAuth redirects
   const p = new URLSearchParams(location.search);
   if (p.get('oura') === 'connected') {
@@ -682,13 +691,24 @@ async function saveSettings() {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload)
     });
+    if (r.status === 401) { location.href = '/login.html'; return; }
     const d = await r.json();
     if (d.ok) {
       const msg = document.getElementById('saved-msg');
+      msg.textContent = '✓ Salvato';
       msg.classList.add('show');
       setTimeout(() => msg.classList.remove('show'), 2500);
+    } else {
+      console.error('Save failed:', d);
     }
-  } catch(e) { alert('Errore nel salvataggio: ' + e.message); }
+  } catch(e) { console.error('Errore nel salvataggio:', e); }
+}
+
+// Auto-save with 1.5s debounce
+let _autoSaveTimer = null;
+function scheduleAutoSave() {
+  if (_autoSaveTimer) clearTimeout(_autoSaveTimer);
+  _autoSaveTimer = setTimeout(() => { saveSettings(); }, 1500);
 }
 
 // ── Tag helpers ───────────────────────────────────────────────────────────────
@@ -723,17 +743,20 @@ const ROLE_LABELS = { spouse: 'Coniuge / Partner', child: 'Figlio/a', parent: 'G
 function addFamilyMember() {
   familyMembers.push({ _id: Math.random().toString(36).slice(2), name: '', role: 'other', school: '', schoolEmail: '' });
   renderFamilyMembers();
+  scheduleAutoSave();
 }
 
 function removeFamilyMember(id) {
   familyMembers = familyMembers.filter(m => m._id !== id);
   renderFamilyMembers();
+  scheduleAutoSave();
 }
 
 function updateMember(id, field, val) {
   const m = familyMembers.find(m => m._id === id);
   if (m) m[field] = val;
   if (field === 'role') renderFamilyMembers();
+  scheduleAutoSave();
 }
 
 function renderFamilyMembers() {
