@@ -3543,29 +3543,39 @@ if (process.env.NODE_ENV !== 'production') {
 
 const OURA_CLIENT_ID = process.env.OURA_CLIENT_ID || '';
 const OURA_CLIENT_SECRET = process.env.OURA_CLIENT_SECRET || '';
-const OURA_REDIRECT_URI = process.env.OURA_REDIRECT_URI || `http://localhost:${process.env.PORT || 3000}/auth/oura/callback`;
+const OURA_REDIRECT_URI_OVERRIDE = process.env.OURA_REDIRECT_URI || '';
 const OURA_AUTH_URL = 'https://cloud.ouraring.com/oauth/authorize';
 const OURA_TOKEN_URL = 'https://api.ouraring.com/oauth/token';
 const OURA_API = 'https://api.ouraring.com/v2';
+
+function getOuraRedirectUri(req) {
+  if (OURA_REDIRECT_URI_OVERRIDE) return OURA_REDIRECT_URI_OVERRIDE;
+  const proto = req.headers['x-forwarded-proto'] || req.protocol || 'http';
+  const host  = req.headers['x-forwarded-host'] || req.headers.host || `localhost:${PORT}`;
+  return `${proto}://${host}/auth/oura/callback`;
+}
 
 // ── Oura OAuth ────────────────────────────────────────────────────────────────
 app.get('/auth/oura', (req, res) => {
   const uid = req.session?.userId;
   if (!uid) return res.redirect('/login.html');
   if (!OURA_CLIENT_ID) return res.status(400).send('OURA_CLIENT_ID non configurato nelle variabili d\'ambiente.');
+  const redirectUri = getOuraRedirectUri(req);
   const params = new URLSearchParams({
     response_type: 'code',
     client_id: OURA_CLIENT_ID,
-    redirect_uri: OURA_REDIRECT_URI,
+    redirect_uri: redirectUri,
     scope: 'daily heartrate workout session personal',
     state: uid
   });
+  console.log('Oura OAuth redirect_uri:', redirectUri);
   res.redirect(`${OURA_AUTH_URL}?${params}`);
 });
 
 app.get('/auth/oura/callback', async (req, res) => {
   const { code, state } = req.query;
-  if (!code) return res.redirect('/wellness.html?oura=error');
+  if (!code) return res.redirect('/settings.html?oura=error');
+  const redirectUri = getOuraRedirectUri(req);
   try {
     const resp = await fetch(OURA_TOKEN_URL, {
       method: 'POST',
@@ -3573,7 +3583,7 @@ app.get('/auth/oura/callback', async (req, res) => {
       body: new URLSearchParams({
         grant_type: 'authorization_code',
         code,
-        redirect_uri: OURA_REDIRECT_URI,
+        redirect_uri: redirectUri,
         client_id: OURA_CLIENT_ID,
         client_secret: OURA_CLIENT_SECRET
       })
