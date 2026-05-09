@@ -541,16 +541,15 @@ async function runMorningAgent({
 
   const aiKeys = { geminiApiKey, groqApiKey, anthropicApiKey };
 
-  // ── Scarica il corpo delle prime 50 email (Principale prima, poi il resto) ───
+  // ── Analisi email Principale → Task ────────────────────────────────────────
+  // Solo la categoria Principale viene trasformata in task.
+  // Le altre categorie (Aggiornamenti, Social, Promozioni, Forum) vanno in Crescita (STEP 3b).
   let emailTasks = [];
-  if (emailHeaders.length > 0) {
-    // Ordina: Principale prima, poi Aggiornamenti, poi Social/Promo
-    const ORDER = ['Principale', 'Aggiornamenti', 'Social', 'Promozioni', 'Forum'];
-    const sorted = [...emailHeaders].sort((a, b) =>
-      (ORDER.indexOf(a.category) ?? 99) - (ORDER.indexOf(b.category) ?? 99)
-    );
-    const toAnalyze = sorted.slice(0, 50);
-    emit(`  ↳ Scarico corpo di ${toAnalyze.length} email (priorità: Principale prima)...`);
+  const principaleHeaders = emailHeaders.filter(e => e.category === 'Principale');
+  emit(`  ↳ ${principaleHeaders.length} email Principale trovate`);
+  if (principaleHeaders.length > 0) {
+    const toAnalyze = principaleHeaders.slice(0, 100);  // fino a 100 email Principale
+    emit(`  ↳ Scarico corpo di ${toAnalyze.length} email Principale...`);
 
     const emailsWithBody = [];
     for (const e of toAnalyze) {
@@ -589,7 +588,7 @@ EMAIL:\n${emailList}`, 32768);
       emit(`  ↳ ✅ ${emailTasks.length} task parsati da ${emailsWithBody.length} email`);
     } catch(e) { emit(`  ↳ Errore analisi: ${e.message?.slice(0, 300)}`); }
   } else {
-    emit(`  ↳ Nessuna email da analizzare`);
+    emit(`  ↳ Nessuna email Principale da analizzare`);
   }
 
   result.tasks = emailTasks.map(t => ({
@@ -604,43 +603,81 @@ EMAIL:\n${emailList}`, 32768);
 
   emit(`  ↳ ${result.tasks.length} task email identificati`);
 
-  // ── STEP 3b: Newsletter / growth material ──────────────────────────────────────
-  emit('[3b] Scansione newsletter e aggiornamenti...');
+  // ── STEP 3b: Crescita — Aggiornamenti + Social + Promozioni + Forum ──────────
+  // Tutte le email non-Principale vengono analizzate separatamente e messe in Crescita.
+  emit('[3b] Analisi email per sezione Crescita (Aggiornamenti, Social, Promozioni, Forum)...');
   const studyItems = [];
-  try {
-    const socialRaw = await gmailSearch(token, 'category:social OR category:updates', 30);
-    const socialData = [];
-    for (const msg of socialRaw.slice(0, 20)) {
+  const growthCats = ['Aggiornamenti', 'Promozioni', 'Social', 'Forum'];
+  const growthHeaders = emailHeaders.filter(e => growthCats.includes(e.category));
+  emit(`  ↳ ${growthHeaders.length} email totali (Aggiornamenti: ${(allRawByCategory['Aggiornamenti']||[]).length} · Social: ${(allRawByCategory['Social']||[]).length} · Promozioni: ${(allRawByCategory['Promozioni']||[]).length} · Forum: ${(allRawByCategory['Forum']||[]).length})`);
+
+  if (growthHeaders.length > 0) {
+    // Priorità: prima Aggiornamenti, poi Social, poi Promozioni, poi Forum
+    const GROWTH_ORDER = ['Aggiornamenti', 'Social', 'Promozioni', 'Forum'];
+    const sortedGrowth = [...growthHeaders].sort((a, b) =>
+      GROWTH_ORDER.indexOf(a.category) - GROWTH_ORDER.indexOf(b.category)
+    );
+    const toStudy = sortedGrowth.slice(0, 80);
+    emit(`  ↳ Scarico corpo di ${toStudy.length} email per Crescita...`);
+
+    const studyWithBody = [];
+    for (const e of toStudy) {
       try {
-        const full = await gmailGetMessage(token, msg.id);
-        const h = gmailHeaders(full);
-        socialData.push({ id: msg.id, from: h.from || '', subject: h.subject || '', body: gmailBody(full, 600) });
-      } catch(e) { /* skip */ }
+        const full = await gmailGetMessage(token, e.id);
+        studyWithBody.push({ ...e, body: gmailBody(full, 400) });
+      } catch { studyWithBody.push({ ...e, body: '' }); }
     }
 
-    if (socialData.length > 0) {
+    try {
       const interests = (settings.interests || ['business', 'AI', 'leadership', 'startup', 'tecnologia']).join(', ');
-      const resp = await claude.messages.create({
-        model: claude._provider === 'gemini' ? 'gemini-2.0-flash' : claude._provider === 'groq' ? 'llama-3.3-70b-versatile' : 'claude-3-5-sonnet-20241022',
-        max_tokens: 2000,
-        messages: [{
-          role: 'user',
-          content: `Seleziona i 5 contenuti più rilevanti per la crescita di ${settings.userName || 'Marco'}.
-Aree di interesse: ${interests}
+      const emailList = studyWithBody.map((e, i) =>
+        `EMAIL_${i+1} [id:${e.id}] [${e.category}]\nDa: ${e.from}\nOggetto: ${e.subject}\n${e.body}`
+      ).join('\n\n---\n\n');
 
-Per ognuno dei 5 più rilevanti:
-{"title":"...","summary":"sintesi 2-3 frasi","source":"Newsletter · mittente","link":"https://mail.google.com/mail/u/0/#inbox/ID","recommendation":"Cosa fare con questa info"}
+      const studyText = await aiCall(aiKeys,
+        `Sei l'assistente personale di ${settings.userName||'Marco'}.
+Interessi: ${interests}.
+Data oggi: ${date}.
 
-EMAIL:\n${socialData.map((e, i) => `[${i + 1}|id:${e.id}] Da: ${e.from}\nOggetto: ${e.subject}\n${e.body}`).join('\n---\n')}
+Analizza TUTTE queste email da Aggiornamenti, Social e Promozioni.
+Per OGNI email crea un record JSON:
+{"id":"SOLO_IL_CODICE_ID","title":"titolo o oggetto email","summary":"sintesi 1-2 frasi del contenuto","source":"nome newsletter o mittente","recommendation":"leggi|acquista|ignora|salva|iscriviti","category":"AI|business|tool|promo|social|news|evento|marketing|finanza|altro","priority":"high|medium|low","gmailCategory":"categoria Gmail originale"}
 
-Rispondi SOLO con array JSON.`
-        }]
+HIGH = molto rilevante per gli interessi di Marco.
+MEDIUM = interessante ma non urgente.
+LOW = spam, promozioni banali, notifiche automatiche.
+
+Includi TUTTE le email nell'array JSON. Rispondi SOLO con array JSON.
+
+EMAIL:\n${emailList}`, 32768);
+
+      emit(`  ↳ Gemini Crescita risposta (prime 200 car): ${studyText.slice(0, 200)}`);
+      const parsed = safeJsonParse(studyText, []);
+      for (const s of parsed) {
+        if (!s.id) continue;
+        studyItems.push({
+          id: s.id,
+          title: s.title || s.from || 'Aggiornamento',
+          summary: s.summary || '',
+          source: s.source || s.from || '',
+          recommendation: s.recommendation || '',
+          category: s.category || 'altro',
+          gmailCategory: s.gmailCategory || '',
+          priority: s.priority || 'medium',
+          link: `https://mail.google.com/mail/u/0/#inbox/${s.id}`,
+          done: false
+        });
+      }
+      // Ordina: high → medium → low
+      studyItems.sort((a, b) => {
+        const P = { high: 0, medium: 1, low: 2 };
+        return (P[a.priority] ?? 1) - (P[b.priority] ?? 1);
       });
-      const parsed = safeJsonParse(resp.content[0]?.text || '[]', []);
-      studyItems.push(...parsed.slice(0, 5));
-    }
-  } catch(e) { emit(`  ↳ Errore 3b: ${e.message}`); }
-  emit(`  ↳ ${studyItems.length} study items selezionati`);
+      emit(`  ↳ ✅ ${studyItems.length} item per Crescita (${studyItems.filter(s=>s.priority==='high').length} high · ${studyItems.filter(s=>s.priority==='medium').length} medium · ${studyItems.filter(s=>s.priority==='low').length} low)`);
+    } catch(e) { emit(`  ↳ Errore 3b: ${e.message?.slice(0, 300)}`); }
+  } else {
+    emit('  ↳ Nessuna email non-Principale trovata per Crescita');
+  }
 
   // ── STEP 3c: School/child alerts ───────────────────────────────────────────────
   const tommasoAlerts = [];
@@ -962,12 +999,23 @@ function buildEmailHtml({ date, dayType, dayTypeLabel, health, healthRec, calend
       ${e.brief ? `<pre style="white-space:pre-wrap;font-family:inherit;font-size:13px;color:#d1d5db;margin:8px 0 0;">${e.brief}</pre>` : ''}
     `)).join('')}` : '';
 
+  const priorityColor = { high: '#f87171', medium: '#fbbf24', low: '#9ca3af' };
   const studySection = studyItems.length ? `
-    ${h3('📚', 'Crescita · Da leggere')}
-    ${studyItems.map(s => `<div style="margin-bottom:12px;">
-      <strong style="color:#a78bfa;">${s.title}</strong>&nbsp;<small style="color:#9ca3af;">${s.source || ''}</small><br/>
-      ${s.summary || ''}<br/>
-      <em style="color:#6ee7b7;">→ ${s.recommendation || ''}</em>
+    ${h3('📚', `Crescita · ${studyItems.length} contenuti`)}
+    <p style="color:#9ca3af;font-size:12px;margin:0 0 12px;">
+      🔴 ${studyItems.filter(s=>s.priority==='high').length} alta priorità &nbsp;·&nbsp;
+      🟡 ${studyItems.filter(s=>s.priority==='medium').length} media &nbsp;·&nbsp;
+      ⚫ ${studyItems.filter(s=>s.priority==='low').length} bassa
+    </p>
+    ${studyItems.map(s => `<div style="margin-bottom:14px;padding:10px 12px;background:#141416;border-left:3px solid ${priorityColor[s.priority||'medium']};border-radius:0 6px 6px 0;">
+      <div style="margin-bottom:4px;">
+        <strong>${link(s.link||'#', s.title||'')}</strong>
+        ${s.category ? `<span style="font-size:10px;background:rgba(99,102,241,.15);color:#a5b4fc;padding:1px 6px;border-radius:8px;margin-left:6px;">${s.category}</span>` : ''}
+        ${s.gmailCategory ? `<span style="font-size:10px;background:rgba(52,211,153,.1);color:#6ee7b7;padding:1px 6px;border-radius:8px;margin-left:4px;">${s.gmailCategory}</span>` : ''}
+      </div>
+      <small style="color:#9ca3af;">${s.source || ''}</small><br/>
+      <span style="font-size:12px;color:#d1d5db;">${s.summary || ''}</span><br/>
+      ${s.recommendation ? `<em style="font-size:12px;color:#6ee7b7;">→ ${s.recommendation}</em>` : ''}
     </div>`).join('')}` : '';
 
   const familySection = `
