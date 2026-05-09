@@ -276,6 +276,15 @@ function safeJsonParse(text, fallback = []) {
   if (arrMatch) { try { return JSON.parse(arrMatch[1]); } catch {} }
   const objMatch = stripped.match(/(\{[\s\S]*\})/);
   if (objMatch) { try { return JSON.parse(objMatch[1]); } catch {} }
+  // Recovery: extract all complete JSON objects from a potentially truncated array
+  // (handles the case where maxOutputTokens cuts the response mid-array)
+  const objects = [];
+  const objRegex = /\{[^{}]*(?:\{[^{}]*\}[^{}]*)?\}/g;
+  let match;
+  while ((match = objRegex.exec(stripped)) !== null) {
+    try { objects.push(JSON.parse(match[0])); } catch {}
+  }
+  if (objects.length > 0) return objects;
   return fallback;
 }
 
@@ -564,12 +573,12 @@ Data oggi: ${date}.
 Analizza TUTTE queste email e per ognuna crea un task JSON. Assegna un quadrante in base a urgenza e importanza.
 Per le email Principale assegna Q1 o Q2. Per Aggiornamenti usa Q3 o Q4. Per Promozioni/Social usa Q4 a meno che non siano rilevanti.
 
-Formato JSON per ogni email:
-{"id":"id tra [id:...]","title":"titolo conciso max 60 car","category":"categoria","quadrant":"Q1|Q2|Q3|Q4","brief":"Descrizione del contenuto e perché è rilevante. Cosa richiede.","actionPoints":["Azione specifica 1","Azione 2","Azione 3"],"from":"mittente"}
+Formato JSON per ogni email (IMPORTANTE: id = solo il codice alfanumerico tra [id:...], NON le parentesi):
+{"id":"SOLO_IL_CODICE_ID","title":"titolo conciso max 60 car","category":"categoria","quadrant":"Q1|Q2|Q3|Q4","brief":"Descrizione 1-2 frasi","actionPoints":["Azione 1","Azione 2"],"from":"mittente"}
 
-Rispondi SOLO con array JSON di TUTTI i task. Non saltare nessuna email.
+Rispondi SOLO con array JSON. Sii conciso nel brief (1-2 frasi max) per non superare il limite di lunghezza.
 
-EMAIL:\n${emailList}`, 8192);
+EMAIL:\n${emailList}`, 32768);
 
       emit(`  ↳ Gemini risposta (prime 200 car): ${text.slice(0, 200)}`);
       emailTasks = safeJsonParse(text, []);
