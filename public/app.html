@@ -269,6 +269,11 @@
     .act-sections { display: flex; flex-direction: column; gap: 20px; }
     .act-group-title { font-size: 13px; font-weight: 700; color: var(--t1); text-transform: uppercase; letter-spacing: .06em; margin-bottom: 10px; display: flex; align-items: center; gap: 8px; }
     .act-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+    .act-tab-bar { display: flex; gap: 8px; padding: 14px 18px 0; flex-wrap: wrap; }
+    .act-tab { padding: 7px 16px; border-radius: 20px; border: 1px solid var(--line); background: transparent; color: var(--t1); cursor: pointer; font-size: 13px; font-weight: 500; transition: all .15s; white-space: nowrap; }
+    .act-tab:hover { border-color: var(--t1); color: var(--t0); }
+    .act-tab.on { font-weight: 600; }
+    .act-grid-full { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; padding: 14px 18px 18px; }
     .act-card {
       background: var(--s1); border: 1px solid var(--line); border-radius: var(--r);
       padding: 16px 18px; display: flex; flex-direction: column; gap: 8px;
@@ -461,14 +466,18 @@ function render() {
     const items = act.items||[];
     const city  = act.city||net.city||'';
     const refreshedAt=act._refreshedAt ? new Date(act._refreshedAt).toLocaleDateString('it-IT',{day:'2-digit',month:'2-digit'}) : null;
-    const byType = t => items.filter(a=>a.type===t);
     const members=dayData?.userSettings?.familyMembers||[];
-    const groups = [
-      { type:'solo',       icon:'🚶', label:'Solo',               color:'#3b82f6' },
-      { type:'couple',     icon:'💑', label:`Con ${members.find(f=>f.role==='spouse')?.name||'partner'}`, color:'#ff6482' },
-      { type:'family',     icon:'👨‍👩‍👦', label:`Con ${members.find(f=>f.role==='child')?.name||'figlio'} (${members.find(f=>f.role==='child')?.age||8} anni)`, color:'#00d084' },
-      { type:'restaurant', icon:'🍽️', label:'Ristoranti', color:'#ffb800' },
+    const spouseName = members.find(f=>f.role==='spouse')?.name||'Partner';
+    const childName  = members.find(f=>f.role==='child')?.name||'Figlio';
+    const childAge   = members.find(f=>f.role==='child')?.age||8;
+
+    const tabs = [
+      { key:'solo',       icon:'🚶', label:'Per me',              color:'#3b82f6' },
+      { key:'couple',     icon:'💑', label:`Con ${spouseName}`,   color:'#ff6482' },
+      { key:'family',     icon:'👨‍👩‍👦', label:`Con ${childName}`,   color:'#00d084' },
+      { key:'restaurant', icon:'🍽️', label:'Ristoranti',          color:'#ffb800' },
     ];
+
     const actCard = a => `<div class="act-card ${esc(a.type||'')}">
       <div class="act-card-top">
         <div class="act-price">${esc(a.price||'')}</div>
@@ -482,25 +491,32 @@ function render() {
         ${a.link?`<a href="${esc(a.link)}" target="_blank" class="act-link">↗ Info</a>`:''}
       </div>
     </div>`;
+
+    const activeTab = window._actTab || 'solo';
+
     page.innerHTML = `
       ${_panelHtml()}
       <div class="fw-section">
         <div class="fw-head">
           <span class="fw-title">🗺️ Vita locale${city?' · '+esc(city):''}</span>
-          ${items.length?`<span class="fw-count">${items.length} idee</span>`:''}
           ${refreshedAt?`<span style="font-size:11px;color:var(--t2);margin-left:auto">aggiornato ${refreshedAt}</span>`:''}
           <button onclick="refreshLocal()" style="margin-left:${refreshedAt?'8px':'auto'};padding:4px 12px;border-radius:6px;border:1px solid var(--line);background:transparent;color:var(--t1);cursor:pointer;font-size:12px">⟳ Aggiorna</button>
         </div>
         <div id="local-refresh-log" style="display:none;padding:10px 16px;font-size:12px;color:var(--t1);font-family:monospace;white-space:pre-wrap;border-bottom:1px solid var(--line)"></div>
-        ${items.length ? `<div class="act-sections">
-          ${groups.map(g=>{
-            const gItems = byType(g.type);
-            if(!gItems.length) return '';
-            return `<div>
-              <div class="act-group-title"><span>${g.icon}</span><span style="color:${g.color}">${g.label}</span></div>
-              <div class="act-grid">${gItems.map(actCard).join('')}</div>
-            </div>`;
-          }).join('')}
+        ${items.length ? `
+        <div class="act-tab-bar">
+          ${tabs.map(t=>`
+            <button class="act-tab ${activeTab===t.key?'on':''}" onclick="setActTab('${t.key}')"
+              style="${activeTab===t.key?`background:${t.color}22;border-color:${t.color};color:${t.color}`:''}">
+              ${t.icon} ${t.label}
+            </button>`).join('')}
+        </div>
+        <div class="act-grid-full">
+          ${(()=>{
+            const visible = items.filter(a=>a.type===activeTab);
+            if(!visible.length) return `<div class="empty"><div class="ei">${tabs.find(t=>t.key===activeTab)?.icon||'🗺️'}</div>Nessuna attività trovata.<br/>Clicca ⟳ Aggiorna per cercare.</div>`;
+            return visible.map(actCard).join('');
+          })()}
         </div>`
         : `<div class="card"><div class="empty"><div class="ei">🗺️</div>Nessuna attività trovata${city?' per '+esc(city):''}.<br/><button onclick="refreshLocal()" style="margin-top:8px;padding:6px 16px;border-radius:8px;border:none;background:var(--accent);color:#fff;cursor:pointer;font-size:12px">⟳ Cerca attività ora</button></div></div>`}
       </div>`;
@@ -889,6 +905,8 @@ function renderEmpty(){ document.getElementById('page').innerHTML=`<div style="p
 function toggleMenu(){document.getElementById('user-menu').classList.toggle('open');document.getElementById('overlay').style.display='block';}
 function closeMenu(){document.getElementById('user-menu').classList.remove('open');document.getElementById('overlay').style.display='none';}
 async function logout(){if(!confirm('Uscire da Glint?'))return;await fetch('/api/logout',{method:'POST',credentials:'include'});location.href='/login.html';}
+
+function setActTab(key){ window._actTab=key; render(); }
 
 async function refreshLocal(){
   const logEl = document.getElementById('local-refresh-log');
