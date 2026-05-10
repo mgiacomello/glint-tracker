@@ -3727,6 +3727,29 @@ app.post('/api/oura/sync', async (req, res) => {
     }
 
     db.ouraLastSync = new Date().toISOString();
+
+    // Bridge: map ouraData → days[date].health so the morning agent and app health card can read it
+    Object.entries(db.ouraData).forEach(([date, od]) => {
+      if (!db.days) db.days = {};
+      if (!db.days[date]) db.days[date] = { events: [], tasks: [], items: {}, reflection: '', briefing: '' };
+      const existing = db.days[date].health || {};
+      // Stress level: derived from readiness score (≥85 low, ≥60 medium, else high)
+      const readScore = od.readiness?.score || 0;
+      const stressLevel = readScore >= 85 ? 'low' : readScore >= 60 ? 'medium' : 'high';
+      db.days[date].health = {
+        ...existing,
+        sleepScore:   od.sleep?.score      ?? existing.sleepScore  ?? null,
+        hrv:          od.hrv_avg           ?? existing.hrv         ?? null,
+        restingHR:    od.readiness?.resting_heart_rate ?? existing.restingHR ?? null,
+        stressLevel:  readScore > 0 ? stressLevel : (existing.stressLevel ?? null),
+        readinessScore: od.readiness?.score ?? existing.readinessScore ?? null,
+        activityScore:  od.activity?.score  ?? existing.activityScore  ?? null,
+        steps:          od.activity?.steps  ?? existing.steps          ?? null,
+        totalSleepMin:  od.sleep?.total_sleep ?? existing.totalSleepMin ?? null,
+        source: 'oura'
+      };
+    });
+
     writeDB(db);
     res.json({ ok: true, days: Object.keys(db.ouraData).length, lastSync: db.ouraLastSync });
   } catch (e) {

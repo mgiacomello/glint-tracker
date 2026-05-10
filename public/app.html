@@ -615,15 +615,23 @@ function render() {
         <div class="bc-head"><span class="bc-title">🫀 Salute Oura</span></div>
         ${health ? `
         <div class="h-grid">
-          ${(()=>{const s=health.sleepScore,hrv=health.hrv,rhr=health.restingHR,str=health.stressLevel;const sc=s>=76?'#86efac':s>=60?'#fde68a':'#fca5a5';return`
-          <div class="hm"><div class="hm-val" style="color:${sc}">${s||'?'}</div><div class="hm-lbl">Sonno</div></div>
-          <div class="hm"><div class="hm-val">${hrv||'?'}</div><div class="hm-lbl">HRV ms</div></div>
-          <div class="hm"><div class="hm-val">${rhr||'?'}</div><div class="hm-lbl">FC riposo</div></div>
-          <div class="hm"><div class="hm-val">${str||'?'}</div><div class="hm-lbl">Stress</div></div>
+          ${(()=>{
+            const s=health.sleepScore, hrv=health.hrv, rhr=health.restingHR, str=health.stressLevel;
+            const rd=health.readinessScore, steps=health.steps, sleepMin=health.totalSleepMin;
+            const sc=s>=76?'#86efac':s>=60?'#fde68a':'#fca5a5';
+            const rc=rd>=85?'#86efac':rd>=60?'#fde68a':'#fca5a5';
+            const sleepH=sleepMin?Math.floor(sleepMin/60)+'h '+(sleepMin%60)+'m':null;
+            return`
+            <div class="hm"><div class="hm-val" style="color:${sc}">${s||'?'}</div><div class="hm-lbl">Sonno</div></div>
+            <div class="hm"><div class="hm-val" style="color:${rc}">${rd||'?'}</div><div class="hm-lbl">Readiness</div></div>
+            <div class="hm"><div class="hm-val">${hrv||'?'}</div><div class="hm-lbl">HRV ms</div></div>
+            <div class="hm"><div class="hm-val">${rhr||'?'}</div><div class="hm-lbl">FC riposo</div></div>
+            ${sleepH?`<div class="hm" style="grid-column:span 2"><div class="hm-val" style="font-size:18px">${sleepH}</div><div class="hm-lbl">Sonno totale</div></div>`:''}
+            ${steps?`<div class="hm" style="grid-column:span 2"><div class="hm-val" style="font-size:18px">${steps.toLocaleString('it-IT')}</div><div class="hm-lbl">Passi</div></div>`:''}
           `})()}
         </div>
         ${health.recommendations?`<div class="h-rec">🏃 ${esc(health.recommendations.activity||'')}<br/>🧠 ${esc(health.recommendations.mindset||'')}</div>`:''}
-        ` : `<div class="empty"><div class="ei">🫀</div>Dati Oura non disponibili.<br/>Configura in <a href="/settings.html" style="color:var(--accent)">Impostazioni</a>.</div>`}
+        ` : `<div class="empty"><div class="ei">🫀</div>Sincronizza Oura per vedere i dati.<br/><button onclick="syncOura()" style="margin-top:8px;padding:6px 14px;border-radius:8px;border:none;background:var(--accent);color:#fff;cursor:pointer;font-size:12px">⟳ Sincronizza ora</button></div>`}
       </div>
 
       <!-- Email span2 -->
@@ -872,6 +880,18 @@ function renderEmpty(){ document.getElementById('page').innerHTML=`<div style="p
 function toggleMenu(){document.getElementById('user-menu').classList.toggle('open');document.getElementById('overlay').style.display='block';}
 function closeMenu(){document.getElementById('user-menu').classList.remove('open');document.getElementById('overlay').style.display='none';}
 async function logout(){if(!confirm('Uscire da Glint?'))return;await fetch('/api/logout',{method:'POST',credentials:'include'});location.href='/login.html';}
+
+async function syncOura(){
+  const btn = event?.target;
+  if(btn){btn.textContent='⟳ Sync…';btn.disabled=true;}
+  try{
+    const r = await fetch('/api/oura/sync',{method:'POST',credentials:'include'});
+    const d = await r.json();
+    if(d.ok){ await loadDay(); render(); }
+    else{ alert('Errore sync Oura: '+(d.error||'sconosciuto')); }
+  }catch(e){ alert('Errore sync: '+e.message); }
+  finally{ if(btn){btn.textContent='⟳ Sincronizza ora';btn.disabled=false;} }
+}
 
 // ── Utils ──────────────────────────────────────────────────────────────────
 function esc(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}

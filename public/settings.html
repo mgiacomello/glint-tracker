@@ -801,9 +801,14 @@ async function checkOuraStatus() {
     const r = await fetch('/api/oura/status', { credentials: 'include' });
     const d = await r.json();
     if (d.connected) {
+      const lastSync = d.lastSync ? `· sync ${new Date(d.lastSync).toLocaleString('it-IT',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'})}` : '';
       area.innerHTML = `<div class="connected-badge">
-        💍 Oura connesso${d.connectedAt ? ` · dal ${new Date(d.connectedAt).toLocaleDateString('it-IT')}` : ''}
+        💍 Oura connesso${d.connectedAt ? ` · dal ${new Date(d.connectedAt).toLocaleDateString('it-IT')}` : ''} ${lastSync}
         &nbsp;<a href="/auth/oura" style="color:var(--muted);font-size:12px;margin-left:8px;">Riconnetti</a>
+      </div>
+      <div style="margin-top:10px;">
+        <button id="oura-sync-btn" onclick="syncOura()" style="padding:8px 18px;border-radius:8px;border:1px solid var(--border);background:var(--surface);color:var(--text);cursor:pointer;font-size:13px;font-weight:500;">⟳ Sincronizza dati ora</button>
+        <span id="oura-sync-msg" style="margin-left:12px;font-size:12px;color:var(--muted);display:none"></span>
       </div>`;
     } else {
       area.innerHTML = `<div class="connect-banner">
@@ -818,6 +823,28 @@ async function checkOuraStatus() {
       <p>Oura Ring non connesso.</p>
       <a href="/auth/oura">Connetti Oura Ring</a>
     </div>`;
+  }
+}
+
+// ── Oura sync ─────────────────────────────────────────────────────────────────
+async function syncOura() {
+  const btn = document.getElementById('oura-sync-btn');
+  const msg = document.getElementById('oura-sync-msg');
+  if (btn) { btn.disabled = true; btn.textContent = '⟳ Sincronizzazione…'; }
+  if (msg) { msg.style.display = 'none'; }
+  try {
+    const r = await fetch('/api/oura/sync', { method: 'POST', credentials: 'include' });
+    const d = await r.json();
+    if (d.ok) {
+      if (msg) { msg.textContent = `✓ ${d.days} giorni sincronizzati`; msg.style.display = ''; }
+      await checkOuraStatus(); // refresh badge with new lastSync
+    } else {
+      if (msg) { msg.textContent = '⚠️ Errore: ' + (d.error || 'sconosciuto'); msg.style.display = ''; }
+    }
+  } catch(e) {
+    if (msg) { msg.textContent = '⚠️ ' + e.message; msg.style.display = ''; }
+  } finally {
+    if (btn) { btn.disabled = false; btn.textContent = '⟳ Sincronizza dati ora'; }
   }
 }
 
