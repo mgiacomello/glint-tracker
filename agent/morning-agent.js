@@ -884,51 +884,51 @@ Return ONLY a valid JSON array. No text before or after.`;
       const isLondon    = /london/i.test(detectedCity);
       const lang        = isLondon ? 'English' : 'Italian';
 
-      const prompt = `Suggest local activities and places in ${detectedCity} worth doing this week or weekend.
-Return exactly 12 suggestions as a JSON array in ${lang}.
-Split as follows:
-- 3 items type "solo": interesting solo activities (museums, walks, experiences, cultural events)
-- 3 items type "couple": romantic or fun things to do with a partner named ${spouseName} (nice restaurants, experiences, walks)
-- 3 items type "family": kid-friendly activities for a ${childAge}-year-old named ${childName} (parks, museums, fun places)
-- 3 items type "restaurant": restaurant recommendations (mix: romantic, family-friendly, solo lunch spot)
+      // Split into 2 calls of 6 items to avoid truncation
+      const activityBatches = [
+        { types: `- 3 type "solo": interesting solo activities (museums, walks, experiences, cultural events)\n- 3 type "couple": romantic or fun things to do with ${spouseName} (nice restaurants, experiences, walks)`, label: 'solo+couple' },
+        { types: `- 3 type "family": kid-friendly activities for a ${childAge}-year-old named ${childName} (parks, museums, fun places)\n- 3 type "restaurant": restaurant recommendations (mix: romantic, family-friendly, solo lunch spot)`, label: 'family+restaurant' }
+      ];
+      const fields = `{"type":"solo|couple|family|restaurant","title":"name","description":"1 sentence","category":"food|culture|outdoor|sport|art|entertainment|nature","location":"area or address","price":"€|€€|€€€","why":"why recommended","link":"https://..."}`;
 
-Each item must have these exact fields:
-{"type":"solo|couple|family|restaurant","title":"name","description":"2 sentences max","category":"food|culture|outdoor|sport|art|entertainment|nature","location":"neighborhood or address","price":"€|€€|€€€","why":"short personal note why it's recommended","link":"https://..."}
-
-Use real, currently operating places. Search the web for accuracy.
-Return ONLY a valid JSON array — no text, no markdown.`;
-
-      const r = await fetch(
-        `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${geminiApiKey}`,
-        {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            contents: [{ role: 'user', parts: [{ text: prompt }] }],
-            tools: [{ googleSearch: {} }],
-            generationConfig: { maxOutputTokens: 3000, temperature: 0.3 }
-          }),
-          signal: AbortSignal.timeout(30000)
-        }
-      );
-      const d = await r.json();
-      if (d.error) {
-        const code = d.error.code || '';
-        const msg  = d.error.message || '';
-        if (code === 429 || msg.includes('quota') || msg.includes('Quota')) {
-          emit(`  ↳ ⚠️ Gemini quota esaurita (429) — abilita billing su https://ai.dev`);
-        } else {
-          emit(`  ↳ ⚠️ Gemini errore ${code}: ${msg.slice(0, 200)}`);
-        }
+      for (const batch of activityBatches) {
+        const prompt = `Suggest 6 local activities in ${detectedCity} this week. Return a JSON array in ${lang}:\n${batch.types}\nEach item: ${fields}\nReal operating places only. Return ONLY a valid JSON array, no markdown.`;
+        try {
+          const r = await fetch(
+            `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${geminiApiKey}`,
+            {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                contents: [{ role: 'user', parts: [{ text: prompt }] }],
+                tools: [{ googleSearch: {} }],
+                generationConfig: { maxOutputTokens: 2000, temperature: 0.3 }
+              }),
+              signal: AbortSignal.timeout(30000)
+            }
+          );
+          const d = await r.json();
+          if (d.error) {
+            const code = d.error.code || ''; const msg = d.error.message || '';
+            if (code === 429 || msg.includes('quota') || msg.includes('Quota'))
+              emit(`  ↳ ⚠️ Gemini quota esaurita (429) — abilita billing su https://ai.dev`);
+            else emit(`  ↳ ⚠️ Gemini errore ${code}: ${msg.slice(0,200)}`);
+          } else {
+            const text = d.candidates?.[0]?.content?.parts?.[0]?.text || '[]';
+            const parsed = safeJsonParse(text, []);
+            if (Array.isArray(parsed) && parsed.length > 0) {
+              localActivities.push(...parsed);
+              emit(`  ↳ ✅ batch ${batch.label}: ${parsed.length} attività`);
+            } else {
+              emit(`  ↳ Batch ${batch.label}: nessun risultato (${text.slice(0,80)})`);
+            }
+          }
+        } catch(e) { emit(`  ↳ Errore batch ${batch.label}: ${e.message}`); }
+      }
+      if (localActivities.length > 0) {
+        emit(`  ↳ ✅ ${localActivities.length} attività totali trovate in ${detectedCity}`);
       } else {
-        const text = d.candidates?.[0]?.content?.parts?.[0]?.text || '[]';
-        const parsed = safeJsonParse(text, []);
-        if (Array.isArray(parsed) && parsed.length > 0) {
-          localActivities.push(...parsed.slice(0, 12));
-          emit(`  ↳ ✅ ${localActivities.length} attività trovate in ${detectedCity}`);
-        } else {
-          emit(`  ↳ Nessuna attività strutturata trovata (risposta: ${text.slice(0,120)})`);
-        }
+        emit(`  ↳ Nessuna attività trovata`);
       }
     } catch(e) { emit(`  ↳ Errore attività locali: ${e.message?.slice(0,100)}`); }
   } else if (!detectedCity) {
@@ -1228,41 +1228,40 @@ Return ONLY a valid JSON array. Each item: {"title":"","date":"dd Month yyyy","t
   if (actAge < 3) {
     emit(`Attività: dati recenti (${actAge.toFixed(1)} giorni fa), skip`);
   } else {
-    emit('Ricerca attività locali...');
-    try {
-      const spouseName  = (settings.familyMembers || []).find(f => f.role === 'spouse')?.name || 'partner';
-      const childMember = (settings.familyMembers || []).find(f => f.role === 'child');
-      const childName   = childMember?.name || 'figlio'; const childAge = childMember?.age || 8;
-      const lang = /london/i.test(detectedCity) ? 'English' : 'Italian';
-      const prompt = `Suggest local activities and places in ${detectedCity} worth doing this week or weekend.
-Return exactly 12 suggestions as a JSON array in ${lang}.
-- 3 type "solo": interesting solo activities (museums, walks, experiences)
-- 3 type "couple": things to do with a partner named ${spouseName}
-- 3 type "family": kid-friendly for a ${childAge}-year-old named ${childName}
-- 3 type "restaurant": restaurant recommendations
-Each item: {"type":"solo|couple|family|restaurant","title":"","description":"2 sentences","category":"food|culture|outdoor|sport|art|entertainment|nature","location":"","price":"€|€€|€€€","why":"","link":"https://..."}
-Use real operating places. Return ONLY a valid JSON array.`;
-      const r = await fetch(
-        `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${geminiApiKey}`,
-        { method: 'POST', headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ contents: [{ role: 'user', parts: [{ text: prompt }] }], tools: [{ googleSearch: {} }], generationConfig: { maxOutputTokens: 3000, temperature: 0.3 } }),
-          signal: AbortSignal.timeout(35000) }
-      );
-      const d = await r.json();
-      if (d.error) {
-        const code = d.error.code || ''; const msg = d.error.message || '';
-        if (code === 429 || msg.includes('quota') || msg.includes('Quota'))
-          emit('⚠️ Gemini quota esaurita — abilita billing su https://ai.dev');
-        else emit(`⚠️ Gemini errore: ${msg.slice(0, 150)}`);
-      } else {
-        const text = d.candidates?.[0]?.content?.parts?.[0]?.text || '[]';
-        const parsed = safeJsonParse(text, []);
-        if (Array.isArray(parsed) && parsed.length > 0) {
-          localActivities = parsed.slice(0, 12);
-          emit(`✅ ${localActivities.length} attività trovate`);
-        } else { emit(`Nessuna attività strutturata (risposta: ${text.slice(0,100)})`); }
-      }
-    } catch(e) { emit(`Errore attività: ${e.message}`); }
+    emit('Ricerca attività locali (2 batch)...');
+    const spouseName  = (settings.familyMembers || []).find(f => f.role === 'spouse')?.name || 'partner';
+    const childMember = (settings.familyMembers || []).find(f => f.role === 'child');
+    const childName   = childMember?.name || 'figlio'; const childAge = childMember?.age || 8;
+    const lang = /london/i.test(detectedCity) ? 'English' : 'Italian';
+    const fields = `{"type":"...","title":"name","description":"1 sentence","category":"food|culture|outdoor|sport|art|entertainment|nature","location":"area","price":"€|€€|€€€","why":"why recommended","link":"https://..."}`;
+    const batches = [
+      { types: `- 3 type "solo": solo activities (museums, walks, cultural events)\n- 3 type "couple": things to do with ${spouseName} (restaurants, experiences)`, label: 'solo+couple' },
+      { types: `- 3 type "family": kid-friendly for ${childAge}-year-old ${childName}\n- 3 type "restaurant": restaurant picks (romantic, family, solo)`, label: 'family+restaurant' }
+    ];
+    for (const batch of batches) {
+      try {
+        const prompt = `Suggest 6 activities in ${detectedCity} this week in ${lang}:\n${batch.types}\nEach: ${fields}\nReal places. Return ONLY a valid JSON array, no markdown.`;
+        const r = await fetch(
+          `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${geminiApiKey}`,
+          { method:'POST', headers:{'Content-Type':'application/json'},
+            body: JSON.stringify({ contents:[{role:'user',parts:[{text:prompt}]}], tools:[{googleSearch:{}}], generationConfig:{maxOutputTokens:2000,temperature:0.3} }),
+            signal: AbortSignal.timeout(30000) }
+        );
+        const d = await r.json();
+        if (d.error) {
+          const code=d.error.code||''; const msg=d.error.message||'';
+          if (code===429||msg.includes('quota')||msg.includes('Quota')) emit('⚠️ Gemini quota esaurita — abilita billing su https://ai.dev');
+          else emit(`⚠️ Gemini errore: ${msg.slice(0,150)}`);
+        } else {
+          const text = d.candidates?.[0]?.content?.parts?.[0]?.text || '[]';
+          const parsed = safeJsonParse(text, []);
+          if (Array.isArray(parsed) && parsed.length > 0) { localActivities.push(...parsed); emit(`✅ batch ${batch.label}: ${parsed.length} attività`); }
+          else emit(`Batch ${batch.label}: nessun risultato (${text.slice(0,80)})`);
+        }
+      } catch(e) { emit(`Errore batch ${batch.label}: ${e.message}`); }
+    }
+    if (localActivities.length > 0) emit(`✅ ${localActivities.length} attività totali trovate in ${detectedCity}`);
+    else emit('Nessuna attività trovata');
   }
 
   // Save
