@@ -31,7 +31,7 @@ function makeAIClient({ anthropicApiKey, geminiApiKey, groqApiKey }) {
   // ── Gemini Flash — con fallback automatico a Groq su quota esaurita ──────────
   if (geminiApiKey) {
     // Prova tutti i modelli Gemini disponibili in ordine
-    const GEMINI_MODELS = ['gemini-2.5-flash', 'gemini-2.0-flash', 'gemini-2.0-flash-lite'];
+    const GEMINI_MODELS = ['gemini-2.5-flash', 'gemini-2.5-flash', 'gemini-1.5-flash'];
     return {
       _provider: 'gemini',
       messages: {
@@ -113,7 +113,7 @@ function makeAIClient({ anthropicApiKey, geminiApiKey, groqApiKey }) {
 
 // ── Chiamata AI diretta con fallback automatico Gemini→Groq ──────────────────
 async function aiCall({ geminiApiKey, groqApiKey, anthropicApiKey }, prompt, maxTokens = 2048) {
-  const GEMINI_MODELS = ['gemini-2.5-flash', 'gemini-2.0-flash', 'gemini-2.0-flash-lite'];
+  const GEMINI_MODELS = ['gemini-2.5-flash', 'gemini-2.5-flash', 'gemini-1.5-flash'];
   if (geminiApiKey) {
     for (const model of GEMINI_MODELS) {
       try {
@@ -751,7 +751,7 @@ EMAIL:\n${emailList}`, 32768);
       } catch(e) { /* Drive opzionale */ }
 
       const resp = await claude.messages.create({
-        model: claude._provider === 'gemini' ? 'gemini-2.0-flash' : claude._provider === 'groq' ? 'llama-3.3-70b-versatile' : 'claude-3-5-sonnet-20241022',
+        model: claude._provider === 'gemini' ? 'gemini-2.5-flash' : claude._provider === 'groq' ? 'llama-3.3-70b-versatile' : 'claude-3-5-sonnet-20241022',
         max_tokens: 700,
         messages: [{
           role: 'user',
@@ -834,7 +834,7 @@ For each event return a JSON object with these exact fields:
 Return ONLY a valid JSON array. No text before or after.`;
 
       const r = await fetch(
-        `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${geminiApiKey}`,
+        `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${geminiApiKey}`,
         {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -899,7 +899,7 @@ Use real, currently operating places. Search the web for accuracy.
 Return ONLY a valid JSON array — no text, no markdown.`;
 
       const r = await fetch(
-        `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${geminiApiKey}`,
+        `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${geminiApiKey}`,
         {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -981,7 +981,7 @@ Return ONLY a valid JSON array — no text, no markdown.`;
     const top3 = result.tasks.filter(t => t.quadrant === 'Q1' || t.quadrant === 'Q2').slice(0, 3).map(t => t.title).join(', ');
     const sleepInfo = health ? `Sonno ${health.sleepScore || '?'}/100, Stress: ${health.stressLevel || '?'}` : 'Dati salute non disponibili';
     const resp = await claude.messages.create({
-      model: claude._provider === 'gemini' ? 'gemini-2.0-flash' : claude._provider === 'groq' ? 'llama-3.3-70b-versatile' : 'claude-3-5-sonnet-20241022',
+      model: claude._provider === 'gemini' ? 'gemini-2.5-flash' : claude._provider === 'groq' ? 'llama-3.3-70b-versatile' : 'claude-3-5-sonnet-20241022',
       max_tokens: 350,
       messages: [{
         role: 'user',
@@ -1201,7 +1201,7 @@ async function runLocalRefresh({ uid, date, settings, geminiApiKey, readDBForUid
 Include: tech meetups, startup events, pitch nights, founder dinners, accelerator demo days.
 Return ONLY a valid JSON array. Each item: {"title":"","date":"dd Month yyyy","time":"","description":"","link":"https://...","location":"","tags":[]}`;
       const r = await fetch(
-        `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${geminiApiKey}`,
+        `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${geminiApiKey}`,
         { method: 'POST', headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ contents: [{ role: 'user', parts: [{ text: prompt }] }], tools: [{ googleSearch: {} }], generationConfig: { maxOutputTokens: 2048, temperature: 0.1 } }),
           signal: AbortSignal.timeout(30000) }
@@ -1243,7 +1243,7 @@ Return exactly 12 suggestions as a JSON array in ${lang}.
 Each item: {"type":"solo|couple|family|restaurant","title":"","description":"2 sentences","category":"food|culture|outdoor|sport|art|entertainment|nature","location":"","price":"€|€€|€€€","why":"","link":"https://..."}
 Use real operating places. Return ONLY a valid JSON array.`;
       const r = await fetch(
-        `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${geminiApiKey}`,
+        `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${geminiApiKey}`,
         { method: 'POST', headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ contents: [{ role: 'user', parts: [{ text: prompt }] }], tools: [{ googleSearch: {} }], generationConfig: { maxOutputTokens: 3000, temperature: 0.3 } }),
           signal: AbortSignal.timeout(35000) }

@@ -2390,7 +2390,7 @@ async function callAI(prompt, { maxTokens = 2048 } = {}) {
   const contents = [{ role: 'user', parts: [{ text: prompt }] }];
   // Gemini con fallback automatico tra modelli e poi a Groq
   if (cfg.geminiApiKey) {
-    for (const model of ['gemini-2.5-flash', 'gemini-2.0-flash', 'gemini-2.0-flash-lite']) {
+    for (const model of ['gemini-2.5-flash', 'gemini-2.5-flash', 'gemini-2.5-flash-lite']) {
       try {
         const r = await fetch(
           `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${cfg.geminiApiKey}`,
