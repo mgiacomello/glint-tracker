@@ -436,15 +436,19 @@ function render() {
   // ── SECTION: NETWORK (full width) ──
   if (section==='network') {
     const city=net.city||'';
+    const refreshedAt=net._refreshedAt ? new Date(net._refreshedAt).toLocaleDateString('it-IT',{day:'2-digit',month:'2-digit'}) : null;
     page.innerHTML = `
       ${_panelHtml()}
       <div class="fw-section">
         <div class="fw-head">
           <span class="fw-title">🌐 Network${city?' · '+esc(city):''}</span>
           ${netEvts.length?`<span class="fw-count">${netEvts.length}</span>`:''}
+          ${refreshedAt?`<span style="font-size:11px;color:var(--t2);margin-left:auto">aggiornato ${refreshedAt}</span>`:''}
+          <button onclick="refreshLocal()" style="margin-left:${refreshedAt?'8px':'auto'};padding:4px 12px;border-radius:6px;border:1px solid var(--line);background:transparent;color:var(--t1);cursor:pointer;font-size:12px">⟳ Aggiorna</button>
         </div>
+        <div id="local-refresh-log" style="display:none;padding:10px 16px;font-size:12px;color:var(--t1);font-family:monospace;white-space:pre-wrap;border-bottom:1px solid var(--line)"></div>
         <div class="card">
-          ${netEvts.length ? netEvts.map(e=>netRow(e)).join('') : `<div class="empty"><div class="ei">🌐</div>Nessun evento trovato${city?' a '+esc(city):''}.<br/>Clicca <strong>☀️ Briefing</strong> per cercare eventi networking.</div>`}
+          ${netEvts.length ? netEvts.map(e=>netRow(e)).join('') : `<div class="empty"><div class="ei">🌐</div>Nessun evento trovato${city?' a '+esc(city):''}.<br/><button onclick="refreshLocal()" style="margin-top:8px;padding:6px 16px;border-radius:8px;border:none;background:var(--accent);color:#fff;cursor:pointer;font-size:12px">⟳ Cerca eventi ora</button></div>`}
         </div>
       </div>`;
     _restorePanel();
@@ -456,12 +460,14 @@ function render() {
     const act   = d.localActivities||{};
     const items = act.items||[];
     const city  = act.city||net.city||'';
+    const refreshedAt=act._refreshedAt ? new Date(act._refreshedAt).toLocaleDateString('it-IT',{day:'2-digit',month:'2-digit'}) : null;
     const byType = t => items.filter(a=>a.type===t);
+    const members=dayData?.userSettings?.familyMembers||[];
     const groups = [
       { type:'solo',       icon:'🚶', label:'Solo',               color:'#3b82f6' },
-      { type:'couple',     icon:'💑', label:`Con ${(dayData?.userSettings?.familyMembers||[]).find(f=>f.role==='spouse')?.name||'partner'}`, color:'#ff6482' },
-      { type:'family',     icon:'👨‍👩‍👦', label:`Con ${(dayData?.userSettings?.familyMembers||[]).find(f=>f.role==='child')?.name||'figlio'} (${(dayData?.userSettings?.familyMembers||[]).find(f=>f.role==='child')?.age||8} anni)`, color:'#00d084' },
-      { type:'restaurant', icon:'🍽️', label:'Ristoranti',         color:'#ffb800' },
+      { type:'couple',     icon:'💑', label:`Con ${members.find(f=>f.role==='spouse')?.name||'partner'}`, color:'#ff6482' },
+      { type:'family',     icon:'👨‍👩‍👦', label:`Con ${members.find(f=>f.role==='child')?.name||'figlio'} (${members.find(f=>f.role==='child')?.age||8} anni)`, color:'#00d084' },
+      { type:'restaurant', icon:'🍽️', label:'Ristoranti', color:'#ffb800' },
     ];
     const actCard = a => `<div class="act-card ${esc(a.type||'')}">
       <div class="act-card-top">
@@ -482,7 +488,10 @@ function render() {
         <div class="fw-head">
           <span class="fw-title">🗺️ Vita locale${city?' · '+esc(city):''}</span>
           ${items.length?`<span class="fw-count">${items.length} idee</span>`:''}
+          ${refreshedAt?`<span style="font-size:11px;color:var(--t2);margin-left:auto">aggiornato ${refreshedAt}</span>`:''}
+          <button onclick="refreshLocal()" style="margin-left:${refreshedAt?'8px':'auto'};padding:4px 12px;border-radius:6px;border:1px solid var(--line);background:transparent;color:var(--t1);cursor:pointer;font-size:12px">⟳ Aggiorna</button>
         </div>
+        <div id="local-refresh-log" style="display:none;padding:10px 16px;font-size:12px;color:var(--t1);font-family:monospace;white-space:pre-wrap;border-bottom:1px solid var(--line)"></div>
         ${items.length ? `<div class="act-sections">
           ${groups.map(g=>{
             const gItems = byType(g.type);
@@ -493,7 +502,7 @@ function render() {
             </div>`;
           }).join('')}
         </div>`
-        : `<div class="card"><div class="empty"><div class="ei">🗺️</div>Nessuna attività trovata${city?' per '+esc(city):''}.<br/>Clicca <strong>☀️ Briefing</strong> per cercare attività locali.</div></div>`}
+        : `<div class="card"><div class="empty"><div class="ei">🗺️</div>Nessuna attività trovata${city?' per '+esc(city):''}.<br/><button onclick="refreshLocal()" style="margin-top:8px;padding:6px 16px;border-radius:8px;border:none;background:var(--accent);color:#fff;cursor:pointer;font-size:12px">⟳ Cerca attività ora</button></div></div>`}
       </div>`;
     _restorePanel();
     return;
@@ -880,6 +889,29 @@ function renderEmpty(){ document.getElementById('page').innerHTML=`<div style="p
 function toggleMenu(){document.getElementById('user-menu').classList.toggle('open');document.getElementById('overlay').style.display='block';}
 function closeMenu(){document.getElementById('user-menu').classList.remove('open');document.getElementById('overlay').style.display='none';}
 async function logout(){if(!confirm('Uscire da Glint?'))return;await fetch('/api/logout',{method:'POST',credentials:'include'});location.href='/login.html';}
+
+async function refreshLocal(){
+  const logEl = document.getElementById('local-refresh-log');
+  if(logEl){ logEl.style.display='block'; logEl.textContent=''; }
+  try {
+    const r = await fetch(`/api/local/refresh?date=${TODAY}`, { method:'POST', credentials:'include' });
+    const reader = r.body.getReader(); const dec = new TextDecoder();
+    let buf='';
+    while(true){
+      const {done,value}=await reader.read(); if(done) break;
+      buf+=dec.decode(value,{stream:true});
+      const lines=buf.split('\n'); buf=lines.pop()||'';
+      for(const line of lines){
+        if(!line.startsWith('data:')) continue;
+        try{
+          const d=JSON.parse(line.slice(5).trim());
+          if(d.log && logEl) logEl.textContent+=d.log+'\n';
+          if(d.done){ await loadDay(); render(); }
+        }catch{}
+      }
+    }
+  } catch(e){ if(logEl) logEl.textContent+='Errore: '+e.message; }
+}
 
 async function syncOura(){
   const btn = event?.target;

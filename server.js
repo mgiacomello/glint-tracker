@@ -3354,6 +3354,45 @@ app.post('/api/morning-agent/:date/run', async (req, res) => {
   res.end();
 });
 
+// POST /api/local/refresh  → regenerate network + local activities only (SSE)
+app.post('/api/local/refresh', async (req, res) => {
+  const uid = getCurrentUid();
+  if (!uid) return res.status(401).json({ error: 'Non autenticato' });
+
+  const date = req.query.date || new Date().toISOString().slice(0, 10);
+  const cfg  = readConfig();
+  const geminiApiKey = cfg.geminiApiKey || '';
+
+  res.setHeader('Content-Type', 'text/event-stream; charset=utf-8');
+  res.setHeader('Cache-Control', 'no-cache');
+  res.setHeader('Connection', 'keep-alive');
+  res.setHeader('X-Accel-Buffering', 'no');
+
+  const send = obj => { try { res.write(`data: ${JSON.stringify(obj)}\n\n`); } catch {} };
+
+  try {
+    const { runLocalRefresh } = require('./agent/morning-agent');
+    const db = readDB();
+    const users = readUsers();
+    const user  = users[uid] || {};
+    const settings = { ...DEFAULT_SETTINGS, userName: user.name||'', briefingEmail: user.email||'', primaryEmail: user.email||'', ...(db.userSettings||{}) };
+
+    send({ log: `🔄 Aggiornamento network + vita locale per ${date}...` });
+
+    const result = await als.run({ uid }, () => runLocalRefresh({
+      uid, date, settings, geminiApiKey, readDBForUid, writeDBForUid,
+      log: msg => send({ log: msg })
+    }));
+
+    send({ log: `✅ Completato — ${result.networkEvents.length} eventi network, ${result.localActivities.length} attività locali` });
+    send({ done: true, networkCount: result.networkEvents.length, actCount: result.localActivities.length });
+  } catch(e) {
+    send({ log: `❌ Errore: ${e.message}` });
+    send({ done: true, error: e.message });
+  }
+  res.end();
+});
+
 // GET /api/morning-agent/status  → last run info for current user
 app.get('/api/morning-agent/status', (req, res) => {
   const db = readDB();

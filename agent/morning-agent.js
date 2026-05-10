@@ -848,19 +848,24 @@ Return ONLY a valid JSON array. No text before or after.`;
       );
       const d = await r.json();
       if (d.error) {
-        emit(`  ↳ Gemini Search: ${d.error.message?.slice(0,100)}`);
+        const code = d.error.code || '';
+        const msg  = d.error.message || '';
+        if (code === 429 || msg.includes('quota') || msg.includes('Quota')) {
+          emit(`  ↳ ⚠️ Gemini quota esaurita (429) — abilita billing su https://ai.dev o usa una nuova API key`);
+        } else {
+          emit(`  ↳ ⚠️ Gemini errore ${code}: ${msg.slice(0, 200)}`);
+        }
       } else {
         const text = d.candidates?.[0]?.content?.parts?.[0]?.text || '[]';
-        emit(`  ↳ Gemini Search risposta (prime 150 car): ${text.slice(0,150)}`);
         const parsed = safeJsonParse(text, []);
         if (Array.isArray(parsed) && parsed.length > 0) {
           networkEvents.push(...parsed.slice(0, 5));
           emit(`  ↳ ✅ ${networkEvents.length} eventi trovati in ${detectedCity}`);
         } else {
-          emit(`  ↳ Nessun evento strutturato trovato`);
+          emit(`  ↳ Nessun evento strutturato trovato (risposta: ${text.slice(0,120)})`);
         }
       }
-    } catch(e) { emit(`  ↳ Errore networking: ${e.message?.slice(0,100)}`); }
+    } catch(e) { emit(`  ↳ Errore networking: ${e.message}`); }
   } else if (!detectedCity) {
     emit('  ↳ Posizione non rilevata (aggiungi homeCity in Impostazioni o voli nel Calendar)');
   } else {
@@ -908,7 +913,13 @@ Return ONLY a valid JSON array — no text, no markdown.`;
       );
       const d = await r.json();
       if (d.error) {
-        emit(`  ↳ Errore attività: ${d.error.message?.slice(0,100)}`);
+        const code = d.error.code || '';
+        const msg  = d.error.message || '';
+        if (code === 429 || msg.includes('quota') || msg.includes('Quota')) {
+          emit(`  ↳ ⚠️ Gemini quota esaurita (429) — abilita billing su https://ai.dev`);
+        } else {
+          emit(`  ↳ ⚠️ Gemini errore ${code}: ${msg.slice(0, 200)}`);
+        }
       } else {
         const text = d.candidates?.[0]?.content?.parts?.[0]?.text || '[]';
         const parsed = safeJsonParse(text, []);
@@ -916,7 +927,7 @@ Return ONLY a valid JSON array — no text, no markdown.`;
           localActivities.push(...parsed.slice(0, 12));
           emit(`  ↳ ✅ ${localActivities.length} attività trovate in ${detectedCity}`);
         } else {
-          emit(`  ↳ Nessuna attività strutturata trovata`);
+          emit(`  ↳ Nessuna attività strutturata trovata (risposta: ${text.slice(0,120)})`);
         }
       }
     } catch(e) { emit(`  ↳ Errore attività locali: ${e.message?.slice(0,100)}`); }
@@ -1143,4 +1154,127 @@ function buildEmailHtml({ date, dayType, dayTypeLabel, health, healthRec, calend
 </body></html>`;
 }
 
-module.exports = { runMorningAgent };
+// ── Standalone local refresh (network + vita locale) ─────────────────────────
+async function runLocalRefresh({ uid, date, settings, geminiApiKey, readDBForUid, writeDBForUid, log = console.log }) {
+  const logs = [];
+  function emit(msg) { logs.push(msg); log(msg); }
+
+  const dbNow = readDBForUid(uid);
+  const day   = dbNow.days?.[date] || {};
+
+  // Cache: skip if populated in the last 3 days
+  const networkAge = day.network?._refreshedAt
+    ? (Date.now() - new Date(day.network._refreshedAt).getTime()) / 86400000
+    : 999;
+  const actAge = day.localActivities?._refreshedAt
+    ? (Date.now() - new Date(day.localActivities._refreshedAt).getTime()) / 86400000
+    : 999;
+
+  // Detect city (same logic as morning agent)
+  let detectedCity = settings.homeCity || '';
+  if (!detectedCity) {
+    const tz = settings.timezone || '';
+    if (/london|europe\/london/i.test(tz))      detectedCity = 'London, UK';
+    else if (/rome|milan|italy/i.test(tz))       detectedCity = 'Milano, Italy';
+  }
+
+  if (!detectedCity) {
+    emit('Posizione non rilevata — imposta homeCity nelle Impostazioni');
+    return { logs, networkEvents: [], localActivities: [], city: '' };
+  }
+  if (!geminiApiKey) {
+    emit('GEMINI_API_KEY non configurata');
+    return { logs, networkEvents: [], localActivities: [], city: detectedCity };
+  }
+
+  emit(`Città: ${detectedCity}`);
+
+  // ── Network ──────────────────────────────────────────────────────────────────
+  let networkEvents = day.network?.events || [];
+  if (networkAge < 3) {
+    emit(`Network: dati recenti (${networkAge.toFixed(1)} giorni fa), skip`);
+  } else {
+    emit('Ricerca eventi networking...');
+    try {
+      const weekFwd = new Date(date + 'T12:00:00Z'); weekFwd.setDate(weekFwd.getDate() + 7);
+      const prompt = `Find 5 real upcoming networking events for entrepreneurs, founders and startup people in ${detectedCity} happening between ${date} and ${weekFwd.toISOString().slice(0,10)}.
+Include: tech meetups, startup events, pitch nights, founder dinners, accelerator demo days.
+Return ONLY a valid JSON array. Each item: {"title":"","date":"dd Month yyyy","time":"","description":"","link":"https://...","location":"","tags":[]}`;
+      const r = await fetch(
+        `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${geminiApiKey}`,
+        { method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ contents: [{ role: 'user', parts: [{ text: prompt }] }], tools: [{ googleSearch: {} }], generationConfig: { maxOutputTokens: 2048, temperature: 0.1 } }),
+          signal: AbortSignal.timeout(30000) }
+      );
+      const d = await r.json();
+      if (d.error) {
+        const code = d.error.code || ''; const msg = d.error.message || '';
+        if (code === 429 || msg.includes('quota') || msg.includes('Quota'))
+          emit('⚠️ Gemini quota esaurita — abilita billing su https://ai.dev');
+        else emit(`⚠️ Gemini errore: ${msg.slice(0, 150)}`);
+      } else {
+        const text = d.candidates?.[0]?.content?.parts?.[0]?.text || '[]';
+        const parsed = safeJsonParse(text, []);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          networkEvents = parsed.slice(0, 5);
+          emit(`✅ ${networkEvents.length} eventi trovati`);
+        } else { emit(`Nessun evento strutturato (risposta: ${text.slice(0,100)})`); }
+      }
+    } catch(e) { emit(`Errore networking: ${e.message}`); }
+  }
+
+  // ── Local activities ──────────────────────────────────────────────────────────
+  let localActivities = day.localActivities?.items || [];
+  if (actAge < 3) {
+    emit(`Attività: dati recenti (${actAge.toFixed(1)} giorni fa), skip`);
+  } else {
+    emit('Ricerca attività locali...');
+    try {
+      const spouseName  = (settings.familyMembers || []).find(f => f.role === 'spouse')?.name || 'partner';
+      const childMember = (settings.familyMembers || []).find(f => f.role === 'child');
+      const childName   = childMember?.name || 'figlio'; const childAge = childMember?.age || 8;
+      const lang = /london/i.test(detectedCity) ? 'English' : 'Italian';
+      const prompt = `Suggest local activities and places in ${detectedCity} worth doing this week or weekend.
+Return exactly 12 suggestions as a JSON array in ${lang}.
+- 3 type "solo": interesting solo activities (museums, walks, experiences)
+- 3 type "couple": things to do with a partner named ${spouseName}
+- 3 type "family": kid-friendly for a ${childAge}-year-old named ${childName}
+- 3 type "restaurant": restaurant recommendations
+Each item: {"type":"solo|couple|family|restaurant","title":"","description":"2 sentences","category":"food|culture|outdoor|sport|art|entertainment|nature","location":"","price":"€|€€|€€€","why":"","link":"https://..."}
+Use real operating places. Return ONLY a valid JSON array.`;
+      const r = await fetch(
+        `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${geminiApiKey}`,
+        { method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ contents: [{ role: 'user', parts: [{ text: prompt }] }], tools: [{ googleSearch: {} }], generationConfig: { maxOutputTokens: 3000, temperature: 0.3 } }),
+          signal: AbortSignal.timeout(35000) }
+      );
+      const d = await r.json();
+      if (d.error) {
+        const code = d.error.code || ''; const msg = d.error.message || '';
+        if (code === 429 || msg.includes('quota') || msg.includes('Quota'))
+          emit('⚠️ Gemini quota esaurita — abilita billing su https://ai.dev');
+        else emit(`⚠️ Gemini errore: ${msg.slice(0, 150)}`);
+      } else {
+        const text = d.candidates?.[0]?.content?.parts?.[0]?.text || '[]';
+        const parsed = safeJsonParse(text, []);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          localActivities = parsed.slice(0, 12);
+          emit(`✅ ${localActivities.length} attività trovate`);
+        } else { emit(`Nessuna attività strutturata (risposta: ${text.slice(0,100)})`); }
+      }
+    } catch(e) { emit(`Errore attività: ${e.message}`); }
+  }
+
+  // Save
+  const now = new Date().toISOString();
+  const saveDb = readDBForUid(uid);
+  if (!saveDb.days) saveDb.days = {};
+  if (!saveDb.days[date]) saveDb.days[date] = { events:[], tasks:[], items:{}, reflection:'', briefing:'' };
+  saveDb.days[date].network         = { city: detectedCity, events: networkEvents, _refreshedAt: now };
+  saveDb.days[date].localActivities = { city: detectedCity, items: localActivities,  _refreshedAt: now };
+  writeDBForUid(uid, saveDb);
+
+  return { logs, networkEvents, localActivities, city: detectedCity };
+}
+
+module.exports = { runMorningAgent, runLocalRefresh };
