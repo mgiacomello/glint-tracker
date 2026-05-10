@@ -264,6 +264,68 @@ function dayOfWeekIt(dateStr) {
   } catch { return dateStr; }
 }
 
+// ── Activity batch prompts (shared by morning agent + local refresh) ──────────
+function buildActivityBatches({ city, spouseName, childName, childAge, lang }) {
+  const f = `{"type":"TYPE","title":"name","description":"1 sentence","category":"food|culture|outdoor|sport|art|entertainment|nature","location":"area or address","price":"€|€€|€€€","why":"why it's worth it","link":"https://..."}`;
+  return [
+    {
+      label: 'solo+couple',
+      type: 'solo|couple',
+      prompt: `Find 6 activities in ${city} this week worth doing in ${lang}. Return a JSON array:
+- 3 type "solo": interesting things to do alone (exhibitions, walks, experiences, cultural events, markets)
+- 3 type "couple": romantic or fun things to do with a partner named ${spouseName} (nice dinners, experiences, scenic walks, unique activities)
+Be specific — use real event names or venue names happening this week. Search the web.
+Each item: ${f.replace('TYPE','solo|couple')}
+Return ONLY a valid JSON array, no markdown.`
+    },
+    {
+      label: 'family-tommy',
+      type: 'family',
+      prompt: `Find 4 activities in ${city} this week that are perfect for a parent and a ${childAge}-year-old child named ${childName} in ${lang}. Return a JSON array:
+- type "family" for all 4 items
+Think: interactive museums, science centres, parks with activities, adventure playgrounds, fun workshops, cinemas with kid films, street fairs.
+All must be genuinely fun for a ${childAge}-year-old and currently open/running this week. Search the web for current events.
+Each item: ${f.replace('TYPE','family')}
+Return ONLY a valid JSON array, no markdown.`
+    },
+    {
+      label: 'restaurants',
+      type: 'restaurant',
+      prompt: `Find 4 restaurants in ${city} in ${lang} that opened in the last 6 months OR are currently hyped / trending / have a viral dish / won a recent award. Return a JSON array:
+- type "restaurant" for all 4 items
+Focus on: new openings, pop-ups, chef collabs, restaurants with buzz on social media, Michelin-starred newcomers, must-try dishes right now.
+Include a mix: one romantic/date night, one family-friendly, one solo lunch, one that is simply THE place to be right now.
+Search the web for up-to-date picks. Each item: ${f.replace('TYPE','restaurant')}
+Return ONLY a valid JSON array, no markdown.`
+    }
+  ];
+}
+
+async function runActivityBatch({ prompt, label, geminiApiKey, emit }) {
+  const r = await fetch(
+    `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${geminiApiKey}`,
+    { method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ contents: [{ role: 'user', parts: [{ text: prompt }] }], tools: [{ googleSearch: {} }], generationConfig: { maxOutputTokens: 2000, temperature: 0.4 } }),
+      signal: AbortSignal.timeout(35000) }
+  );
+  const d = await r.json();
+  if (d.error) {
+    const code = d.error.code || ''; const msg = d.error.message || '';
+    if (code === 429 || msg.includes('quota') || msg.includes('Quota'))
+      emit(`  ↳ ⚠️ Gemini quota esaurita — abilita billing su https://ai.dev`);
+    else emit(`  ↳ ⚠️ Gemini errore ${code}: ${msg.slice(0,150)}`);
+    return [];
+  }
+  const text = d.candidates?.[0]?.content?.parts?.[0]?.text || '[]';
+  const parsed = safeJsonParse(text, []);
+  if (Array.isArray(parsed) && parsed.length > 0) {
+    emit(`  ↳ ✅ ${label}: ${parsed.length} risultati`);
+    return parsed;
+  }
+  emit(`  ↳ ${label}: nessun risultato (${text.slice(0,100)})`);
+  return [];
+}
+
 function safeJsonParse(text, fallback = []) {
   if (!text) return fallback;
   // Try direct parse first
@@ -884,45 +946,12 @@ Return ONLY a valid JSON array. No text before or after.`;
       const isLondon    = /london/i.test(detectedCity);
       const lang        = isLondon ? 'English' : 'Italian';
 
-      // Split into 2 calls of 6 items to avoid truncation
-      const activityBatches = [
-        { types: `- 3 type "solo": interesting solo activities (museums, walks, experiences, cultural events)\n- 3 type "couple": romantic or fun things to do with ${spouseName} (nice restaurants, experiences, walks)`, label: 'solo+couple' },
-        { types: `- 3 type "family": kid-friendly activities for a ${childAge}-year-old named ${childName} (parks, museums, fun places)\n- 3 type "restaurant": restaurant recommendations (mix: romantic, family-friendly, solo lunch spot)`, label: 'family+restaurant' }
-      ];
-      const fields = `{"type":"solo|couple|family|restaurant","title":"name","description":"1 sentence","category":"food|culture|outdoor|sport|art|entertainment|nature","location":"area or address","price":"€|€€|€€€","why":"why recommended","link":"https://..."}`;
-
+      // 3 dedicated batches: solo+couple, family, restaurants
+      const activityBatches = buildActivityBatches({ city: detectedCity, spouseName, childName, childAge, lang });
       for (const batch of activityBatches) {
-        const prompt = `Suggest 6 local activities in ${detectedCity} this week. Return a JSON array in ${lang}:\n${batch.types}\nEach item: ${fields}\nReal operating places only. Return ONLY a valid JSON array, no markdown.`;
         try {
-          const r = await fetch(
-            `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${geminiApiKey}`,
-            {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({
-                contents: [{ role: 'user', parts: [{ text: prompt }] }],
-                tools: [{ googleSearch: {} }],
-                generationConfig: { maxOutputTokens: 2000, temperature: 0.3 }
-              }),
-              signal: AbortSignal.timeout(30000)
-            }
-          );
-          const d = await r.json();
-          if (d.error) {
-            const code = d.error.code || ''; const msg = d.error.message || '';
-            if (code === 429 || msg.includes('quota') || msg.includes('Quota'))
-              emit(`  ↳ ⚠️ Gemini quota esaurita (429) — abilita billing su https://ai.dev`);
-            else emit(`  ↳ ⚠️ Gemini errore ${code}: ${msg.slice(0,200)}`);
-          } else {
-            const text = d.candidates?.[0]?.content?.parts?.[0]?.text || '[]';
-            const parsed = safeJsonParse(text, []);
-            if (Array.isArray(parsed) && parsed.length > 0) {
-              localActivities.push(...parsed);
-              emit(`  ↳ ✅ batch ${batch.label}: ${parsed.length} attività`);
-            } else {
-              emit(`  ↳ Batch ${batch.label}: nessun risultato (${text.slice(0,80)})`);
-            }
-          }
+          const items = await runActivityBatch({ prompt: batch.prompt, label: batch.label, geminiApiKey, emit });
+          localActivities.push(...items);
         } catch(e) { emit(`  ↳ Errore batch ${batch.label}: ${e.message}`); }
       }
       if (localActivities.length > 0) {
@@ -1228,36 +1257,16 @@ Return ONLY a valid JSON array. Each item: {"title":"","date":"dd Month yyyy","t
   if (actAge < 3) {
     emit(`Attività: dati recenti (${actAge.toFixed(1)} giorni fa), skip`);
   } else {
-    emit('Ricerca attività locali (2 batch)...');
+    emit('Ricerca attività locali (3 batch: solo+couple, famiglia, ristoranti)...');
     const spouseName  = (settings.familyMembers || []).find(f => f.role === 'spouse')?.name || 'partner';
     const childMember = (settings.familyMembers || []).find(f => f.role === 'child');
     const childName   = childMember?.name || 'figlio'; const childAge = childMember?.age || 8;
     const lang = /london/i.test(detectedCity) ? 'English' : 'Italian';
-    const fields = `{"type":"...","title":"name","description":"1 sentence","category":"food|culture|outdoor|sport|art|entertainment|nature","location":"area","price":"€|€€|€€€","why":"why recommended","link":"https://..."}`;
-    const batches = [
-      { types: `- 3 type "solo": solo activities (museums, walks, cultural events)\n- 3 type "couple": things to do with ${spouseName} (restaurants, experiences)`, label: 'solo+couple' },
-      { types: `- 3 type "family": kid-friendly for ${childAge}-year-old ${childName}\n- 3 type "restaurant": restaurant picks (romantic, family, solo)`, label: 'family+restaurant' }
-    ];
+    const batches = buildActivityBatches({ city: detectedCity, spouseName, childName, childAge, lang });
     for (const batch of batches) {
       try {
-        const prompt = `Suggest 6 activities in ${detectedCity} this week in ${lang}:\n${batch.types}\nEach: ${fields}\nReal places. Return ONLY a valid JSON array, no markdown.`;
-        const r = await fetch(
-          `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${geminiApiKey}`,
-          { method:'POST', headers:{'Content-Type':'application/json'},
-            body: JSON.stringify({ contents:[{role:'user',parts:[{text:prompt}]}], tools:[{googleSearch:{}}], generationConfig:{maxOutputTokens:2000,temperature:0.3} }),
-            signal: AbortSignal.timeout(30000) }
-        );
-        const d = await r.json();
-        if (d.error) {
-          const code=d.error.code||''; const msg=d.error.message||'';
-          if (code===429||msg.includes('quota')||msg.includes('Quota')) emit('⚠️ Gemini quota esaurita — abilita billing su https://ai.dev');
-          else emit(`⚠️ Gemini errore: ${msg.slice(0,150)}`);
-        } else {
-          const text = d.candidates?.[0]?.content?.parts?.[0]?.text || '[]';
-          const parsed = safeJsonParse(text, []);
-          if (Array.isArray(parsed) && parsed.length > 0) { localActivities.push(...parsed); emit(`✅ batch ${batch.label}: ${parsed.length} attività`); }
-          else emit(`Batch ${batch.label}: nessun risultato (${text.slice(0,80)})`);
-        }
+        const items = await runActivityBatch({ prompt: batch.prompt, label: batch.label, geminiApiKey, emit });
+        localActivities.push(...items);
       } catch(e) { emit(`Errore batch ${batch.label}: ${e.message}`); }
     }
     if (localActivities.length > 0) emit(`✅ ${localActivities.length} attività totali trovate in ${detectedCity}`);
