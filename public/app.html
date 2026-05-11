@@ -471,7 +471,7 @@
 const TODAY = new Date().toISOString().slice(0,10);
 let dayData = null;
 let section = 'all';
-let qFilter = 'all';
+let qFilter = 'Q1';
 let userName = '';
 let _panelOpen = false, _logLines = [], _sumHtml = '';
 
@@ -780,75 +780,31 @@ function render() {
       <!-- Email span2 -->
       <div class="bc s2">
         <div class="bc-head">
-          <span class="bc-title">📧 Email</span>
-          ${q1Active>0?`<span class="bc-badge red">${q1Active} urgenti</span>`:''}
-          ${tasks.length?`<span class="bc-badge">${tasks.length} totali</span>`:''}
+          <span class="bc-title">📧 Email${qFilter!=='Q1'?'':' urgenti'}</span>
+          ${q1Active>0?`<span class="bc-badge red">${q1Active} Q1</span>`:''}
+          ${qFilter!=='Q1'&&tasks.length?`<span class="bc-badge">${tasks.length} totali</span>`:''}
         </div>
-        <div class="q-strip">
-          <button class="qb ${qFilter==='all'?'on':''}" onclick="setQ('all')">Tutti (${tasks.length})</button>
-          <button class="qb q1 ${qFilter==='Q1'?'on':''}" onclick="setQ('Q1')">🔴 Q1 (${q1.length})</button>
-          <button class="qb q2 ${qFilter==='Q2'?'on':''}" onclick="setQ('Q2')">🔵 Q2 (${q2.length})</button>
-          <button class="qb q3 ${qFilter==='Q3'?'on':''}" onclick="setQ('Q3')">🟠 Q3 (${q3.length})</button>
-          <button class="qb q4 ${qFilter==='Q4'?'on':''}" onclick="setQ('Q4')">⚫ Q4 (${q4.length})</button>
-        </div>
-        ${filteredTasks.length ? filteredTasks.map(t=>tkRow(t,items[t.id]||{})).join('')
-          : tasks.length ? `<div class="empty-sm">Nessun task in questa categoria.</div>`
-          : `<div class="empty"><div class="ei">📧</div>Nessuna email da gestire.<br/>Clicca <strong>☀️ Briefing</strong> per analizzare la inbox.</div>`}
-      </div>
-
-      <!-- Crescita preview span1 -->
-      <div class="bc">
-        <div class="bc-head">
-          <span class="bc-title">📚 Crescita</span>
-          ${study.length?`<span class="bc-badge pur">${study.length}</span>`:''}
-          ${study.length>3?`<button class="bc-more" onclick="nav('growth',null)">Vedi tutti →</button>`:''}
-        </div>
-        ${studyPreview.length ? studyPreview.map((s,_i)=>stRowCompact(s,study.indexOf(s))).join('')
-          : `<div class="empty"><div class="ei">📚</div>Nessuna newsletter.<br/>Clicca <strong>⚡</strong> per analizzare.</div>`}
-      </div>
-
-      <!-- Network preview span1 -->
-      <div class="bc">
-        <div class="bc-head">
-          <span class="bc-title">🌐 Network${net.city?' · '+esc(net.city):''}</span>
-          ${netEvts.length?`<span class="bc-badge blue">${netEvts.length}</span>`:''}
-          ${netEvts.length>2?`<button class="bc-more" onclick="nav('network',null)">Tutti →</button>`:''}
-        </div>
-        ${netPreview.length ? netPreview.map(e=>netRow(e)).join('')
-          : `<div class="empty"><div class="ei">🌐</div>Nessun evento.<br/><span style="font-size:11px">Avvia briefing per cercare</span></div>`}
-      </div>
-
-      <!-- Vita locale preview span1 -->
-      <div class="bc">
-        <div class="bc-head">
-          <span class="bc-title">🗺️ Vita locale</span>
-          ${actData.items?.length?`<span class="bc-badge pur">${actData.items.length}</span>`:''}
-          ${actData.items?.length>3?`<button class="bc-more" onclick="nav('activities',null)">Tutti →</button>`:''}
-        </div>
-        ${actPreview.length ? actPreview.map(a=>`
-          <div style="display:flex;gap:10px;align-items:flex-start;padding:9px 16px;border-bottom:1px solid var(--line2);">
-            <div style="width:6px;height:6px;border-radius:50%;flex-shrink:0;margin-top:5px;background:${{solo:'#3b82f6',couple:'#ff6482',family:'#00d084',restaurant:'#ffb800'}[a.type]||'var(--accent)'};"></div>
-            <div style="flex:1;min-width:0;">
-              <div style="font-size:12px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${esc(a.title||'')}</div>
-              <div style="font-size:11px;color:var(--t2)">${esc(a.location||'')}${a.price?' · '+esc(a.price):''}</div>
-            </div>
-          </div>`).join('')
-        : `<div class="empty"><div class="ei">🗺️</div>Nessuna idea locale.<br/><span style="font-size:11px">Avvia briefing per cercare</span></div>`}
-      </div>
-
-      <!-- Famiglia span1 -->
-      <div class="bc">
-        <div class="bc-head"><span class="bc-title">👨‍👩‍👦 Famiglia</span></div>
-        <div class="fam-cols" style="grid-template-columns:1fr;">
-          <div class="fam-col">
-            <div class="fam-label">${esc(sp)}</div>
-            <div class="fam-body">${al.length?al.slice(0,2).map(e=>`${e.time?esc(e.time)+' · ':''}${esc(e.title)}${e.isAway?`<div class="fam-alert">⚠️ Non sarà a casa</div>`:''}`).join('<br/>'):`<span style="color:var(--t2)">Nessun impegno</span>`}</div>
+        ${qFilter==='Q1' ? `
+          ${q1.filter(t=>!items[t.id]?.done).length
+            ? q1.filter(t=>!items[t.id]?.done).map(t=>tkRow(t,items[t.id]||{})).join('')
+            : q1.length
+              ? `<div style="color:var(--t2);padding:12px 16px;font-size:13px">✅ Nessuna email Q1 da gestire</div>`
+              : `<div class="empty"><div class="ei">📧</div>Nessuna email urgente.<br/>Clicca <strong>☀️ Briefing</strong> per analizzare la inbox.</div>`
+          }
+          ${tasks.length > q1.length ? `<button onclick="setQ('all')" style="display:block;width:100%;padding:10px 16px;border:none;border-top:1px solid var(--line2);background:transparent;color:var(--t2);font-size:12px;cursor:pointer;text-align:left">Mostra tutte le email (${tasks.length}) →</button>` : ''}
+        ` : `
+          <div class="q-strip">
+            <button class="qb ${qFilter==='all'?'on':''}" onclick="setQ('all')">Tutti (${tasks.length})</button>
+            <button class="qb q1 ${qFilter==='Q1'?'on':''}" onclick="setQ('Q1')">🔴 Q1 (${q1.length})</button>
+            <button class="qb q2 ${qFilter==='Q2'?'on':''}" onclick="setQ('Q2')">🔵 Q2 (${q2.length})</button>
+            <button class="qb q3 ${qFilter==='Q3'?'on':''}" onclick="setQ('Q3')">🟠 Q3 (${q3.length})</button>
+            <button class="qb q4 ${qFilter==='Q4'?'on':''}" onclick="setQ('Q4')">⚫ Q4 (${q4.length})</button>
           </div>
-          <div class="fam-col" style="border-top:1px solid var(--line2);border-left:none;">
-            <div class="fam-label">${esc(ch)} · Scuola</div>
-            <div class="fam-body">${tm.length?tm.slice(0,2).map(t=>`<a href="${esc(t.link)}" target="_blank" style="color:#60a5fa;text-decoration:none">${esc(t.title)}</a>`).join('<br/>'):`<span style="color:var(--t2)">Nessuna comunicazione</span>`}</div>
-          </div>
-        </div>
+          ${filteredTasks.length ? filteredTasks.map(t=>tkRow(t,items[t.id]||{})).join('')
+            : tasks.length ? `<div class="empty-sm">Nessun task in questa categoria.</div>`
+            : `<div class="empty"><div class="ei">📧</div>Nessuna email da gestire.</div>`}
+          <button onclick="setQ('Q1')" style="display:block;width:100%;padding:10px 16px;border:none;border-top:1px solid var(--line2);background:transparent;color:var(--t2);font-size:12px;cursor:pointer;text-align:left">← Solo urgenti</button>
+        `}
       </div>
 
     </div>`;
