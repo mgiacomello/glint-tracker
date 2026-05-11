@@ -2,8 +2,18 @@
 <html lang="it">
 <head>
   <meta charset="UTF-8"/>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Impostazioni · Daily Tracker</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover"/>
+  <title>Impostazioni · Glint</title>
+
+  <!-- PWA -->
+  <link rel="manifest" href="/manifest.json"/>
+  <meta name="theme-color" content="#7c6ef5"/>
+  <meta name="mobile-web-app-capable" content="yes"/>
+  <meta name="apple-mobile-web-app-capable" content="yes"/>
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
+  <meta name="apple-mobile-web-app-title" content="Glint"/>
+  <link rel="apple-touch-icon" href="/icons/icon-192.png"/>
+
   <link rel="preconnect" href="https://fonts.googleapis.com"/>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet"/>
   <style>
@@ -399,7 +409,35 @@
     @media (max-width: 600px) {
       .row-2, .row-3 { grid-template-columns: 1fr; }
       .member-fields { grid-template-columns: 1fr; }
+      .page { padding: 16px 14px 40px; }
     }
+
+    /* ── PWA safe areas ── */
+    body { padding-top: env(safe-area-inset-top); }
+    .header {
+      padding-top: max(12px, env(safe-area-inset-top));
+      padding-left: max(20px, env(safe-area-inset-left));
+      padding-right: max(20px, env(safe-area-inset-right));
+    }
+    * { -webkit-tap-highlight-color: transparent; }
+    button, a { touch-action: manipulation; }
+
+    /* ── Notification toggle ── */
+    .notif-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+    .notif-row .lbl { font-size: 13px; color: var(--t1); }
+    .toggle-wrap { display: flex; align-items: center; gap: 8px; }
+    .toggle { position: relative; width: 44px; height: 24px; }
+    .toggle input { opacity: 0; width: 0; height: 0; }
+    .toggle-slider {
+      position: absolute; inset: 0; cursor: pointer; border-radius: 24px;
+      background: var(--s3); border: 1px solid var(--line); transition: .2s;
+    }
+    .toggle-slider:before {
+      content: ''; position: absolute; height: 18px; width: 18px; left: 2px; bottom: 2px;
+      background: var(--t2); border-radius: 50%; transition: .2s;
+    }
+    .toggle input:checked + .toggle-slider { background: var(--accent); border-color: var(--accent); }
+    .toggle input:checked + .toggle-slider:before { transform: translateX(20px); background: #fff; }
   </style>
 </head>
 <body>
@@ -586,6 +624,29 @@
         <label>Perplexity API Key <span style="color:var(--muted);font-weight:400;">(non più necessaria)</span></label>
         <input type="password" id="s-perplexityApiKey" placeholder="pplx-..." disabled style="opacity:.4;cursor:not-allowed"/>
         <span class="hint">⚠️ La ricerca eventi networking usa ora <strong>Gemini + Google Search</strong> (gratis, nessuna key richiesta). Puoi ignorare questo campo.</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Notifiche ─────────────────────────────────────────────────────────── -->
+  <div class="section">
+    <h2>📲 App &amp; Notifiche</h2>
+    <div class="card">
+      <div class="form-group notif-row">
+        <div>
+          <div class="lbl" style="font-size:14px;font-weight:600;color:var(--t0)">Notifiche push</div>
+          <div class="lbl" style="margin-top:2px">Ricevi una notifica quando il briefing è pronto</div>
+        </div>
+        <label class="toggle">
+          <input type="checkbox" id="notif-toggle" onchange="toggleNotifications(this.checked)"/>
+          <span class="toggle-slider"></span>
+        </label>
+      </div>
+      <div id="notif-status" class="hint" style="margin-top:6px"></div>
+      <div class="form-group" id="install-section" style="display:none;margin-top:8px">
+        <div style="font-size:14px;font-weight:600;color:var(--t0);margin-bottom:4px">Installa come app</div>
+        <button onclick="installFromSettings()" style="padding:8px 18px;border-radius:8px;border:none;background:var(--accent);color:#fff;font-size:13px;font-weight:600;cursor:pointer">📲 Aggiungi alla schermata home</button>
+        <div class="hint" style="margin-top:6px">Funziona su Android (Chrome) e iOS (Safari → Condividi → Aggiungi a schermata Home)</div>
       </div>
     </div>
   </div>
@@ -993,6 +1054,91 @@ function escHtml(s) {
 function escAttr(s) {
   return String(s).replace(/'/g,'&#39;').replace(/"/g,'&quot;');
 }
+
+// ── Service Worker ────────────────────────────────────────────────────────────
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('/sw.js', { scope: '/' }).catch(() => {});
+}
+
+// ── Notifications ─────────────────────────────────────────────────────────────
+let _settingsInstallEvent = null;
+
+window.addEventListener('beforeinstallprompt', e => {
+  e.preventDefault();
+  _settingsInstallEvent = e;
+  document.getElementById('install-section').style.display = 'block';
+});
+
+function installFromSettings() {
+  if (!_settingsInstallEvent) return;
+  _settingsInstallEvent.prompt();
+}
+
+async function initNotifUI() {
+  const toggle = document.getElementById('notif-toggle');
+  const status = document.getElementById('notif-status');
+  if (!('Notification' in window) || !('serviceWorker' in navigator)) {
+    if (status) status.textContent = 'Le notifiche non sono supportate su questo browser.';
+    if (toggle) toggle.disabled = true;
+    return;
+  }
+  const perm = Notification.permission;
+  if (toggle) toggle.checked = perm === 'granted' && await hasActiveSub();
+  if (status) {
+    if (perm === 'denied') status.textContent = '🚫 Notifiche bloccate. Abilitale nelle impostazioni del browser.';
+    else if (perm === 'granted') status.textContent = '✅ Notifiche attive — riceverai un avviso quando il briefing è pronto.';
+    else status.textContent = 'Attiva per ricevere il briefing ogni mattina sul dispositivo.';
+  }
+}
+
+async function hasActiveSub() {
+  try {
+    const reg = await navigator.serviceWorker.ready;
+    return !!(await reg.pushManager.getSubscription());
+  } catch { return false; }
+}
+
+function urlBase64ToUint8Array(b64) {
+  const pad = '='.repeat((4 - b64.length % 4) % 4);
+  const base64 = (b64 + pad).replace(/-/g,'+').replace(/_/g,'/');
+  const raw = atob(base64);
+  return Uint8Array.from([...raw].map(c => c.charCodeAt(0)));
+}
+
+async function toggleNotifications(enabled) {
+  const status = document.getElementById('notif-status');
+  if (!enabled) {
+    try {
+      const reg = await navigator.serviceWorker.ready;
+      const sub = await reg.pushManager.getSubscription();
+      if (sub) {
+        await fetch('/api/push/subscribe', { method:'DELETE', credentials:'include', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ endpoint: sub.endpoint }) });
+        await sub.unsubscribe();
+      }
+    } catch {}
+    if (status) status.textContent = 'Notifiche disattivate.';
+    return;
+  }
+  try {
+    const perm = await Notification.requestPermission();
+    if (perm !== 'granted') {
+      if (status) status.textContent = '🚫 Permesso negato. Attivale dalle impostazioni del browser.';
+      document.getElementById('notif-toggle').checked = false;
+      return;
+    }
+    const reg = await navigator.serviceWorker.ready;
+    const keyRes = await fetch('/api/push/vapid-key', { credentials: 'include' });
+    const { publicKey } = await keyRes.json();
+    const sub = await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: urlBase64ToUint8Array(publicKey) });
+    await fetch('/api/push/subscribe', { method:'POST', credentials:'include', headers:{'Content-Type':'application/json'}, body: JSON.stringify(sub.toJSON()) });
+    if (status) status.textContent = '✅ Notifiche attive!';
+  } catch(e) {
+    if (status) status.textContent = 'Errore: ' + e.message;
+    document.getElementById('notif-toggle').checked = false;
+  }
+}
+
+document.addEventListener('DOMContentLoaded', () => setTimeout(initNotifUI, 500));
 </script>
 </body>
 </html>

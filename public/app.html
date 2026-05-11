@@ -2,8 +2,18 @@
 <html lang="it">
 <head>
   <meta charset="UTF-8"/>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover"/>
   <title>Glint</title>
+
+  <!-- PWA -->
+  <link rel="manifest" href="/manifest.json"/>
+  <meta name="theme-color" content="#7c6ef5"/>
+  <meta name="mobile-web-app-capable" content="yes"/>
+  <meta name="apple-mobile-web-app-capable" content="yes"/>
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
+  <meta name="apple-mobile-web-app-title" content="Glint"/>
+  <link rel="apple-touch-icon" href="/icons/icon-192.png"/>
+
   <link rel="preconnect" href="https://fonts.googleapis.com"/>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet"/>
   <style>
@@ -305,9 +315,80 @@
     @media (max-width: 600px) {
       .bento { grid-template-columns: 1fr; }
       .bc.s2, .bc.s3 { grid-column: span 1; }
-      .page { padding: 20px 16px 60px; }
-      .tab-nav .tnav:not(.on) { display: none; }
+      .page { padding: 16px 14px 80px; }
+      .tab-nav { display: none; }
+      .act-grid-full { grid-template-columns: 1fr 1fr; gap: 10px; padding: 12px 14px 16px; }
+      .act-tab-bar { padding: 12px 14px 0; gap: 6px; }
+      .act-tab { padding: 6px 12px; font-size: 12px; }
+      .hero-name { font-size: 28px; }
+      .hero { flex-direction: column; gap: 12px; }
+      .hero-kpis { display: none; }
+      .topbar { padding: 0 16px; }
+      .tb-name { display: none; }
+      .btn-run { padding: 6px 11px; font-size: 12px; }
     }
+    @media (max-width: 420px) {
+      .act-grid-full { grid-template-columns: 1fr; }
+    }
+
+    /* ── BOTTOM NAV (mobile only) ── */
+    .bottom-nav {
+      display: none;
+    }
+    @media (max-width: 600px) {
+      .bottom-nav {
+        display: flex;
+        position: fixed; bottom: 0; left: 0; right: 0; z-index: 300;
+        height: calc(58px + env(safe-area-inset-bottom));
+        padding-bottom: env(safe-area-inset-bottom);
+        background: rgba(10,10,10,.96);
+        backdrop-filter: blur(20px) saturate(160%);
+        border-top: 1px solid var(--line);
+        justify-content: space-around;
+        align-items: stretch;
+      }
+      .bn-item {
+        flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center;
+        gap: 3px; cursor: pointer; border: none; background: none;
+        color: var(--t2); font-size: 10px; font-weight: 500; padding: 8px 4px 4px;
+        transition: color .12s; -webkit-tap-highlight-color: transparent;
+        min-width: 44px;
+      }
+      .bn-item.on { color: var(--accent); }
+      .bn-item .bn-icon { font-size: 20px; line-height: 1; }
+      .bn-item .bn-label { font-size: 9px; font-weight: 600; letter-spacing: .02em; }
+      .bn-badge {
+        position: absolute; top: 2px; right: 50%; transform: translateX(12px);
+        min-width: 15px; height: 15px; padding: 0 3px;
+        background: var(--red); border-radius: 8px;
+        font-size: 9px; font-weight: 800; color: #fff; display: flex; align-items: center; justify-content: center;
+      }
+      .bn-item { position: relative; }
+    }
+
+    /* ── INSTALL BANNER ── */
+    .install-banner {
+      display: none; align-items: center; gap: 12px;
+      background: linear-gradient(135deg, rgba(124,110,245,.15), rgba(167,139,250,.08));
+      border: 1px solid rgba(124,110,245,.3); border-radius: var(--r);
+      padding: 14px 18px; margin-bottom: 0;
+    }
+    .install-banner.show { display: flex; }
+    .ib-icon { font-size: 26px; flex-shrink: 0; }
+    .ib-text { flex: 1; }
+    .ib-title { font-size: 14px; font-weight: 700; color: var(--t0); margin-bottom: 2px; }
+    .ib-sub   { font-size: 12px; color: var(--t1); }
+    .ib-btn   { padding: 8px 16px; border-radius: 8px; background: var(--accent); border: none; color: #fff; font-size: 13px; font-weight: 600; cursor: pointer; white-space: nowrap; flex-shrink: 0; }
+    .ib-close { background: none; border: none; color: var(--t2); cursor: pointer; font-size: 20px; padding: 0 4px; }
+
+    /* ── SAFE AREA (notch/home indicator) ── */
+    body { padding-top: env(safe-area-inset-top); }
+    .topbar { padding-top: max(0px, env(safe-area-inset-top)); height: calc(54px + env(safe-area-inset-top)); }
+
+    /* ── TOUCH IMPROVEMENTS ── */
+    * { -webkit-tap-highlight-color: transparent; }
+    button, a { touch-action: manipulation; }
+    .ev-row, .tk-row, .st-row, .net-row { min-height: 44px; }
   </style>
 </head>
 <body>
@@ -342,8 +423,43 @@
   </div>
 </nav>
 
+<div id="install-banner" class="install-banner">
+  <div class="ib-icon">📲</div>
+  <div class="ib-text">
+    <div class="ib-title">Installa Glint</div>
+    <div class="ib-sub">Aggiungi alla schermata home per un'esperienza nativa</div>
+  </div>
+  <button class="ib-btn" id="install-btn" onclick="installPWA()">Installa</button>
+  <button class="ib-close" onclick="dismissInstall()">×</button>
+</div>
+
 <div class="page" id="page"></div>
 <div id="overlay" style="display:none;position:fixed;inset:0;z-index:250;" onclick="closeMenu()"></div>
+
+<!-- Bottom nav (mobile only) -->
+<nav class="bottom-nav" id="bottom-nav">
+  <button class="bn-item on" id="bn-all" onclick="nav('all',this)" data-sec="all">
+    <span class="bn-icon">🏠</span>
+    <span class="bn-label">Oggi</span>
+  </button>
+  <button class="bn-item" id="bn-growth" onclick="nav('growth',this)" data-sec="growth">
+    <span class="bn-icon">📚</span>
+    <span class="bn-label">Crescita</span>
+    <span class="bn-badge" id="bn-badge-growth" style="display:none"></span>
+  </button>
+  <button class="bn-item" id="bn-activities" onclick="nav('activities',this)" data-sec="activities">
+    <span class="bn-icon">🗺️</span>
+    <span class="bn-label">Vita</span>
+  </button>
+  <button class="bn-item" id="bn-network" onclick="nav('network',this)" data-sec="network">
+    <span class="bn-icon">🌐</span>
+    <span class="bn-label">Network</span>
+  </button>
+  <button class="bn-item" id="bn-family" onclick="nav('family',this)" data-sec="family">
+    <span class="bn-icon">👨‍👩‍👦</span>
+    <span class="bn-label">Famiglia</span>
+  </button>
+</nav>
 
 <script>
 'use strict';
@@ -400,9 +516,12 @@ function render() {
   const done        = Object.values(items).filter(i=>i.done).length;
   const total       = events.length + tasks.length;
 
-  // update nav badge
+  // update nav badge (top nav)
   const tb = document.getElementById('tnav-growth');
   if(tb){if(study.length){tb.textContent='·'+study.length;tb.style.display='';} else tb.style.display='none';}
+  // update bottom nav badge
+  const bb = document.getElementById('bn-badge-growth');
+  if(bb){if(study.length){bb.textContent=study.length;bb.style.display='flex';} else bb.style.display='none';}
 
   // update tab active state
   document.querySelectorAll('.tnav').forEach(b=>b.classList.remove('on'));
@@ -830,7 +949,12 @@ function _restorePanel() {
 }
 
 // ── Navigation ─────────────────────────────────────────────────────────────
-function nav(s, _el) { section=s; render(); }
+function nav(s, _el) {
+  section = s;
+  render();
+  // Sync bottom nav
+  document.querySelectorAll('.bn-item').forEach(b => b.classList.toggle('on', b.dataset.sec === s));
+}
 function setQ(q) { qFilter=q; render(); }
 
 // ── Toggles ────────────────────────────────────────────────────────────────
@@ -945,6 +1069,94 @@ async function syncOura(){
 
 // ── Utils ──────────────────────────────────────────────────────────────────
 function esc(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
+
+// ── Service Worker + PWA ───────────────────────────────────────────────────
+let _installEvent = null;
+
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('/sw.js', { scope: '/' })
+      .then(reg => {
+        console.log('[SW] Registered', reg.scope);
+        // Check for updates on each visit
+        reg.update();
+      })
+      .catch(e => console.warn('[SW] Error:', e));
+  });
+}
+
+// Install prompt (Android Chrome)
+window.addEventListener('beforeinstallprompt', e => {
+  e.preventDefault();
+  _installEvent = e;
+  if (!localStorage.getItem('glint-install-dismissed')) {
+    document.getElementById('install-banner')?.classList.add('show');
+  }
+});
+
+window.addEventListener('appinstalled', () => {
+  document.getElementById('install-banner')?.classList.remove('show');
+  _installEvent = null;
+  localStorage.setItem('glint-install-dismissed', '1');
+});
+
+function installPWA() {
+  if (!_installEvent) return;
+  _installEvent.prompt();
+  _installEvent.userChoice.then(r => {
+    if (r.outcome === 'accepted') localStorage.setItem('glint-install-dismissed', '1');
+    document.getElementById('install-banner')?.classList.remove('show');
+    _installEvent = null;
+  });
+}
+
+function dismissInstall() {
+  document.getElementById('install-banner')?.classList.remove('show');
+  localStorage.setItem('glint-install-dismissed', '1');
+}
+
+// ── Push Notifications ─────────────────────────────────────────────────────
+async function requestPushPermission() {
+  if (!('Notification' in window) || !('serviceWorker' in navigator)) return false;
+  if (Notification.permission === 'granted') return true;
+  if (Notification.permission === 'denied') return false;
+  const result = await Notification.requestPermission();
+  return result === 'granted';
+}
+
+async function subscribePush() {
+  try {
+    const granted = await requestPushPermission();
+    if (!granted) return;
+    const reg = await navigator.serviceWorker.ready;
+    const existing = await reg.pushManager.getSubscription();
+    if (existing) return; // already subscribed
+
+    const keyRes = await fetch('/api/push/vapid-key', { credentials: 'include' });
+    const { publicKey } = await keyRes.json();
+
+    const sub = await reg.pushManager.subscribe({
+      userVisibleOnly: true,
+      applicationServerKey: urlBase64ToUint8Array(publicKey)
+    });
+    await fetch('/api/push/subscribe', {
+      method: 'POST', credentials: 'include',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(sub.toJSON())
+    });
+    console.log('[Push] Subscribed');
+  } catch(e) { console.warn('[Push]', e.message); }
+}
+
+function urlBase64ToUint8Array(base64String) {
+  const padding = '='.repeat((4 - base64String.length % 4) % 4);
+  const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
+  const raw = window.atob(base64);
+  return Uint8Array.from([...raw].map(c => c.charCodeAt(0)));
+}
+
+// Auto-subscribe push after page loads (only asks once if not already granted)
+window.addEventListener('load', () => setTimeout(subscribePush, 3000));
 </script>
 </body>
 </html>

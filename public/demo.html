@@ -1,0 +1,479 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Glint — New UI</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;0,900;1,400&display=swap" rel="stylesheet"/>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --bg:    #0a0a0a;
+      --s1:    #111111;
+      --s2:    #181818;
+      --s3:    #1f1f1f;
+      --line:  rgba(255,255,255,.06);
+      --line2: rgba(255,255,255,.03);
+      --t0:    #ffffff;
+      --t1:    #a0a0a0;
+      --t2:    #555555;
+      --accent:#7c6ef5;
+      --red:   #ff4444;
+      --green: #00d084;
+      --amber: #ffb800;
+      --blue:  #3b82f6;
+      --r:     16px;
+    }
+    html, body { background: var(--bg); color: var(--t0); font-family: 'Inter', sans-serif; font-size: 14px; line-height: 1.5; min-height: 100vh; -webkit-font-smoothing: antialiased; }
+
+    /* ── TOP BAR ── */
+    .top {
+      display: flex; align-items: center; gap: 0;
+      padding: 0 32px; height: 56px;
+      border-bottom: 1px solid var(--line);
+      position: sticky; top: 0; z-index: 100;
+      background: rgba(10,10,10,.85); backdrop-filter: blur(24px);
+    }
+    .top-logo { display: flex; align-items: center; gap: 9px; margin-right: 40px; }
+    .top-gem {
+      width: 28px; height: 28px; border-radius: 8px;
+      background: linear-gradient(135deg,#7c6ef5,#a78bfa);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 13px; box-shadow: 0 0 16px rgba(124,110,245,.3);
+    }
+    .top-brand { font-size: 16px; font-weight: 800; letter-spacing: -.03em; }
+    .top-tabs { display: flex; gap: 2px; flex: 1; }
+    .ttab {
+      padding: 6px 14px; border-radius: 8px; font-size: 13px; font-weight: 500;
+      color: var(--t2); cursor: pointer; transition: all .12s; border: none; background: none;
+    }
+    .ttab:hover { color: var(--t1); background: rgba(255,255,255,.04); }
+    .ttab.on { color: var(--t0); background: rgba(255,255,255,.07); }
+    .top-right { display: flex; align-items: center; gap: 8px; margin-left: auto; }
+    .chip {
+      display: inline-flex; align-items: center; gap: 5px;
+      padding: 5px 12px; border-radius: 20px; font-size: 12px; font-weight: 600;
+      background: rgba(255,255,255,.06); border: 1px solid var(--line);
+      color: var(--t1); cursor: pointer; transition: all .1s;
+    }
+    .chip:hover { background: rgba(255,255,255,.1); color: var(--t0); }
+    .chip.run { background: var(--accent); border-color: transparent; color: #fff; }
+    .chip.run:hover { filter: brightness(1.1); }
+    .ava { width: 30px; height: 30px; border-radius: 50%; background: linear-gradient(135deg,#7c6ef5,#a78bfa); display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 700; cursor: pointer; }
+
+    /* ── PAGE ── */
+    .page { max-width: 1100px; margin: 0 auto; padding: 36px 32px 80px; display: flex; flex-direction: column; gap: 32px; }
+
+    /* ── HERO ROW ── */
+    .hero { display: flex; align-items: flex-end; justify-content: space-between; gap: 24px; }
+    .hero-left {}
+    .hero-date { font-size: 12px; color: var(--t2); font-weight: 500; letter-spacing: .04em; text-transform: uppercase; margin-bottom: 6px; }
+    .hero-name { font-size: 38px; font-weight: 900; letter-spacing: -.04em; line-height: 1; margin-bottom: 10px; }
+    .hero-name span { color: var(--accent); }
+    .hero-tags { display: flex; gap: 6px; }
+    .htag { padding: 4px 12px; border-radius: 20px; font-size: 12px; font-weight: 600; border: 1px solid; }
+    .htag.focus  { border-color: rgba(0,208,132,.25); color: var(--green); background: rgba(0,208,132,.06); }
+    .htag.warn   { border-color: rgba(255,68,68,.25);  color: var(--red);   background: rgba(255,68,68,.06); }
+    .hero-right { display: flex; gap: 10px; }
+    .kpi {
+      background: var(--s1); border: 1px solid var(--line); border-radius: var(--r);
+      padding: 18px 24px; text-align: center; min-width: 90px;
+    }
+    .kpi-n { font-size: 36px; font-weight: 900; letter-spacing: -.05em; line-height: 1; }
+    .kpi-n.red { color: var(--red); }
+    .kpi-n.dim { color: var(--t1); }
+    .kpi-l { font-size: 11px; color: var(--t2); margin-top: 4px; font-weight: 500; }
+
+    /* ── COACHING ── */
+    .brief-card {
+      background: var(--s1); border: 1px solid var(--line); border-radius: var(--r);
+      padding: 20px 24px; display: flex; gap: 16px; align-items: flex-start;
+    }
+    .brief-icon { font-size: 20px; flex-shrink: 0; margin-top: 1px; }
+    .brief-text { font-size: 13px; color: var(--t1); line-height: 1.8; }
+    .brief-text strong { color: var(--t0); }
+
+    /* ── BENTO GRID ── */
+    .bento { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; }
+    .bcard {
+      background: var(--s1); border: 1px solid var(--line); border-radius: var(--r);
+      overflow: hidden; display: flex; flex-direction: column;
+    }
+    .bcard.span2 { grid-column: span 2; }
+    .bcard.span3 { grid-column: span 3; }
+    .bcard-head {
+      display: flex; align-items: center; gap: 8px;
+      padding: 14px 18px 12px; border-bottom: 1px solid var(--line2);
+    }
+    .bcard-title { font-size: 12px; font-weight: 700; color: var(--t1); text-transform: uppercase; letter-spacing: .06em; flex: 1; }
+    .bcard-count { font-size: 11px; font-weight: 700; padding: 2px 8px; border-radius: 20px; background: rgba(255,255,255,.06); color: var(--t2); }
+    .bcard-count.red { background: rgba(255,68,68,.12); color: #ff6b6b; }
+    .bcard-count.blue { background: rgba(59,130,246,.12); color: #60a5fa; }
+    .bcard-body { flex: 1; display: flex; flex-direction: column; }
+
+    /* ── EVENT ROWS ── */
+    .erow {
+      display: flex; align-items: flex-start; gap: 12px;
+      padding: 12px 18px; border-bottom: 1px solid var(--line2);
+      transition: background .1s;
+    }
+    .erow:last-child { border-bottom: none; }
+    .erow:hover { background: rgba(255,255,255,.02); }
+    .etime { font-size: 11px; color: var(--t2); width: 80px; flex-shrink: 0; padding-top: 2px; font-variant-numeric: tabular-nums; }
+    .ebody { flex: 1; }
+    .etitle { font-size: 13px; font-weight: 600; margin-bottom: 2px; }
+    .emeta { font-size: 11px; color: var(--t2); }
+    .ejoin {
+      padding: 4px 10px; border-radius: 7px; font-size: 11px; font-weight: 600;
+      background: rgba(0,208,132,.08); border: 1px solid rgba(0,208,132,.2);
+      color: var(--green); text-decoration: none; flex-shrink: 0;
+    }
+
+    /* ── TASK ROWS ── */
+    .trow {
+      display: flex; align-items: flex-start; gap: 10px;
+      padding: 11px 18px; border-bottom: 1px solid var(--line2);
+      transition: background .1s;
+    }
+    .trow:last-child { border-bottom: none; }
+    .trow:hover { background: rgba(255,255,255,.02); }
+    .trow.q1 { border-left: 2px solid rgba(255,68,68,.5); padding-left: 16px; }
+    .tdot { width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0; margin-top: 5px; }
+    .tdot.q1 { background: var(--red); box-shadow: 0 0 6px rgba(255,68,68,.5); }
+    .tdot.q2 { background: var(--blue); }
+    .tbody { flex: 1; min-width: 0; }
+    .ttitle { font-size: 13px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .trow.q1 .ttitle { color: #fff5f5; }
+    .tmeta { font-size: 11px; color: var(--t2); margin-top: 1px; }
+    .tmeta a { color: var(--accent); text-decoration: none; }
+    .tcb { width: 18px; height: 18px; border-radius: 5px; border: 1.5px solid var(--line); flex-shrink: 0; cursor: pointer; margin-top: 1px; }
+
+    /* ── HEALTH MINI CARD ── */
+    .health-grid { display: grid; grid-template-columns: repeat(2,1fr); gap: 0; }
+    .hm { padding: 16px 18px; border-bottom: 1px solid var(--line2); border-right: 1px solid var(--line2); }
+    .hm:nth-child(2n) { border-right: none; }
+    .hm:nth-child(3), .hm:nth-child(4) { border-bottom: none; }
+    .hm-val { font-size: 26px; font-weight: 800; letter-spacing: -.03em; }
+    .hm-lbl { font-size: 11px; color: var(--t2); margin-top: 2px; }
+    .hm-rec { padding: 12px 18px; font-size: 12px; color: var(--t2); border-top: 1px solid var(--line2); line-height: 1.8; }
+
+    /* ── STUDY ROWS ── */
+    .srow {
+      display: flex; gap: 12px; align-items: flex-start;
+      padding: 12px 18px; border-bottom: 1px solid var(--line2);
+    }
+    .srow:last-child { border-bottom: none; }
+    .snum { width: 22px; height: 22px; border-radius: 6px; background: rgba(124,110,245,.1); color: #a78bfa; font-size: 10px; font-weight: 800; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+    .sbody { flex: 1; min-width: 0; }
+    .stitle { font-size: 13px; font-weight: 600; margin-bottom: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .ssrc { font-size: 11px; color: var(--t2); margin-bottom: 4px; }
+    .srec { font-size: 11px; color: var(--green); }
+    .stags { display: flex; gap: 4px; margin-top: 5px; flex-wrap: wrap; }
+    .stag { font-size: 10px; font-weight: 700; padding: 1px 7px; border-radius: 10px; letter-spacing: .2px; }
+    .stag.H { background: rgba(255,68,68,.1);   color: #ff7070; }
+    .stag.M { background: rgba(255,184,0,.1);   color: #ffb800; }
+    .stag.c { background: rgba(124,110,245,.1); color: #a78bfa; }
+    .stag.g { background: rgba(0,208,132,.07);  color: #00d084; }
+
+    /* ── NETWORK ROWS ── */
+    .nrow {
+      display: flex; gap: 12px; align-items: flex-start;
+      padding: 12px 18px; border-bottom: 1px solid var(--line2);
+    }
+    .nrow:last-child { border-bottom: none; }
+    .ndot { width: 8px; height: 8px; border-radius: 50%; background: var(--accent); box-shadow: 0 0 8px rgba(124,110,245,.4); flex-shrink: 0; margin-top: 4px; }
+    .nbody { flex: 1; }
+    .ntitle { font-size: 13px; font-weight: 600; margin-bottom: 2px; }
+    .nmeta { font-size: 11px; color: var(--t2); }
+    .ntags { display: flex; gap: 4px; margin-top: 5px; }
+    .ntag { font-size: 10px; font-weight: 600; padding: 1px 7px; border-radius: 10px; background: rgba(124,110,245,.1); color: #a78bfa; }
+    .nlink { padding: 4px 10px; border-radius: 7px; font-size: 11px; font-weight: 600; background: rgba(124,110,245,.1); border: 1px solid rgba(124,110,245,.2); color: #a78bfa; text-decoration: none; flex-shrink: 0; white-space: nowrap; }
+
+    /* ── Q-FILTER ── */
+    .qrow { display: flex; gap: 4px; padding: 10px 18px; border-bottom: 1px solid var(--line2); }
+    .qbtn { padding: 3px 10px; border-radius: 20px; font-size: 11px; font-weight: 600; border: 1px solid var(--line); background: transparent; color: var(--t2); cursor: pointer; }
+    .qbtn.on { background: rgba(255,68,68,.1); border-color: rgba(255,68,68,.25); color: #ff6b6b; }
+    .qbtn.on.b { background: rgba(59,130,246,.1); border-color: rgba(59,130,246,.25); color: #60a5fa; }
+    .qbtn.on.w { background: rgba(255,255,255,.07); border-color: rgba(255,255,255,.12); color: var(--t0); }
+
+    /* ── PROGRESS BAR ── */
+    .prog-wrap { height: 2px; background: var(--line); border-radius: 2px; overflow: hidden; margin-top: 10px; }
+    .prog-bar  { height: 100%; background: var(--accent); border-radius: 2px; width: 25%; }
+  </style>
+</head>
+<body>
+
+<!-- TOP BAR -->
+<nav class="top">
+  <div class="top-logo">
+    <div class="top-gem">✦</div>
+    <span class="top-brand">Glint</span>
+  </div>
+  <div class="top-tabs">
+    <button class="ttab on">Oggi</button>
+    <button class="ttab">Crescita</button>
+    <button class="ttab">Network</button>
+    <button class="ttab">Famiglia</button>
+  </div>
+  <div class="top-right">
+    <button class="chip">⚡ Forza</button>
+    <button class="chip run">☀️ Briefing</button>
+    <div class="ava">MG</div>
+  </div>
+</nav>
+
+<div class="page">
+
+  <!-- HERO -->
+  <div class="hero">
+    <div class="hero-left">
+      <div class="hero-date">venerdì · 9 maggio 2025</div>
+      <div class="hero-name">Buongiorno,<br/><span>Marco.</span></div>
+      <div class="hero-tags">
+        <span class="htag focus">🟢 Giornata Focus</span>
+        <span class="htag warn">🔴 4 urgenti</span>
+      </div>
+      <div class="prog-wrap"><div class="prog-bar"></div></div>
+      <div style="font-size:11px;color:var(--t2);margin-top:5px">3 di 12 completate</div>
+    </div>
+    <div class="hero-right">
+      <div class="kpi">
+        <div class="kpi-n dim">3</div>
+        <div class="kpi-l">Riunioni</div>
+      </div>
+      <div class="kpi">
+        <div class="kpi-n red">4</div>
+        <div class="kpi-l">Urgenti Q1</div>
+      </div>
+      <div class="kpi">
+        <div class="kpi-n dim">12</div>
+        <div class="kpi-l">Email</div>
+      </div>
+      <div class="kpi">
+        <div class="kpi-n dim">8</div>
+        <div class="kpi-l">Da leggere</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- COACHING BRIEF -->
+  <div class="brief-card">
+    <div class="brief-icon">💡</div>
+    <div class="brief-text">
+      <strong>Focus del giorno:</strong> Hai 4 email urgenti in Q1 da gestire prima delle riunioni del pomeriggio.
+      Inizia dalla <strong>proposta Nexus</strong> (scadenza oggi) e dal <strong>deploy bloccato</strong> con il team dev.
+      HRV a 58ms — mattino ottimo per lavoro in profondità. 3 call dalle 14:30 in poi.
+    </div>
+  </div>
+
+  <!-- BENTO GRID -->
+  <div class="bento">
+
+    <!-- Riunioni (span 2) -->
+    <div class="bcard span2">
+      <div class="bcard-head">
+        <span class="bcard-title">📅 Riunioni</span>
+        <span class="bcard-count blue">3 oggi</span>
+      </div>
+      <div class="bcard-body">
+        <div class="erow">
+          <div class="etime">10:00 – 11:00</div>
+          <div class="ebody">
+            <div class="etitle">Sync settimanale — Product Team</div>
+            <div class="emeta">Google Meet · Marco, Anna R., Luca T.</div>
+          </div>
+          <a href="#" class="ejoin">↗ Join</a>
+        </div>
+        <div class="erow">
+          <div class="etime">14:30 – 15:00</div>
+          <div class="ebody">
+            <div class="etitle">Call con Nexus — Proposta Q3</div>
+            <div class="emeta">Zoom · Cliente esterno</div>
+          </div>
+          <a href="#" class="ejoin">↗ Join</a>
+        </div>
+        <div class="erow">
+          <div class="etime">17:00 – 17:30</div>
+          <div class="ebody">
+            <div class="etitle">1:1 con Francesca</div>
+            <div class="emeta">In presenza</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Salute (1 col) -->
+    <div class="bcard">
+      <div class="bcard-head">
+        <span class="bcard-title">🫀 Salute</span>
+      </div>
+      <div class="bcard-body">
+        <div class="health-grid">
+          <div class="hm">
+            <div class="hm-val" style="color:#86efac">82</div>
+            <div class="hm-lbl">Sonno /100</div>
+          </div>
+          <div class="hm">
+            <div class="hm-val">58</div>
+            <div class="hm-lbl">HRV ms</div>
+          </div>
+          <div class="hm">
+            <div class="hm-val">54</div>
+            <div class="hm-lbl">FC riposo</div>
+          </div>
+          <div class="hm">
+            <div class="hm-val" style="color:var(--amber)">Med</div>
+            <div class="hm-lbl">Stress</div>
+          </div>
+        </div>
+        <div class="hm-rec">🏃 Camminata 30 min nel pomeriggio<br/>🧠 HRV ottimo — profondità al mattino</div>
+      </div>
+    </div>
+
+    <!-- Email urgenti (span 2) -->
+    <div class="bcard span2">
+      <div class="bcard-head">
+        <span class="bcard-title">📧 Email — da gestire</span>
+        <span class="bcard-count red">4 urgenti</span>
+        <span class="bcard-count" style="margin-left:4px">12 totali</span>
+      </div>
+      <div class="bcard-body">
+        <div class="qrow">
+          <button class="qbtn on">Q1 · Urgente</button>
+          <button class="qbtn b">Q2 · Importante</button>
+          <button class="qbtn w">Tutto</button>
+        </div>
+        <div class="trow q1">
+          <div class="tdot q1"></div>
+          <div class="tbody">
+            <div class="ttitle">Nexus — Revisione proposta commerciale entro oggi</div>
+            <div class="tmeta">andrea.bianchi@nexus.it · <a href="#">↗ Apri</a></div>
+          </div>
+          <div class="tcb"></div>
+        </div>
+        <div class="trow q1">
+          <div class="tdot q1"></div>
+          <div class="tbody">
+            <div class="ttitle">Deploy produzione bloccato — risposta urgente al team</div>
+            <div class="tmeta">luca.dev@glint.io · <a href="#">↗ Apri</a></div>
+          </div>
+          <div class="tcb"></div>
+        </div>
+        <div class="trow q1">
+          <div class="tdot q1"></div>
+          <div class="tbody">
+            <div class="ttitle">Fattura scaduta — Fornitore ABC da saldare</div>
+            <div class="tmeta">fatture@abc-srl.it · <a href="#">↗ Apri</a></div>
+          </div>
+          <div class="tcb"></div>
+        </div>
+        <div class="trow q1">
+          <div class="tdot q1"></div>
+          <div class="tbody">
+            <div class="ttitle">Contratto rinnovo — firma entro domani</div>
+            <div class="tmeta">legale@partner.com · <a href="#">↗ Apri</a></div>
+          </div>
+          <div class="tcb"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Crescita (1 col) -->
+    <div class="bcard">
+      <div class="bcard-head">
+        <span class="bcard-title">📚 Crescita</span>
+        <span class="bcard-count">8</span>
+      </div>
+      <div class="bcard-body">
+        <div class="srow">
+          <div class="snum">1</div>
+          <div class="sbody">
+            <div class="stitle">AI Agents per email B2B</div>
+            <div class="ssrc">Lenny's Newsletter</div>
+            <div class="srec">💡 Molto rilevante per Glint</div>
+            <div class="stags"><span class="stag H">HIGH</span><span class="stag c">AI</span><span class="stag g">Aggiornamenti</span></div>
+          </div>
+        </div>
+        <div class="srow">
+          <div class="snum">2</div>
+          <div class="sbody">
+            <div class="stitle">Sequoia: VC Europa Q1 2025</div>
+            <div class="ssrc">Sequoia Capital · Social</div>
+            <div class="srec">💡 Utile prima della call Nexus</div>
+            <div class="stags"><span class="stag H">HIGH</span><span class="stag c">Business</span></div>
+          </div>
+        </div>
+        <div class="srow">
+          <div class="snum">3</div>
+          <div class="sbody">
+            <div class="stitle">Sconto 60% Notion AI</div>
+            <div class="ssrc">Notion · Promozioni</div>
+            <div class="srec">💡 Valuta rispetto alla licenza attuale</div>
+            <div class="stags"><span class="stag M">MED</span><span class="stag c">Tool</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Network (span 2) -->
+    <div class="bcard span2">
+      <div class="bcard-head">
+        <span class="bcard-title">🌐 Network · Milano, Italy</span>
+        <span class="bcard-count blue">4 eventi</span>
+      </div>
+      <div class="bcard-body">
+        <div class="nrow">
+          <div class="ndot"></div>
+          <div class="nbody">
+            <div class="ntitle">MilanIN — AI & Founders Meetup</div>
+            <div class="nmeta">Gio 15 maggio · 18:30 · Talent Garden</div>
+            <div class="ntags"><span class="ntag">AI</span><span class="ntag">Startup</span><span class="ntag">Networking</span></div>
+          </div>
+          <a href="#" class="nlink">↗ Info</a>
+        </div>
+        <div class="nrow">
+          <div class="ndot"></div>
+          <div class="nbody">
+            <div class="ntitle">SaaS Italia — Roundtable PLG</div>
+            <div class="nmeta">Mar 13 maggio · 09:00 · Via Broletto</div>
+            <div class="ntags"><span class="ntag">SaaS</span><span class="ntag">PLG</span></div>
+          </div>
+          <a href="#" class="nlink">↗ Info</a>
+        </div>
+        <div class="nrow">
+          <div class="ndot"></div>
+          <div class="nbody">
+            <div class="ntitle">Google for Startups — Cloud Office Hours</div>
+            <div class="nmeta">Mer 14 maggio · 15:00 · Via Confalonieri</div>
+            <div class="ntags"><span class="ntag">Google</span><span class="ntag">Cloud</span></div>
+          </div>
+          <a href="#" class="nlink">↗ Info</a>
+        </div>
+      </div>
+    </div>
+
+    <!-- Famiglia (1 col) -->
+    <div class="bcard">
+      <div class="bcard-head">
+        <span class="bcard-title">👨‍👩‍👦 Famiglia</span>
+      </div>
+      <div class="bcard-body">
+        <div style="padding:14px 18px; display:flex; flex-direction:column; gap:14px;">
+          <div>
+            <div style="font-size:10px;font-weight:700;color:var(--t2);text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px;">Alessandra</div>
+            <div style="font-size:13px;color:var(--t1);">18:00 · Yoga Prati<br/>21:30 · <span style="color:var(--amber)">⚠️ Non sarà a casa</span></div>
+          </div>
+          <div style="border-top:1px solid var(--line2);padding-top:12px;">
+            <div style="font-size:10px;font-weight:700;color:var(--t2);text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px;">Tommaso · Scuola</div>
+            <div style="font-size:13px;color:var(--t1);">Nessuna comunicazione recente</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div><!-- /bento -->
+
+</div><!-- /page -->
+
+</body>
+</html>

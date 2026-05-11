@@ -1,0 +1,25 @@
+{
+  "name": "Glint",
+  "short_name": "Glint",
+  "description": "Il tuo assistente personale quotidiano",
+  "start_url": "/app.html",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#0a0a0a",
+  "theme_color": "#7c6ef5",
+  "orientation": "portrait-primary",
+  "lang": "it",
+  "icons": [
+    { "src": "/icons/icon-192.png",          "sizes": "192x192",  "type": "image/png" },
+    { "src": "/icons/icon-512.png",          "sizes": "512x512",  "type": "image/png" },
+    { "src": "/icons/icon-maskable-192.png", "sizes": "192x192",  "type": "image/png", "purpose": "maskable" },
+    { "src": "/icons/icon-maskable-512.png", "sizes": "512x512",  "type": "image/png", "purpose": "maskable" }
+  ],
+  "shortcuts": [
+    { "name": "Oggi",         "short_name": "Oggi",     "url": "/app.html",      "description": "Briefing di oggi" },
+    { "name": "Impostazioni", "short_name": "Settings", "url": "/settings.html", "description": "Impostazioni" }
+  ],
+  "screenshots": [],
+  "categories": ["productivity", "lifestyle"],
+  "prefer_related_applications": false
+}

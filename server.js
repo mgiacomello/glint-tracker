@@ -7,6 +7,18 @@ const session = require('express-session');
 const FileStore = require('session-file-store')(session);
 const { v4: uuidv4 } = require('uuid');
 const { AsyncLocalStorage } = require('async_hooks');
+const webpush = require('web-push');
+
+// ── Web Push (VAPID) ──────────────────────────────────────────────────────────
+const VAPID_PUBLIC  = process.env.VAPID_PUBLIC_KEY  || 'BNDxnQfjBqcjwN7-T4mZgL6-3dEmdZEwgVkbWXNvD56iX-a_c9w5Os6BziiYvMmoJTTtWAy2ngjqnKhIa2xhreI';
+const VAPID_PRIVATE = process.env.VAPID_PRIVATE_KEY || 'DTJb2ZgRql6GHWasGpVJBsXH4ny6DMAGxaD33090LYo';
+const VAPID_EMAIL   = process.env.VAPID_EMAIL       || 'mailto:admin@glint.app';
+
+try {
+  webpush.setVapidDetails(VAPID_EMAIL, VAPID_PUBLIC, VAPID_PRIVATE);
+} catch(e) {
+  console.warn('⚠️  VAPID config error:', e.message);
+}
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -3346,6 +3358,19 @@ app.post('/api/morning-agent/:date/run', async (req, res) => {
     } catch(e) { /* non bloccante */ }
 
     send({ done: true, summary: result.summary });
+
+    // Push notification: briefing completato
+    try {
+      const s = result.summary || {};
+      const q1 = s.q1Tasks || 0;
+      sendPushToUser(uid, {
+        title: '☀️ Briefing pronto',
+        body:  `${q1 > 0 ? `🔴 ${q1} urgenti · ` : ''}${s.events||0} riunioni · ${s.tasks||0} email`,
+        tag:   'morning-brief',
+        url:   '/app.html',
+        requireInteraction: false,
+      }).catch(() => {});
+    } catch {}
   } catch(e) {
     console.error('[MorningAgent]', e.message);
     send({ error: e.message });
@@ -4024,6 +4049,66 @@ app.get('/api/wellness/summary', (req, res) => {
     brain: brain ? { neuroscore: brain.neuroscore, neurostate: brain.neurostate, exercisesTotal: brain.exercises?.length, exercisesDone: brain.completed?.length } : null
   });
 });
+
+// ── Push Notifications ────────────────────────────────────────────────────────
+
+// GET /api/push/vapid-key — return public key to client for subscription
+app.get('/api/push/vapid-key', (req, res) => {
+  const uid = getCurrentUid();
+  if (!uid) return res.status(401).json({ error: 'Non autenticato' });
+  res.json({ publicKey: VAPID_PUBLIC });
+});
+
+// POST /api/push/subscribe — save push subscription for this user
+app.post('/api/push/subscribe', (req, res) => {
+  const uid = getCurrentUid();
+  if (!uid) return res.status(401).json({ error: 'Non autenticato' });
+  const sub = req.body;
+  if (!sub?.endpoint) return res.status(400).json({ error: 'Invalid subscription' });
+  const db = readDBForUid(uid);
+  if (!db.pushSubscriptions) db.pushSubscriptions = [];
+  // Dedup by endpoint
+  const idx = db.pushSubscriptions.findIndex(s => s.endpoint === sub.endpoint);
+  if (idx >= 0) db.pushSubscriptions[idx] = sub;
+  else db.pushSubscriptions.push(sub);
+  writeDBForUid(uid, db);
+  res.json({ ok: true });
+});
+
+// DELETE /api/push/subscribe — remove push subscription
+app.delete('/api/push/subscribe', (req, res) => {
+  const uid = getCurrentUid();
+  if (!uid) return res.status(401).json({ error: 'Non autenticato' });
+  const { endpoint } = req.body;
+  const db = readDBForUid(uid);
+  if (db.pushSubscriptions)
+    db.pushSubscriptions = db.pushSubscriptions.filter(s => s.endpoint !== endpoint);
+  writeDBForUid(uid, db);
+  res.json({ ok: true });
+});
+
+// ── sendPushToUser helper ─────────────────────────────────────────────────────
+async function sendPushToUser(uid, payload) {
+  const db = readDBForUid(uid);
+  const subs = db.pushSubscriptions || [];
+  if (!subs.length) return;
+  const results = await Promise.allSettled(
+    subs.map(sub => webpush.sendNotification(sub, JSON.stringify(payload)))
+  );
+  // Clean up expired subscriptions
+  const toRemove = [];
+  results.forEach((r, i) => {
+    if (r.status === 'rejected' && (r.reason?.statusCode === 410 || r.reason?.statusCode === 404))
+      toRemove.push(subs[i].endpoint);
+  });
+  if (toRemove.length) {
+    const freshDb = readDBForUid(uid);
+    if (freshDb.pushSubscriptions)
+      freshDb.pushSubscriptions = freshDb.pushSubscriptions.filter(s => !toRemove.includes(s.endpoint));
+    writeDBForUid(uid, freshDb);
+  }
+  return results;
+}
 
 // ── START ─────────────────────────────────────────────────────────────────────
 
