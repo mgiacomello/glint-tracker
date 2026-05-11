@@ -279,7 +279,7 @@
     .act-sections { display: flex; flex-direction: column; gap: 20px; }
     .act-group-title { font-size: 13px; font-weight: 700; color: var(--t1); text-transform: uppercase; letter-spacing: .06em; margin-bottom: 10px; display: flex; align-items: center; gap: 8px; }
     .act-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
-    .act-tab-bar { display: flex; gap: 8px; padding: 14px 18px 0; flex-wrap: wrap; }
+    .act-tab-bar { display: flex; gap: 8px; padding: 14px 18px 0; }
     .act-tab { padding: 7px 16px; border-radius: 20px; border: 1px solid var(--line); background: transparent; color: var(--t1); cursor: pointer; font-size: 13px; font-weight: 500; transition: all .15s; white-space: nowrap; }
     .act-tab:hover { border-color: var(--t1); color: var(--t0); }
     .act-tab.on { font-weight: 600; }
@@ -318,14 +318,19 @@
       .page { padding: 16px 14px 80px; }
       .tab-nav { display: none; }
       .act-grid-full { grid-template-columns: 1fr 1fr; gap: 10px; padding: 12px 14px 16px; }
-      .act-tab-bar { padding: 12px 14px 0; gap: 6px; }
-      .act-tab { padding: 6px 12px; font-size: 12px; }
+      .act-tab-bar { padding: 12px 14px 0; gap: 6px; flex-wrap: nowrap; overflow-x: auto; -webkit-overflow-scrolling: touch; scrollbar-width: none; }
+      .act-tab-bar::-webkit-scrollbar { display: none; }
+      .act-tab { flex-shrink: 0; padding: 6px 12px; font-size: 12px; }
       .hero-name { font-size: 28px; }
       .hero { flex-direction: column; gap: 12px; }
       .hero-kpis { display: none; }
       .topbar { padding: 0 16px; }
       .tb-name { display: none; }
       .btn-run { padding: 6px 11px; font-size: 12px; }
+      .btn-link { display: none; }
+      .st-title { white-space: normal; overflow: visible; text-overflow: clip; }
+      .fam-cols { grid-template-columns: 1fr !important; }
+      .fam-col + .fam-col { border-left: none; border-top: 1px solid var(--line2); }
     }
     @media (max-width: 420px) {
       .act-grid-full { grid-template-columns: 1fr; }
@@ -470,6 +475,13 @@ let qFilter = 'all';
 let userName = '';
 let _panelOpen = false, _logLines = [], _sumHtml = '';
 
+// ── Mock mode (audit/demo only — ?mock=1) ─────────────────────────────────
+const _MOCK = new URLSearchParams(location.search).get('mock') === '1';
+if (_MOCK) {
+  const _MOCK_DATA = {events:[{id:'e1',title:'Standup team prodotto',time:'09:30',participants:'Luca, Sara, Marta',meetLink:'https://meet.google.com/abc'},{id:'e2',title:'Call con investor — Sequoia',time:'11:00',participants:'Marco Rossi',meetLink:'https://meet.google.com/xyz'},{id:'e3',title:'Design review Sprint 12',time:'15:00',participants:'Sara Bianchi'}],tasks:[{id:'t1',title:'Re: Proposta partnership Vodafone — scadenza oggi',quadrant:'Q1',due:'Oggi',brief:'Rispondere entro le 17:00.',link:'#'},{id:'t2',title:'Re: Feedback investitori Q1 report',quadrant:'Q1',due:'Domani',brief:'Preparare slide deck aggiornato.',link:'#'},{id:'t3',title:'Newsletter Product Hunt — nuovi tool AI',quadrant:'Q2',due:'',brief:'3 nuovi strumenti rilevanti.',link:'#'},{id:'t4',title:'Booking confirmation — hotel Milano',quadrant:'Q3',due:'15 Mag',brief:'Confermare entro giovedì.',link:'#'},{id:'t5',title:'Re: Promo LinkedIn Premium 40%',quadrant:'Q4',due:'',brief:'Sconto limitato.',link:'#'}],items:{e1:{done:true,comment:'',actionPoints:[],quadrant:'Q1',type:'event'},e2:{done:false,comment:'',actionPoints:[{id:'ap1',text:'Preparare deck 5 slide',done:false},{id:'ap2',text:'Confermare termini deal',done:true}],quadrant:'Q1',type:'event'},e3:{done:false,comment:'',actionPoints:[],quadrant:'Q1',type:'event'},t1:{done:false,comment:'',quadrant:'Q1',type:'task',actionPoints:[{id:'ap3',text:'Rivedere prezzi con CFO',done:false}]},t2:{done:false,comment:'',quadrant:'Q1',type:'task',actionPoints:[]},t3:{done:false,comment:'',quadrant:'Q2',type:'task',actionPoints:[]},t4:{done:false,comment:'',quadrant:'Q3',type:'task',actionPoints:[]},t5:{done:true,comment:'',quadrant:'Q4',type:'task',actionPoints:[]}},health:{sleepScore:84,hrv:62,restingHR:52,stressLevel:28,readinessScore:88,steps:7420,totalSleepMin:437,recommendations:{activity:'30 min camminata nel pomeriggio',mindset:'Meditazione prima della call investor'}},insights:{dayType:'maker',growthBrief:'Maker Day ideale per deep work. La call con Sequoia alle 11 è il momento chiave — prepara metriche MoM e ARR. Stress basso (28) e HRV ottimo (62ms) suggeriscono picco cognitivo prima di pranzo.',studyItems:[{title:'OpenAI lancia GPT-5 con reasoning avanzato',source:'Product Hunt',summary:'GPT-5 supera Claude 3.5 nei benchmark. Implicazioni per i prodotti AI.',priority:'high',category:'AI',recommendation:'Valuta integrazione nei prossimi 30gg',link:'#',done:false},{title:'Come Notion ha acquisito 30M utenti senza paid ads',source:'Growth Newsletter',summary:'Community-led growth e template virali.',priority:'high',category:'Growth',link:'#',done:false},{title:'GDPR AI — nuova normativa giugno',source:'Legal Update',summary:'Obbligo di disclosure per AI che prende decisioni autonome.',priority:'medium',category:'Legal',link:'#',done:false}]},family:{alessandraEvents:[{time:'18:30',title:'Yoga in centro',isAway:false},{time:'20:00',title:'Cena con le amiche',isAway:true}],tommasoAlerts:[{title:'Verifica matematica domani — frazioni',link:'#',priority:'high'},{title:'Gita scolastica 16 maggio — modulo',link:'#',priority:'medium'}]},network:{city:'Milano, Italy',events:[{title:'StartupItalia Open Summit',date:'14 Maggio 2026',time:'09:00',description:'Il più grande evento startup italiano.',link:'#',location:'Base Milano',tags:['startup','networking']},{title:'Milano VC Founders Dinner',date:'15 Maggio 2026',time:'19:30',description:'Cena privata con 20 founder e 5 VC.',link:'#',location:'Brera',tags:['vc','founders']},{title:'AI Product Meetup — Politecnico',date:'16 Maggio 2026',time:'18:00',description:'Demo prodotti AI con focus LLM B2B.',link:'#',location:'PoliMi',tags:['AI','product']}],_refreshedAt:new Date().toISOString()},localActivities:{city:'Milano, Italy',items:[{type:'solo',title:'Mostra Basquiat — Palazzo Reale',description:'Retrospettiva di 80 opere del maestro neo-espressionista.',category:'art',location:'Piazza Duomo',price:'€€',why:'Ultima settimana, quasi sold-out',link:'#'},{type:'solo',title:'Mercato Navigli Vintage',description:'Vinili, libri, design anni 70.',category:'culture',location:'Navigli',price:'€',why:'Perfetto per staccare',link:'#'},{type:'couple',title:'Cena da Seta — 1★ Michelin',description:'Cucina milanese contemporanea in cortile del 600.',category:'food',location:'Brera',price:'€€€',why:'Prenotazione disponibile giovedì',link:'#'},{type:'couple',title:'Aperitivo Terrazza Triennale',description:'Vista Parco Sempione al tramonto.',category:'food',location:'Parco Sempione',price:'€€',why:'Meteo perfetto questo week',link:'#'},{type:'family',title:'MUBA — Laboratorio Piccoli Architetti',description:'Costruire con materiali di riciclo.',category:'culture',location:'Porta Volta',price:'€€',why:'Perfetto per 8 anni',link:'#'},{type:'family',title:'Sea Life Gardaland',description:'Acquario con squali e tartarughe.',category:'nature',location:'Desenzano del Garda',price:'€€',why:'Gita di giornata ideale',link:'#'},{type:'restaurant',title:'Trippa Milano — Pop-up stagionale',description:'Chef Diego Rossi, format pop-up.',category:'food',location:'Porta Romana',price:'€€',why:'Sold-out in 2h, lista attesa',link:'#'},{type:'restaurant',title:'Iyo Omakase',description:'Sushi 18 portate, stella Michelin.',category:'food',location:'Corso Sempione',price:'€€€',why:'Il più hype su Instagram food ora',link:'#'}],_refreshedAt:new Date().toISOString()},userSettings:{familyMembers:[{role:'spouse',name:'Alessandra'},{role:'child',name:'Tommaso',age:8}],homeCity:'Milano, Italy'}};
+  window.fetch = async (url) => new Response(JSON.stringify(url.includes('/api/day/') ? _MOCK_DATA : {uid:'mock',name:'Marco Giacomello',email:'marco@test.com',picture:''}), {status:200,headers:{'Content-Type':'application/json'}});
+}
+
 // ── Bootstrap ──────────────────────────────────────────────────────────────
 (async () => {
   try {
@@ -565,7 +577,7 @@ function render() {
       ${_panelHtml()}
       <div class="fw-section">
         <div class="fw-head">
-          <span class="fw-title">🌐 Network${city?' · '+esc(city):''}</span>
+          <div><span class="fw-title">🌐 Network</span>${city?`<div style="font-size:12px;color:var(--t2);margin-top:1px">${esc(city)}</div>`:''}</div>
           ${netEvts.length?`<span class="fw-count">${netEvts.length}</span>`:''}
           ${refreshedAt?`<span style="font-size:11px;color:var(--t2);margin-left:auto">aggiornato ${refreshedAt}</span>`:''}
           <button onclick="refreshLocal()" style="margin-left:${refreshedAt?'8px':'auto'};padding:4px 12px;border-radius:6px;border:1px solid var(--line);background:transparent;color:var(--t1);cursor:pointer;font-size:12px">⟳ Aggiorna</button>
@@ -617,7 +629,7 @@ function render() {
       ${_panelHtml()}
       <div class="fw-section">
         <div class="fw-head">
-          <span class="fw-title">🗺️ Vita locale${city?' · '+esc(city):''}</span>
+          <div><span class="fw-title">🗺️ Vita locale</span>${city?`<div style="font-size:12px;color:var(--t2);margin-top:1px">${esc(city)}</div>`:''}</div>
           ${refreshedAt?`<span style="font-size:11px;color:var(--t2);margin-left:auto">aggiornato ${refreshedAt}</span>`:''}
           <button onclick="refreshLocal()" style="margin-left:${refreshedAt?'8px':'auto'};padding:4px 12px;border-radius:6px;border:1px solid var(--line);background:transparent;color:var(--t1);cursor:pointer;font-size:12px">⟳ Aggiorna</button>
         </div>
@@ -713,19 +725,6 @@ function render() {
     ${ins.growthBrief?`<div class="brief-card">
       <div class="brief-head"><span class="brief-head-label">☀️ Briefing del giorno</span></div>
       <div class="brief-body"><div class="brief-icon">💡</div><div class="brief-text">${esc(ins.growthBrief).replace(/\n/g,'<br/>')}</div></div>
-    </div>`:''}
-
-    ${health?`
-    <div class="brief-card" style="gap:0;padding:0;overflow:hidden;">
-      <div class="h-grid" style="flex:1;">
-        ${(()=>{const s=health.sleepScore,hrv=health.hrv,rhr=health.restingHR,str=health.stressLevel;const sc=s>=76?'#86efac':s>=60?'#fde68a':'#fca5a5';return `
-        <div class="hm"><div class="hm-val" style="color:${sc}">${s||'?'}<span style="font-size:13px;font-weight:400;color:var(--t2)">/100</span></div><div class="hm-lbl">Sonno</div></div>
-        <div class="hm"><div class="hm-val">${hrv||'?'}<span style="font-size:12px;font-weight:400;color:var(--t2)"> ms</span></div><div class="hm-lbl">HRV</div></div>
-        <div class="hm"><div class="hm-val">${rhr||'?'}<span style="font-size:12px;font-weight:400;color:var(--t2)"> bpm</span></div><div class="hm-lbl">FC riposo</div></div>
-        <div class="hm"><div class="hm-val">${str||'?'}</div><div class="hm-lbl">Stress</div></div>
-        ${health.recommendations?`<div class="h-rec" style="grid-column:span 2">🏃 ${esc(health.recommendations.activity||'')} &nbsp;·&nbsp; 🧠 ${esc(health.recommendations.mindset||'')}</div>`:''}
-        `})()}
-      </div>
     </div>`:''}
 
     <!-- Bento -->
