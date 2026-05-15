@@ -721,8 +721,8 @@ function render() {
           ${badgeLabel?`<span class="hbadge ${badgeClass}">${badgeLabel}</span>`:''}
           ${q1Active>0?`<span class="hbadge warn">🔴 ${q1Active} urgent${q1Active>1?'i':''}</span>`:''}
         </div>
-        <div class="prog-bar-wrap"><div class="prog-bar-fill" style="width:${pct}%"></div></div>
-        <div class="prog-text">${done} di ${total} completat${done===1?'o':'i'}</div>
+        ${total>0?`<div class="prog-bar-wrap"><div class="prog-bar-fill" style="width:${pct}%"></div></div>
+        <div class="prog-text">${done} di ${total} completat${done===1?'o':'i'}</div>`:''}
       </div>
       <div class="hero-kpis">
         <div class="kpi"><div class="kpi-n">${events.length}</div><div class="kpi-l">Riunioni</div></div>
@@ -731,6 +731,13 @@ function render() {
         <div class="kpi"><div class="kpi-n">${study.length}</div><div class="kpi-l">Da leggere</div></div>
       </div>
     </div>
+
+    ${!total&&!ins.growthBrief?`<div class="brief-card" style="text-align:center;padding:28px 24px;">
+      <div style="font-size:36px;margin-bottom:12px">☀️</div>
+      <div style="font-size:15px;font-weight:600;margin-bottom:6px">Nessun dato per oggi</div>
+      <div style="font-size:13px;color:var(--t2);margin-bottom:20px;line-height:1.5">Avvia il briefing mattutino per sincronizzare<br/>Gmail, Calendar e generare il tuo piano.</div>
+      <button onclick="runAgent()" style="padding:10px 24px;border-radius:10px;border:none;background:var(--accent);color:#fff;font-size:14px;font-weight:600;cursor:pointer">☀️ Avvia Briefing</button>
+    </div>`:''}
 
     ${ins.growthBrief?`<div class="brief-card">
       <div class="brief-head"><span class="brief-head-label">☀️ Briefing del giorno</span></div>
