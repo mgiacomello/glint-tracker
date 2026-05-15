@@ -120,6 +120,19 @@
     .kpi-n.red { color: var(--red); }
     .kpi-l { font-size: 11px; color: var(--t2); margin-top: 4px; font-weight: 500; }
 
+    /* ── INTELLIGENCE FEED ── */
+    .intel-feed { border-left: 3px solid var(--accent); padding: 12px 18px; margin-bottom: 0; }
+    .intel-feed-label { font-size: 9px; font-weight: 700; color: var(--accent); text-transform: uppercase; letter-spacing: .1em; margin-bottom: 6px; }
+    .intel-feed-text { font-size: 14px; font-style: italic; color: var(--t0); line-height: 1.55; }
+
+    /* ── PRIORITY BADGE ── */
+    .prio-badge { font-size: 9px; font-weight: 800; padding: 2px 7px; border-radius: 4px; text-transform: uppercase; letter-spacing: .05em; flex-shrink: 0; }
+    .prio-badge.CRITICO { background: rgba(255,68,68,.15); color: #ff7070; border: 1px solid rgba(255,68,68,.3); }
+    .prio-badge.HIGH    { background: rgba(255,184,0,.12); color: var(--amber); border: 1px solid rgba(255,184,0,.25); }
+    .prio-badge.MEDIUM  { background: rgba(59,130,246,.1); color: #60a5fa; border: 1px solid rgba(59,130,246,.2); }
+    .prio-badge.LOW     { background: rgba(82,82,91,.1); color: var(--t2); border: 1px solid var(--line); }
+    .tk-project { display: inline-flex; align-items: center; gap: 4px; font-size: 10px; font-weight: 600; color: var(--t2); background: var(--s3); border: 1px solid var(--line); border-radius: 4px; padding: 1px 7px; margin-top: 5px; font-family: 'JetBrains Mono', monospace; }
+
     /* ── COACHING BRIEF ── */
     .brief-card { background: var(--s1); border: 1px solid var(--line); border-radius: var(--r); overflow: hidden; }
     .brief-head { display: flex; align-items: center; gap: 8px; padding: 11px 18px 10px; border-bottom: 1px solid var(--line2); }
@@ -1077,9 +1090,14 @@ function render() {
       ${_agentRunning?'':' <button onclick="runAgent()" style="padding:10px 24px;border-radius:10px;border:none;background:var(--accent);color:#fff;font-size:14px;font-weight:600;cursor:pointer">☀️ Avvia Briefing</button>'}
     </div>`:''}
 
-    ${ins.growthBrief?`<div class="brief-card">
-      <div class="brief-head"><span class="brief-head-label">☀️ Briefing del giorno</span></div>
-      <div class="brief-body"><div class="brief-icon">💡</div><div class="brief-text">${esc(ins.growthBrief).replace(/\n/g,'<br/>')}</div></div>
+    ${ins.intelligenceFeed?`<div class="brief-card"><div class="intel-feed">
+      <div class="intel-feed-label">✦ Intelligence Feed</div>
+      <div class="intel-feed-text">"${esc(ins.intelligenceFeed)}"</div>
+    </div></div>`:''}
+
+    ${(ins.contextualIntelligence||ins.growthBrief)?`<div class="brief-card">
+      <div class="brief-head"><span class="brief-head-label">⚡ Intelligenza Contestuale</span></div>
+      <div class="brief-body"><div class="brief-text">${esc(ins.contextualIntelligence||ins.growthBrief).replace(/\n/g,'<br/>')}</div></div>
     </div>`:''}
 
     <!-- Bento -->
@@ -1211,12 +1229,18 @@ function tkRow(t, st) {
   const aps=st.actionPoints||[], q=(t.quadrant||'Q2').toUpperCase();
   const brief = esc(t.brief||'').replace(/\n/g,'<br/>');
   const qClass = {Q1:'is-q1',Q2:'is-q2',Q3:'is-q3',Q4:'is-q4'}[q]||'';
+  const prio = t.priority || '';
+  const proj = t.project || '';
   return `<div class="tk-row ${st.done?'done':''} ${qClass}" id="ti-${esc(t.id)}">
     <div class="q-dot ${q}"></div>
     <div class="tk-body">
-      <div class="tk-title">${esc(t.title)}</div>
+      <div style="display:flex;align-items:center;gap:7px;flex-wrap:wrap;margin-bottom:2px">
+        <span class="tk-title" style="margin-bottom:0">${esc(t.title)}</span>
+        ${prio?`<span class="prio-badge ${esc(prio)}">${esc(prio)}</span>`:''}
+      </div>
       <div class="tk-meta">${esc(t.due||'')}${t.link?` &nbsp;<a href="${esc(t.link)}" target="_blank">↗ Apri email</a>`:''}</div>
       ${brief?`<div class="tk-brief">${brief}</div>`:''}
+      ${proj?`<span class="tk-project"># ${esc(proj)}</span>`:''}
       ${aps.length?`<div class="tk-aps" id="ap-${esc(t.id)}">${aps.map((a,i)=>`
         <div class="ap-row">
           <div class="ap-cb ${a.done?'done':''}" onclick="toggleAp('${esc(t.id)}','${esc(a.id)}',${i})"></div>

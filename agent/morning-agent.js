@@ -638,16 +638,20 @@ async function runMorningAgent({
       ).join('\n\n---\n\n');
 
       const text = await aiCall(aiKeys,
-        `Sei l'assistente personale di ${settings.userName||'Marco'} (${settings.primaryEmail||''}).
+        `Sei l'AI chief of staff di ${settings.userName||'Marco'} (${settings.primaryEmail||''}).
 Data oggi: ${date}.
 
-Analizza TUTTE queste email e per ognuna crea un task JSON. Assegna un quadrante in base a urgenza e importanza.
-Per le email Principale assegna Q1 o Q2. Per Aggiornamenti usa Q3 o Q4. Per Promozioni/Social usa Q4 a meno che non siano rilevanti.
+Analizza queste email e trasformale in task esecutivi. Per ogni email:
+- TITOLO: riformula in modo azionabile e descrittivo (es: "Finalizzazione Contratto Vodafone" non "Re: FWD: update"). Max 55 caratteri. Descrive COSA va fatto, non il subject dell'email.
+- ANALYSIS: 2-3 frasi che spiegano PERCHÉ questo task è importante, il contesto di business, e l'impatto se non gestito. Concreto e specifico.
+- ACTION POINTS: 1-3 azioni concrete, verbi all'infinito.
+- QUADRANT: Q1=urgente+importante, Q2=importante non urgente, Q3=urgente non importante, Q4=né urgente né importante.
+- PRIORITY: CRITICO (scadenza oggi/domani o deal rilevante), HIGH (questa settimana), MEDIUM, LOW.
 
-Formato JSON per ogni email (IMPORTANTE: id = solo il codice alfanumerico tra [id:...], NON le parentesi):
-{"id":"SOLO_IL_CODICE_ID","title":"titolo conciso max 60 car","category":"categoria","quadrant":"Q1|Q2|Q3|Q4","brief":"Descrizione 1-2 frasi","actionPoints":["Azione 1","Azione 2"],"from":"mittente"}
+Formato JSON (IMPORTANTE: id = solo il codice alfanumerico tra [id:...]):
+{"id":"CODICE_ID","title":"Titolo Azionabile","priority":"CRITICO|HIGH|MEDIUM|LOW","quadrant":"Q1|Q2|Q3|Q4","analysis":"Analisi contestuale 2-3 frasi del perché questo task conta","actionPoints":["Azione 1","Azione 2"],"from":"mittente","project":"nome progetto/azienda se rilevante"}
 
-Rispondi SOLO con array JSON. Sii conciso nel brief (1-2 frasi max) per non superare il limite di lunghezza.
+Rispondi SOLO con array JSON valido.
 
 EMAIL:\n${emailList}`, 32768);
 
@@ -668,7 +672,9 @@ EMAIL:\n${emailList}`, 32768);
     title: t.title || t.subject || 'Email',
     due: `${t.category || 'Gmail'} · ${t.from || ''}`,
     quadrant: t.quadrant || 'Q2',
-    brief: t.brief || '',
+    priority: t.priority || null,
+    brief: t.analysis || t.brief || '',
+    project: t.project || '',
     link: `https://mail.google.com/mail/u/0/#inbox/${t.id}`,
     actionPoints: Array.isArray(t.actionPoints) ? t.actionPoints : []
   }));
@@ -1004,28 +1010,62 @@ Return ONLY a valid JSON array. No text before or after.`;
     }
   }
 
-  // Growth brief
+  // Intelligenza Contestuale + Intelligence Feed
   let growthBrief = '';
+  let contextualIntelligence = '';
+  let intelligenceFeed = '';
   try {
-    const top3 = result.tasks.filter(t => t.quadrant === 'Q1' || t.quadrant === 'Q2').slice(0, 3).map(t => t.title).join(', ');
-    const sleepInfo = health ? `Sonno ${health.sleepScore || '?'}/100, Stress: ${health.stressLevel || '?'}` : 'Dati salute non disponibili';
+    const critici = result.tasks.filter(t => t.priority === 'CRITICO' || t.quadrant === 'Q1').slice(0, 3).map(t => t.title).join(', ');
+    const highTasks = result.tasks.filter(t => t.priority === 'HIGH' || t.quadrant === 'Q2').slice(0, 2).map(t => t.title).join(', ');
+    const sleepInfo = health
+      ? `Sonno ${health.sleepScore || '?'}/100 · HRV ${health.hrv || '?'}ms · Stress ${health.stressLevel || '?'} · Readiness ${health.readinessScore || '?'}`
+      : 'Dati salute non disponibili';
+    const familyCtx = alessandraEvents.length
+      ? `Partner: ${alessandraEvents.map(e => e.title).join(', ')}`
+      : '';
+    const travelCtx = detectedCity !== (settings.homeCity || '') ? `In viaggio: ${detectedCity}` : '';
+    const networkCtx = networkEvents.slice(0, 2).map(e => e.title).join(', ');
+
+    const contextPrompt = `Sei l'AI chief of staff di ${settings.userName || 'Marco'}.
+Data: ${date} · Tipo giornata: ${dayType.toUpperCase()} · Riunioni: ${calendarEvents.length} · Location: ${detectedCity}
+Salute: ${sleepInfo}
+Task CRITICI: ${critici || 'nessuno'}
+Task HIGH: ${highTasks || 'nessuno'}
+${familyCtx ? 'Famiglia: ' + familyCtx : ''}
+${travelCtx}
+${networkCtx ? 'Network oggi: ' + networkCtx : ''}
+${studyItems.length ? 'Top newsletter: ' + studyItems.slice(0,2).map(s=>s.title).join(', ') : ''}
+
+Scrivi 2 output separati:
+
+1) INTELLIGENCE_FEED: UNA sola frase (max 120 caratteri) che cattura la priorità assoluta del giorno. Esempio: "Oggi la priorità è [azione specifica] che richiede [contesto]." Senza virgolette.
+
+2) CONTEXTUAL_INTELLIGENCE: Analisi esecutiva di 4-6 frasi in italiano. Sintetizza il quadro reale della giornata integrando: task critici specifici, condizione fisica, contesto familiare/location se rilevante, opportunità di network. Parla direttamente dei fatti senza "ti consiglio". Concreto, specifico, niente generic coaching.
+
+Formato risposta:
+INTELLIGENCE_FEED: [testo]
+CONTEXTUAL_INTELLIGENCE: [testo]`;
+
     const resp = await claude.messages.create({
       model: claude._provider === 'gemini' ? 'gemini-2.5-flash' : claude._provider === 'groq' ? 'llama-3.3-70b-versatile' : 'claude-3-5-sonnet-20241022',
-      max_tokens: 350,
-      messages: [{
-        role: 'user',
-        content: `Scrivi un coaching brief motivante di 3-5 frasi per ${settings.userName || 'Marco'}.
-Tipo giornata: ${dayType} (${meetingCount} riunioni). ${sleepInfo}.
-Priorità del giorno: ${top3 || 'nessuna specificata'}.
-${studyItems.length ? `Newsletter rilevanti: ${studyItems.slice(0, 2).map(s => s.title).join(', ')}` : ''}
-In italiano, concreto e azionabile.`
-      }]
+      max_tokens: 600,
+      messages: [{ role: 'user', content: contextPrompt }]
     });
-    growthBrief = resp.content[0]?.text || '';
-  } catch(e) { growthBrief = `Oggi è una ${dayType} day. Buona giornata, ${settings.userName || 'Marco'}!`; }
+    const raw = resp.content[0]?.text || '';
+    const feedMatch = raw.match(/INTELLIGENCE_FEED:\s*(.+)/);
+    const intelMatch = raw.match(/CONTEXTUAL_INTELLIGENCE:\s*([\s\S]+)/);
+    intelligenceFeed = feedMatch ? feedMatch[1].trim() : '';
+    contextualIntelligence = intelMatch ? intelMatch[1].trim().replace(/INTELLIGENCE_FEED:.*/s,'').trim() : '';
+    growthBrief = contextualIntelligence; // backwards compat
+    emit(`  ↳ Intelligence Feed: ${intelligenceFeed.slice(0,80)}`);
+  } catch(e) {
+    growthBrief = `Oggi è una ${dayType} day. Buona giornata, ${settings.userName || 'Marco'}!`;
+    contextualIntelligence = growthBrief;
+    emit(`  ↳ Errore contextual intelligence: ${e.message?.slice(0,100)}`);
+  }
 
   const syncedAt = new Date().toISOString();
-  saveDb.days[date].insights        = { dayType, growthBrief, driveFiles, studyItems };
+  saveDb.days[date].insights        = { dayType, growthBrief, contextualIntelligence, intelligenceFeed, driveFiles, studyItems };
   saveDb.days[date].family          = { alessandraEvents, tommasoAlerts };
   saveDb.days[date].network         = { city: detectedCity, events: networkEvents };
   saveDb.days[date].localActivities = { city: detectedCity, items: localActivities };
@@ -1033,7 +1073,7 @@ In italiano, concreto e azionabile.`
   // Persistenti cross-day: sopravvivono ai giorni successivi senza morning-agent
   saveDb.network         = { city: detectedCity, events: networkEvents, _refreshedAt: syncedAt };
   saveDb.localActivities = { city: detectedCity, items: localActivities, _refreshedAt: syncedAt };
-  saveDb.lastInsights    = { dayType, growthBrief, studyItems, _refreshedAt: syncedAt };
+  saveDb.lastInsights    = { dayType, growthBrief, contextualIntelligence, intelligenceFeed, studyItems, _refreshedAt: syncedAt };
   saveDb.lastFamily      = { alessandraEvents, tommasoAlerts, _refreshedAt: syncedAt };
   saveDb.googleLastSync  = syncedAt;
   writeDBForUid(uid, saveDb);
