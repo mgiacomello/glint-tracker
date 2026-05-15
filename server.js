@@ -334,7 +334,10 @@ app.get('/api/day/:date', (req, res) => {
     primaryEmail: user.email || '',
     ...(db.userSettings || {})
   };
-  res.json({ ...day, userSettings });
+  const network = day.network || db.network || null;
+  const localActivities = day.localActivities || db.localActivities || null;
+  const health = day.health || db.lastHealth || null;
+  res.json({ ...day, network, localActivities, health, userSettings });
 });
 
 // POST /api/day/:date/populate  → called by scheduled task to seed the day
@@ -1330,6 +1333,7 @@ app.post('/api/day/:date/health', (req, res) => {
   const day = ensureDay(db, req.params.date);
   // Merge so Shortcut raw metrics + SKILL recommendations coexist
   day.health = Object.assign({}, day.health || {}, req.body);
+  db.lastHealth = day.health; // persiste l'ultima health nota cross-day
   writeDB(db);
   res.json({ ok: true });
 });

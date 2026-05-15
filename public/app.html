@@ -502,9 +502,19 @@ async function loadDay() {
   try {
     const r = await fetch(`/api/day/${TODAY}`,{credentials:'include'});
     dayData = await r.json();
+    // Auto-carry-forward: se oggi è vuoto ma c'è roba da ieri
+    if (!dayData.tasks?.length && !dayData.events?.length) {
+      try {
+        const cf = await fetch(`/api/auto-carry-forward/${TODAY}`,{method:'POST',credentials:'include'});
+        if (cf.ok) {
+          const fresh = await fetch(`/api/day/${TODAY}`,{credentials:'include'});
+          dayData = await fresh.json();
+        }
+      } catch {}
+    }
     const tasks = dayData?.tasks||[], items = dayData?.items||{};
-    if (qFilter==='all' && tasks.some(t=>(t.quadrant||'Q2').toUpperCase()==='Q1' && !items[t.id]?.done))
-      qFilter='Q1';
+    if (qFilter==='Q1' && !tasks.some(t=>(t.quadrant||'Q2').toUpperCase()==='Q1'))
+      qFilter = 'all';
     render();
   } catch { renderEmpty(); }
 }

@@ -1028,6 +1028,9 @@ In italiano, concreto e azionabile.`
   saveDb.days[date].family          = { alessandraEvents, tommasoAlerts };
   saveDb.days[date].network         = { city: detectedCity, events: networkEvents };
   saveDb.days[date].localActivities = { city: detectedCity, items: localActivities };
+  // Persistenti cross-day: sopravvivono ai giorni successivi senza morning-agent
+  saveDb.network         = { city: detectedCity, events: networkEvents, _refreshedAt: new Date().toISOString() };
+  saveDb.localActivities = { city: detectedCity, items: localActivities, _refreshedAt: new Date().toISOString() };
   saveDb.googleLastSync = new Date().toISOString();
   writeDBForUid(uid, saveDb);
   emit('  ↳ Dati salvati');
@@ -1280,6 +1283,9 @@ Return ONLY a valid JSON array. Each item: {"title":"","date":"dd Month yyyy","t
   if (!saveDb.days[date]) saveDb.days[date] = { events:[], tasks:[], items:{}, reflection:'', briefing:'' };
   saveDb.days[date].network         = { city: detectedCity, events: networkEvents, _refreshedAt: now };
   saveDb.days[date].localActivities = { city: detectedCity, items: localActivities,  _refreshedAt: now };
+  // Persistenti cross-day
+  saveDb.network         = { city: detectedCity, events: networkEvents, _refreshedAt: now };
+  saveDb.localActivities = { city: detectedCity, items: localActivities, _refreshedAt: now };
   writeDBForUid(uid, saveDb);
 
   return { logs, networkEvents, localActivities, city: detectedCity };
