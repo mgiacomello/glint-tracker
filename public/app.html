@@ -54,7 +54,8 @@
       font-size: 13px; box-shadow: 0 0 14px rgba(124,110,245,.3);
     }
     .tb-name { font-size: 16px; font-weight: 800; letter-spacing: -.03em; color: var(--t0); }
-    .tab-nav { display: flex; gap: 2px; flex: 1; }
+    .tab-nav { display: flex; gap: 2px; }
+    .tb-context { font-size: 11px; color: var(--t2); margin-left: 12px; flex-shrink: 0; display: flex; align-items: center; gap: 6px; white-space: nowrap; flex: 1; }
     .tnav {
       padding: 6px 14px; border-radius: 8px; font-size: 13px; font-weight: 500;
       color: var(--t2); cursor: pointer; border: none; background: none;
@@ -331,10 +332,57 @@
     .act-card.restaurant { border-top: 2px solid rgba(255,184,0,.4); }
 
     /* ── RESPONSIVE ── */
+    /* ── PROACTIVE AI ── */
+    .pa-grid { display: flex; flex-direction: column; gap: 0; }
+    .pa-card { padding: 14px 18px; border-bottom: 1px solid var(--line2); transition: background .1s; }
+    .pa-card:last-child { border-bottom: none; }
+    .pa-card:hover { background: rgba(255,255,255,.018); }
+    .pa-header { display: flex; align-items: flex-start; gap: 10px; margin-bottom: 6px; }
+    .pa-icon { font-size: 20px; flex-shrink: 0; line-height: 1.2; }
+    .pa-title-wrap { flex: 1; min-width: 0; }
+    .pa-title { font-size: 13px; font-weight: 600; color: var(--t0); display: block; margin-bottom: 2px; }
+    .pa-time { font-size: 11px; color: var(--amber); font-family: 'JetBrains Mono', monospace; }
+    .pa-health { font-size: 11px; color: var(--green); flex-shrink: 0; white-space: nowrap; }
+    .pa-desc { font-size: 12px; color: var(--t1); line-height: 1.6; margin-bottom: 8px; }
+    .pa-ref { display: inline-block; font-size: 10px; font-weight: 600; color: #a78bfa; background: rgba(124,110,245,.1); border: 1px solid rgba(124,110,245,.2); border-radius: 4px; padding: 1px 7px; margin-bottom: 8px; font-family: 'JetBrains Mono', monospace; }
+    .pa-actions { display: flex; gap: 6px; }
+    .pa-btn { padding: 5px 12px; border-radius: 7px; font-size: 12px; font-weight: 600; cursor: pointer; border: 1px solid var(--line); background: transparent; color: var(--t1); transition: all .12s; }
+    .pa-btn:hover { background: rgba(255,255,255,.06); color: var(--t0); }
+    .pa-btn.primary { background: rgba(124,110,245,.15); border-color: rgba(124,110,245,.3); color: #a78bfa; }
+    .pa-btn.primary:hover { background: rgba(124,110,245,.25); }
+
+    /* ── SPOTIFY ── */
+    .sp-row { display: flex; align-items: center; gap: 12px; padding: 11px 18px; border-bottom: 1px solid var(--line2); transition: background .1s; }
+    .sp-row:last-child { border-bottom: none; }
+    .sp-row:hover { background: rgba(255,255,255,.018); }
+    .sp-emoji { font-size: 20px; flex-shrink: 0; }
+    .sp-body { flex: 1; min-width: 0; }
+    .sp-name { font-size: 13px; font-weight: 600; color: var(--t0); }
+    .sp-mood { font-size: 11px; color: var(--t2); margin-top: 1px; }
+    .sp-play { flex-shrink: 0; width: 30px; height: 30px; border-radius: 50%; background: #1db954; color: #000; font-size: 11px; font-weight: 700; display: flex; align-items: center; justify-content: center; text-decoration: none; transition: filter .12s; }
+    .sp-play:hover { filter: brightness(1.15); }
+
+    /* ── MOMENTO FAMIGLIA ── */
+    .momento-card { display: flex; gap: 12px; align-items: flex-start; padding: 14px 18px; border-bottom: 1px solid var(--line2); background: rgba(124,110,245,.04); }
+    .momento-icon { font-size: 24px; flex-shrink: 0; margin-top: 1px; }
+    .momento-body { flex: 1; min-width: 0; }
+    .momento-title { font-size: 13px; font-weight: 600; color: var(--t0); margin-bottom: 3px; }
+    .momento-desc { font-size: 12px; color: var(--t1); line-height: 1.55; margin-bottom: 4px; }
+    .momento-meta { font-size: 11px; color: #a78bfa; }
+
+    /* ── STUDY SCHEDULE ── */
+    .st-schedule { font-size: 11px; color: var(--amber); font-family: 'JetBrains Mono', monospace; margin-bottom: 5px; }
+    .st-actions { display: flex; gap: 6px; margin-top: 6px; }
+    .st-btn-play { padding: 4px 11px; border-radius: 7px; font-size: 11px; font-weight: 600; background: rgba(0,208,132,.1); border: 1px solid rgba(0,208,132,.2); color: var(--green); text-decoration: none; display: inline-flex; align-items: center; transition: background .12s; }
+    .st-btn-play:hover { background: rgba(0,208,132,.2); }
+    .st-btn-later { padding: 4px 11px; border-radius: 7px; font-size: 11px; font-weight: 600; background: transparent; border: 1px solid var(--line); color: var(--t2); cursor: pointer; transition: all .12s; }
+    .st-btn-later:hover { background: rgba(255,255,255,.05); color: var(--t1); }
+
     @media (max-width: 860px) {
       .bento { grid-template-columns: 1fr 1fr; }
       .bc.s2, .bc.s3 { grid-column: span 2; }
       .hero-kpis { grid-template-columns: auto 1fr 1fr; }
+      .tb-context { display: none; }
     }
     @media (max-width: 600px) {
       .bento { grid-template-columns: 1fr; }
@@ -563,6 +611,7 @@
     <button class="tnav" onclick="nav('month',this)">Mese</button>
     <button class="tnav" onclick="nav('projects',this)">Progetti</button>
   </div>
+  <div class="tb-context" id="tb-context"></div>
   <div class="tb-right">
     <button class="btn-run" id="run-btn" onclick="runAgent(false)">☀️ Briefing</button>
     <span id="ai-dot" class="ai-dot" title="Agent in esecuzione"></span>
@@ -1020,6 +1069,7 @@ function render() {
   // ── SECTION: FAMIGLIA (full width) ──
   if (section==='family') {
     const al=family.alessandraEvents||[], tm=family.tommasoAlerts||[];
+    const momento=family.momentoFamiglia||null;
     const members=dayData?.userSettings?.familyMembers||[];
     const sp=members.find(f=>f.role==='spouse')?.name||'Partner';
     const ch=members.find(f=>f.role==='child')?.name||'Figli';
@@ -1030,6 +1080,14 @@ function render() {
         <div class="fw-head"><span class="fw-title">👨‍👩‍👦 Famiglia</span></div>
         ${!hasMembers ? `<div class="card"><div class="empty"><div class="ei">👨‍👩‍👦</div>Configura i tuoi familiari in <a href="/settings.html" style="color:var(--accent)">Impostazioni → Famiglia</a>,<br/>poi clicca <strong>☀️ Briefing</strong> per rilevare i loro impegni dal Calendar.</div></div>`
         : `<div class="card">
+          ${momento?`<div class="momento-card">
+            <span class="momento-icon">${esc(momento.icon||'❤️')}</span>
+            <div class="momento-body">
+              <div class="momento-title">${esc(momento.title)}</div>
+              <div class="momento-desc">${esc(momento.description||'')}</div>
+              <div class="momento-meta">${esc(momento.person||'')}${momento.location?' · 📍'+esc(momento.location):''}</div>
+            </div>
+          </div>`:''}
           <div class="fam-cols">
             <div class="fam-col">
               <div class="fam-label">${esc(sp)}</div>
@@ -1213,7 +1271,52 @@ function render() {
         `}
       </div>
 
+      ${(()=>{
+        const pa = ins.proactiveActions||[];
+        if (!pa.length) return '';
+        return `<div class="bc s3">
+          <div class="bc-head">
+            <span class="bc-title">🧠 Proactive AI</span>
+            <span class="bc-badge pur">${pa.filter(p=>!p._dismissed).length}</span>
+            <button onclick="refreshProactiveAI()" style="margin-left:auto;padding:3px 10px;border-radius:6px;border:1px solid var(--line);background:transparent;color:var(--t2);font-size:11px;cursor:pointer">⟳ Check</button>
+          </div>
+          <div class="pa-grid">
+            ${pa.map((p,i)=>paCard(p,i)).join('')}
+          </div>
+        </div>`;
+      })()}
+
+      ${(()=>{
+        const sp = ins.spotifyPlaylists||[];
+        if (!sp.length) return '';
+        return `<div class="bc">
+          <div class="bc-head">
+            <span class="bc-title">🎵 Spotify</span>
+            <span class="bc-badge pur">${sp.length}</span>
+          </div>
+          ${sp.map(p=>`
+            <div class="sp-row">
+              <span class="sp-emoji">${esc(p.emoji||'🎵')}</span>
+              <div class="sp-body">
+                <div class="sp-name">${esc(p.name)}</div>
+                <div class="sp-mood">${esc(p.mood||'')}</div>
+              </div>
+              <a href="https://open.spotify.com/search/${encodeURIComponent(p.spotifyQuery||p.name)}" target="_blank" class="sp-play">▶</a>
+            </div>`).join('')}
+        </div>`;
+      })()}
+
     </div>`;
+
+  // Update header context line
+  (function() {
+    const ctx = document.getElementById('tb-context');
+    if (!ctx) return;
+    const h = new Date().getHours();
+    const mode = h<5?'🌌 Night Mode':h<10?'☀️ Morning Focus':h<14?'🛠️ Deep Work':h<18?'⚡ Afternoon':h<22?'🌙 Evening Zen':'🌌 Night Mode';
+    const city = dayData?.network?.city || dayData?.userSettings?.homeCity || '';
+    ctx.textContent = city ? `${mode} · 📍 ${city}` : mode;
+  })();
 
   _restorePanel();
   _syncReflectBtn();
@@ -1258,11 +1361,13 @@ function stRow(s, idx) {
       <div class="st-src">${esc(s.source||'')}${s.gmailCategory?` · ${esc(s.gmailCategory)}`:''}</div>
       <div class="st-sum">${esc(s.summary||'')}</div>
       ${s.recommendation?`<div class="st-rec">→ ${esc(s.recommendation)}</div>`:''}
+      ${(s.suggestedTime||s.duration)?`<div class="st-schedule">⏰ ${s.suggestedTime||''}${s.duration?` · ⏱️ ${s.duration}min`:''}</div>`:''}
       <div class="st-tags">
         <span class="stag ${s.priority||'medium'}">${s.priority||'medium'}</span>
         ${s.category?`<span class="stag cat">${esc(s.category)}</span>`:''}
         ${s.gmailCategory?`<span class="stag gmail">${esc(s.gmailCategory)}</span>`:''}
       </div>
+      ${s.link?`<div class="st-actions"><a href="${esc(s.link)}" target="_blank" class="st-btn-play">▶ Ascolta/Guarda</a><button class="st-btn-later" onclick="toggleStudy(${idx})">Dopo</button></div>`:''}
     </div>
     <button class="btn-circle ${s.done?'done':''}" style="margin-top:2px;flex-shrink:0" onclick="toggleStudy(${idx})">${s.done?'✓':''}</button>
   </div>`;
@@ -1283,6 +1388,43 @@ function stRowCompact(s, idx) {
   </div>`;
 }
 
+function paCard(pa, i) {
+  if (pa._dismissed) return '';
+  return `<div class="pa-card" id="pac-${i}">
+    <div class="pa-header">
+      <span class="pa-icon">${esc(pa.icon||'💡')}</span>
+      <div class="pa-title-wrap">
+        <span class="pa-title">${esc(pa.title)}</span>
+        ${pa.suggestedTime?`<span class="pa-time">⏰ ${esc(pa.suggestedTime)}${pa.duration?` · ⏱️ ${pa.duration}min`:''}</span>`:''}
+      </div>
+      ${pa.healthScore?`<span class="pa-health">🫀 ${pa.healthScore}/100</span>`:''}
+    </div>
+    <div class="pa-desc">${esc(pa.description)}</div>
+    ${pa.taskRef?`<span class="pa-ref">${esc(pa.taskRef)}</span>`:''}
+    <div class="pa-actions">
+      <button class="pa-btn primary" onclick="acceptPA(${i})">${esc(pa.actionLabel||'✨ Azione')}</button>
+      <button class="pa-btn" onclick="dismissPA(${i})">Ignora</button>
+    </div>
+  </div>`;
+}
+
+function dismissPA(i) {
+  const ins = dayData?.insights;
+  if (!ins?.proactiveActions?.[i]) return;
+  ins.proactiveActions[i]._dismissed = true;
+  render();
+}
+
+function acceptPA(i) {
+  showToast('Azione registrata ✓');
+  dismissPA(i);
+}
+
+function refreshProactiveAI() {
+  if (!confirm('Rigenero i suggerimenti Proactive AI con il briefing completo?')) return;
+  runAgent(false);
+}
+
 function netRow(e) {
   return `<div class="net-row">
     <div class="net-dot"></div>
@@ -1294,6 +1436,14 @@ function netRow(e) {
     </div>
     ${e.link?`<a href="${esc(e.link)}" target="_blank" class="btn-info">↗ Info</a>`:''}
   </div>`;
+}
+
+function showToast(msg, duration=2400) {
+  const el = document.createElement('div');
+  el.textContent = msg;
+  el.style.cssText = 'position:fixed;bottom:100px;left:50%;transform:translateX(-50%);z-index:600;background:var(--green);color:#0a0a0a;padding:9px 18px;border-radius:10px;font-size:13px;font-weight:700;pointer-events:none;white-space:nowrap;box-shadow:0 4px 16px rgba(0,0,0,.4)';
+  document.body.appendChild(el);
+  setTimeout(() => el.remove(), duration);
 }
 
 // ── Agent panel ─────────────────────────────────────────────────────────────

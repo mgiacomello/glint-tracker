@@ -719,7 +719,7 @@ Data oggi: ${date}.
 
 Analizza TUTTE queste email da Aggiornamenti, Social e Promozioni.
 Per OGNI email crea un record JSON:
-{"id":"SOLO_IL_CODICE_ID","title":"titolo o oggetto email","summary":"sintesi 1-2 frasi del contenuto","source":"nome newsletter o mittente","recommendation":"leggi|acquista|ignora|salva|iscriviti","category":"AI|business|tool|promo|social|news|evento|marketing|finanza|altro","priority":"high|medium|low","gmailCategory":"categoria Gmail originale"}
+{"id":"SOLO_IL_CODICE_ID","title":"titolo o oggetto email","summary":"sintesi 1-2 frasi del contenuto","source":"nome newsletter o mittente","recommendation":"leggi|acquista|ignora|salva|iscriviti","category":"AI|business|tool|promo|social|news|evento|marketing|finanza|altro","priority":"high|medium|low","gmailCategory":"categoria Gmail originale","suggestedTime":"HH:MM (slot ideale nella giornata per questo contenuto, es 14:30 per lettura pomeridiana)","duration":15}
 
 HIGH = molto rilevante per gli interessi di Marco.
 MEDIUM = interessante ma non urgente.
@@ -742,6 +742,8 @@ EMAIL:\n${emailList}`, 32768);
           category: s.category || 'altro',
           gmailCategory: s.gmailCategory || '',
           priority: s.priority || 'medium',
+          suggestedTime: s.suggestedTime || '',
+          duration: s.duration || null,
           link: `https://mail.google.com/mail/u/0/#inbox/${s.id}`,
           done: false
         });
@@ -972,6 +974,24 @@ Return ONLY a valid JSON array. No text before or after.`;
     emit('  ↳ Gemini API key non configurata');
   }
 
+  // ── STEP 6d: Momento familiare ────────────────────────────────────────────────
+  let momentoFamiglia = null;
+  try {
+    const childMemberM = (settings.familyMembers || []).find(f => f.role === 'child');
+    const spouseMemberM = (settings.familyMembers || []).find(f => f.role === 'spouse');
+    const childNameM = childMemberM?.name;
+    const spouseNameM = spouseMemberM?.name;
+    if ((childNameM || spouseNameM) && detectedCity) {
+      const mText = await aiCall(aiKeys,
+        `Suggerisci UN'attività specifica di qualità da fare con ${childNameM || spouseNameM} a ${detectedCity} oggi.
+Formato JSON: {"person":"${childNameM || spouseNameM}","icon":"🏛️","title":"Titolo attività concisa","description":"1-2 frasi","location":"quartiere/luogo specifico"}
+SOLO JSON oggetto.`, 300);
+      momentoFamiglia = safeJsonParse(mText, null);
+      if (Array.isArray(momentoFamiglia)) momentoFamiglia = momentoFamiglia[0] || null;
+      if (momentoFamiglia) emit(`  ↳ Momento famiglia: ${momentoFamiglia.title}`);
+    }
+  } catch(e) { emit(`  ↳ Momento famiglia skip: ${e.message?.slice(0,60)}`); }
+
   // ── STEP 7: Populate tracker ───────────────────────────────────────────────────
   emit('[7/9] Salvataggio nel tracker...');
   const saveDb = readDBForUid(uid);
@@ -1064,17 +1084,75 @@ CONTEXTUAL_INTELLIGENCE: [testo]`;
     emit(`  ↳ Errore contextual intelligence: ${e.message?.slice(0,100)}`);
   }
 
+  // ── STEP 6e: Proactive AI suggestions ────────────────────────────────────────
+  emit('[6e] Generazione suggerimenti Proactive AI...');
+  let proactiveActions = [];
+  try {
+    const pendingTasks = result.tasks.filter(t => !saveDb.days[date]?.items?.[t.id]?.done).slice(0, 6);
+    const healthScore = health?.readinessScore || health?.sleepScore || null;
+    const hourNow = new Date().getHours();
+    const timeCtx = hourNow < 10 ? 'mattina presto' : hourNow < 14 ? 'mattina/pranzo' : hourNow < 18 ? 'pomeriggio' : 'sera';
+
+    const paPrompt = `Sei il Proactive AI chief of staff di ${settings.userName||'Marco'}.
+Data: ${date} · Ora: ${timeCtx} · Location: ${detectedCity}
+Health Recovery: ${healthScore ? healthScore+'/100' : 'non disponibile'}
+Task pendenti critici: ${pendingTasks.map(t=>`"${t.title}" (${t.priority||t.quadrant})`).join(', ')||'nessuno'}
+Riunioni oggi: ${calendarEvents.length}
+
+Genera 4-5 suggerimenti proattivi SPECIFICI e CONTESTUALI per ${settings.userName||'Marco'}. Ogni suggerimento deve:
+- Essere collegato a un task o evento REALE della lista
+- Considerare la recovery/salute attuale
+- Avere un'azione concreta
+- Essere tempificato (slot orario suggerito)
+
+Formato JSON array:
+[{
+  "id":"pa-1",
+  "icon":"🧠",
+  "title":"Titolo breve (max 40 car)",
+  "description":"2-3 frasi: perché ora, perché è rilevante per salute/task, cosa fare concretamente",
+  "actionType":"azione|sposta|aggiungi|ascolta",
+  "actionLabel":"✨ Azione",
+  "suggestedTime":"HH:MM",
+  "duration":30,
+  "healthScore":${healthScore||50},
+  "taskRef":"nome task collegato se esiste"
+}]
+
+Rispondi SOLO con JSON array.`;
+
+    const paText = await aiCall(aiKeys, paPrompt, 2000);
+    proactiveActions = safeJsonParse(paText, []);
+    if (!Array.isArray(proactiveActions)) proactiveActions = [];
+    emit(`  ↳ ✅ ${proactiveActions.length} suggerimenti Proactive AI generati`);
+  } catch(e) { emit(`  ↳ Proactive AI skip: ${e.message?.slice(0,80)}`); }
+
+  // ── STEP 6f: Spotify playlists ────────────────────────────────────────────────
+  let spotifyPlaylists = [];
+  try {
+    const hourNow2 = new Date().getHours();
+    const timeCtx2 = hourNow2 < 10 ? 'mattina presto' : hourNow2 < 14 ? 'mattina/pranzo' : hourNow2 < 18 ? 'pomeriggio' : 'sera';
+    const healthScore2 = health?.readinessScore || health?.sleepScore || null;
+    const sp = await aiCall(aiKeys,
+      `Suggerisci 2-3 playlist Spotify per ${settings.userName||'Marco'} per ${timeCtx2} con tipo giornata ${dayType}. Recovery: ${healthScore2||'?'}/100.
+Formato JSON: [{"name":"Nome Playlist","mood":"focus|relax|energy|zen","spotifyQuery":"query di ricerca spotify","emoji":"⚡"}]
+SOLO JSON array.`, 500);
+    spotifyPlaylists = safeJsonParse(sp, []);
+    if (!Array.isArray(spotifyPlaylists)) spotifyPlaylists = [];
+    emit(`  ↳ ✅ ${spotifyPlaylists.length} playlist Spotify suggerite`);
+  } catch(e) { spotifyPlaylists = []; }
+
   const syncedAt = new Date().toISOString();
-  saveDb.days[date].insights        = { dayType, growthBrief, contextualIntelligence, intelligenceFeed, driveFiles, studyItems };
-  saveDb.days[date].family          = { alessandraEvents, tommasoAlerts };
+  saveDb.days[date].insights        = { dayType, growthBrief, contextualIntelligence, intelligenceFeed, driveFiles, studyItems, proactiveActions, spotifyPlaylists };
+  saveDb.days[date].family          = { alessandraEvents, tommasoAlerts, momentoFamiglia };
   saveDb.days[date].network         = { city: detectedCity, events: networkEvents };
   saveDb.days[date].localActivities = { city: detectedCity, items: localActivities };
   saveDb.days[date]._syncedAt       = syncedAt;
   // Persistenti cross-day: sopravvivono ai giorni successivi senza morning-agent
   saveDb.network         = { city: detectedCity, events: networkEvents, _refreshedAt: syncedAt };
   saveDb.localActivities = { city: detectedCity, items: localActivities, _refreshedAt: syncedAt };
-  saveDb.lastInsights    = { dayType, growthBrief, contextualIntelligence, intelligenceFeed, studyItems, _refreshedAt: syncedAt };
-  saveDb.lastFamily      = { alessandraEvents, tommasoAlerts, _refreshedAt: syncedAt };
+  saveDb.lastInsights    = { dayType, growthBrief, contextualIntelligence, intelligenceFeed, studyItems, proactiveActions, spotifyPlaylists, _refreshedAt: syncedAt };
+  saveDb.lastFamily      = { alessandraEvents, tommasoAlerts, momentoFamiglia, _refreshedAt: syncedAt };
   saveDb.googleLastSync  = syncedAt;
   writeDBForUid(uid, saveDb);
   emit('  ↳ Dati salvati');
