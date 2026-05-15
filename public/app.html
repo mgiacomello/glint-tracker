@@ -15,7 +15,7 @@
   <link rel="apple-touch-icon" href="/icons/icon-192.png"/>
 
   <link rel="preconnect" href="https://fonts.googleapis.com"/>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet"/>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;700;800&display=swap" rel="stylesheet"/>
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
     :root {
@@ -106,10 +106,17 @@
     .hbadge.warn    { border-color: rgba(255,68,68,.22);  color: var(--red);   background: rgba(255,68,68,.07); }
     .prog-bar-wrap { height: 2px; background: var(--line); border-radius: 2px; overflow: hidden; margin-top: 10px; max-width: 280px; }
     .prog-bar-fill { height: 100%; background: var(--accent); border-radius: 2px; transition: width .4s; }
-    .prog-text { font-size: 11px; color: var(--t2); margin-top: 5px; }
+    .prog-text { font-size: 11px; color: var(--t2); margin-top: 5px; font-family: 'JetBrains Mono', monospace; }
+    .prog-ring-wrap { position: relative; width: 56px; height: 56px; flex-shrink: 0; margin-top: 10px; }
+    .prog-ring-svg { transform: rotate(-90deg); }
+    .prog-ring-bg { fill: none; stroke: var(--line); stroke-width: 3.5; }
+    .prog-ring-fill { fill: none; stroke: var(--accent); stroke-width: 3.5; stroke-linecap: round; transition: stroke-dashoffset .6s ease; filter: drop-shadow(0 0 4px rgba(124,110,245,.5)); }
+    .prog-ring-inner { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 0px; }
+    .prog-ring-pct { font-family: 'JetBrains Mono', monospace; font-size: 12px; font-weight: 700; color: var(--t0); line-height: 1; }
+    .prog-ring-lbl { font-size: 8px; color: var(--t2); margin-top: 1px; }
     .hero-kpis { display: flex; gap: 10px; flex-shrink: 0; }
     .kpi { background: var(--s1); border: 1px solid var(--line); border-radius: var(--r); padding: 16px 22px; text-align: center; min-width: 84px; }
-    .kpi-n { font-size: 34px; font-weight: 900; letter-spacing: -.05em; line-height: 1; color: var(--t1); }
+    .kpi-n { font-size: 34px; font-weight: 800; letter-spacing: -.04em; line-height: 1; color: var(--t1); font-family: 'JetBrains Mono', monospace; }
     .kpi-n.red { color: var(--red); }
     .kpi-l { font-size: 11px; color: var(--t2); margin-top: 4px; font-weight: 500; }
 
@@ -136,13 +143,14 @@
     .ap-log .done-line { color: #a78bfa; font-weight: 600; }
     .ap-summary { display: none; gap: 20px; padding: 12px 16px; border-top: 1px solid var(--line); flex-wrap: wrap; }
     .ap-summary.visible { display: flex; }
-    .sum-item .sv { font-size: 18px; font-weight: 800; color: #a5b4fc; }
+    .sum-item .sv { font-size: 18px; font-weight: 800; color: #a5b4fc; font-family: 'JetBrains Mono', monospace; }
     .sum-item .sl { font-size: 10px; color: var(--t2); margin-top: 1px; }
     @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.3} }
 
     /* ── BENTO GRID ── */
     .bento { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; align-items: start; }
-    .bc { background: var(--s1); border: 1px solid var(--line); border-radius: var(--r); overflow: hidden; display: flex; flex-direction: column; }
+    .bc { background: rgba(255,255,255,.025); backdrop-filter: blur(20px) saturate(140%); border: 1px solid rgba(255,255,255,.08); border-radius: var(--r); overflow: hidden; display: flex; flex-direction: column; transition: transform .25s ease-out, box-shadow .25s ease-out; }
+    .bc:hover { transform: translateY(-2px); box-shadow: 0 8px 32px rgba(124,110,245,.15), 0 0 0 1px rgba(124,110,245,.12); }
     .bc.s2 { grid-column: span 2; }
     .bc.s3 { grid-column: span 3; }
     .bc-head { display: flex; align-items: center; gap: 8px; padding: 13px 18px 11px; border-bottom: 1px solid var(--line2); flex-shrink: 0; }
@@ -159,7 +167,7 @@
     .ev-row:last-child { border-bottom: none; }
     .ev-row:hover { background: rgba(255,255,255,.018); }
     .ev-row.done { opacity: .4; }
-    .ev-time { font-size: 11px; color: var(--t2); min-width: 76px; flex-shrink: 0; padding-top: 2px; font-variant-numeric: tabular-nums; }
+    .ev-time { font-size: 11px; color: var(--t2); min-width: 76px; flex-shrink: 0; padding-top: 2px; font-family: 'JetBrains Mono', monospace; }
     .ev-body { flex: 1; min-width: 0; }
     .ev-title { font-size: 13px; font-weight: 600; margin-bottom: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
     .ev-meta  { font-size: 11px; color: var(--t2); }
@@ -176,7 +184,7 @@
     .hm { padding: 14px 16px; border-bottom: 1px solid var(--line2); border-right: 1px solid var(--line2); }
     .hm:nth-child(2n) { border-right: none; }
     .hm:nth-child(3),.hm:nth-child(4) { border-bottom: none; }
-    .hm-val { font-size: 24px; font-weight: 800; letter-spacing: -.03em; }
+    .hm-val { font-size: 24px; font-weight: 800; letter-spacing: -.03em; font-family: 'JetBrains Mono', monospace; }
     .hm-lbl { font-size: 11px; color: var(--t2); margin-top: 2px; }
     .h-rec { padding: 11px 16px; font-size: 12px; color: var(--t2); border-top: 1px solid var(--line2); line-height: 1.8; }
 
@@ -196,6 +204,9 @@
     .tk-row:hover { background: rgba(255,255,255,.018); }
     .tk-row.done { opacity: .38; }
     .tk-row.is-q1 { border-left: 2px solid rgba(255,68,68,.5); padding-left: 16px; }
+    .tk-row.is-q2 { border-left: 2px solid rgba(59,130,246,.4); padding-left: 16px; }
+    .tk-row.is-q3 { border-left: 2px solid rgba(255,184,0,.35); padding-left: 16px; }
+    .tk-row.is-q4 { border-left: 2px solid rgba(82,82,91,.4); padding-left: 16px; }
     .q-dot { width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0; margin-top: 5px; }
     .q-dot.Q1 { background: var(--red); box-shadow: 0 0 5px rgba(255,68,68,.5); }
     .q-dot.Q2 { background: var(--blue); }
@@ -224,7 +235,7 @@
     .st-row:last-child { border-bottom: none; }
     .st-row:hover { background: rgba(255,255,255,.015); }
     .st-row.done { opacity: .35; }
-    .st-num { width: 22px; height: 22px; border-radius: 6px; background: var(--adim); color: #a78bfa; font-size: 10px; font-weight: 800; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+    .st-num { width: 22px; height: 22px; border-radius: 6px; background: var(--adim); color: #a78bfa; font-size: 10px; font-weight: 800; display: flex; align-items: center; justify-content: center; flex-shrink: 0; font-family: 'JetBrains Mono', monospace; }
     .st-body { flex: 1; min-width: 0; }
     .st-title { font-size: 13px; font-weight: 600; margin-bottom: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
     .st-title a { color: inherit; text-decoration: none; }
@@ -395,6 +406,11 @@
     button, a { touch-action: manipulation; }
     .ev-row, .tk-row, .st-row, .net-row { min-height: 44px; }
 
+    /* ── AI STATUS DOT ── */
+    .ai-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--green); display: none; flex-shrink: 0; }
+    .ai-dot.active { display: block; animation: pulse 1.2s infinite; }
+    .ai-dot.done-state { display: block; animation: none; background: var(--accent); }
+
     /* ── ARCHIVIO / COMPLETATI ── */
     .done-collapse { border-top: 1px solid var(--line2); }
     .done-toggle { display:flex; align-items:center; gap:8px; padding:10px 16px; background:transparent; border:none; color:var(--t2); font-size:12px; cursor:pointer; width:100%; text-align:left; }
@@ -423,6 +439,7 @@
   </div>
   <div class="tb-right">
     <button class="btn-run" id="run-btn" onclick="runAgent(false)">☀️ Briefing</button>
+    <span id="ai-dot" class="ai-dot" title="Agent in esecuzione"></span>
     <button class="btn-icon" onclick="runAgent(true)" title="Force refresh">⚡</button>
     <a href="/wellness.html" class="btn-link">🧠</a>
     <a href="/settings.html" class="btn-link">⚙️</a>
@@ -743,8 +760,7 @@ function render() {
           ${badgeLabel?`<span class="hbadge ${badgeClass}">${badgeLabel}</span>`:''}
           ${q1Active>0?`<span class="hbadge warn">🔴 ${q1Active} urgent${q1Active>1?'i':''}</span>`:''}
         </div>
-        ${total>0?`<div class="prog-bar-wrap"><div class="prog-bar-fill" style="width:${pct}%"></div></div>
-        <div class="prog-text">${done} di ${total} completat${done===1?'o':'i'}</div>`:''}
+        ${total>0?(()=>{const r=22,circ=2*Math.PI*r,off=circ*(1-pct/100);return`<div class="prog-ring-wrap"><svg class="prog-ring-svg" width="56" height="56" viewBox="0 0 56 56"><circle class="prog-ring-bg" cx="28" cy="28" r="${r}"/><circle class="prog-ring-fill" cx="28" cy="28" r="${r}" stroke-dasharray="${circ.toFixed(1)}" stroke-dashoffset="${off.toFixed(1)}"/></svg><div class="prog-ring-inner"><span class="prog-ring-pct">${pct}%</span><span class="prog-ring-lbl">${done}/${total}</span></div></div>`;})():''}
       </div>
       <div class="hero-kpis">
         <div class="kpi"><div class="kpi-n">${events.length}</div><div class="kpi-l">Riunioni</div></div>
@@ -893,7 +909,8 @@ function render() {
 function tkRow(t, st) {
   const aps=st.actionPoints||[], q=(t.quadrant||'Q2').toUpperCase();
   const brief = esc(t.brief||'').replace(/\n/g,'<br/>');
-  return `<div class="tk-row ${st.done?'done':''} ${q==='Q1'?'is-q1':''}" id="ti-${esc(t.id)}">
+  const qClass = {Q1:'is-q1',Q2:'is-q2',Q3:'is-q3',Q4:'is-q4'}[q]||'';
+  return `<div class="tk-row ${st.done?'done':''} ${qClass}" id="ti-${esc(t.id)}">
     <div class="q-dot ${q}"></div>
     <div class="tk-body">
       <div class="tk-title">${esc(t.title)}</div>
@@ -1040,8 +1057,10 @@ async function toggleStudy(idx) {
 // ── Agent runner ───────────────────────────────────────────────────────────
 async function runAgent(force=false) {
   const btn=document.getElementById('run-btn');
+  const aidot=document.getElementById('ai-dot');
   _panelOpen=true; _logLines=[]; _sumHtml='';
   btn.disabled=true; btn.textContent=force?'⚡ In corso…':'⏳ Analisi…';
+  if(aidot){aidot.className='ai-dot active';}
   if(section!=='all') nav('all',null);
   else render();
   const dot=document.getElementById('ap-dot'); if(dot) dot.className='ap-dot';
@@ -1071,6 +1090,7 @@ async function runAgent(force=false) {
     }
   } catch(e){ _push('❌ '+e.message,'err'); }
   btn.disabled=false; btn.textContent='☀️ Briefing';
+  if(aidot){aidot.className='ai-dot done-state'; setTimeout(()=>{aidot.className='ai-dot';},3000);}
 }
 function _push(text,cls){
   _logLines.push({t:text,c:cls});
