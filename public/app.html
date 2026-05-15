@@ -394,6 +394,17 @@
     * { -webkit-tap-highlight-color: transparent; }
     button, a { touch-action: manipulation; }
     .ev-row, .tk-row, .st-row, .net-row { min-height: 44px; }
+
+    /* ── ARCHIVIO / COMPLETATI ── */
+    .done-collapse { border-top: 1px solid var(--line2); }
+    .done-toggle { display:flex; align-items:center; gap:8px; padding:10px 16px; background:transparent; border:none; color:var(--t2); font-size:12px; cursor:pointer; width:100%; text-align:left; }
+    .done-toggle:hover { color:var(--t1); }
+    .done-toggle .dt-count { background:var(--line); border-radius:10px; padding:1px 7px; font-size:11px; }
+    .done-section { overflow:hidden; max-height:0; transition:max-height .3s ease; }
+    .done-section.open { max-height:2000px; }
+    .done-section .tk-row, .done-section .ev-row { opacity:.5; }
+    .item-removing { animation: fadeSlide .4s ease forwards; }
+    @keyframes fadeSlide { to { opacity:0; max-height:0; padding:0; margin:0; overflow:hidden; } }
   </style>
 </head>
 <body>
@@ -568,10 +579,21 @@ function render() {
         </div>
         <div class="card">
           <div class="st-list">
-            ${ordered.length ? ordered.map((s,_i)=>{
-              const idx=study.indexOf(s);
-              return stRow(s,idx);
-            }).join('') : `<div class="empty"><div class="ei">📚</div>Nessun contenuto da Aggiornamenti, Social o Promozioni.<br/>Clicca <strong>⚡</strong> per forzare l'analisi.</div>`}
+            ${(()=>{
+              const activeStudy = ordered.filter(s=>!s.done);
+              const doneStudy   = ordered.filter(s=> s.done);
+              if (!ordered.length) return `<div class="empty"><div class="ei">📚</div>Nessun contenuto da Aggiornamenti, Social o Promozioni.<br/>Clicca <strong>⚡</strong> per forzare l'analisi.</div>`;
+              const doneSec = doneStudy.length ? `
+                <div class="done-collapse">
+                  <button class="done-toggle" onclick="toggleDoneSection(this)">
+                    <span>✓ Completati</span><span class="dt-count">${doneStudy.length}</span><span style="margin-left:auto">↓</span>
+                  </button>
+                  <div class="done-section">
+                    ${doneStudy.map(s=>stRow(s,study.indexOf(s))).join('')}
+                  </div>
+                </div>` : '';
+              return activeStudy.map(s=>stRow(s,study.indexOf(s))).join('') + doneSec;
+            })()}
           </div>
         </div>
       </div>`;
@@ -753,21 +775,36 @@ function render() {
           <span class="bc-title">📅 Riunioni</span>
           ${events.length?`<span class="bc-badge blue">${events.length}</span>`:''}
         </div>
-        ${events.length ? events.map(e=>{
-          const st=items[e.id]||{}, br=(st.brief||e.brief||'').slice(0,160);
-          return `<div class="ev-row ${st.done?'done':''}" id="ei-${esc(e.id)}">
-            <div class="ev-time">${esc(e.time||'')}</div>
-            <div class="ev-body">
-              <div class="ev-title">${esc(e.title)}</div>
-              ${e.participants?`<div class="ev-meta">👥 ${esc(e.participants)}</div>`:''}
-              ${br?`<div class="ev-brief">${esc(br)}${(st.brief||e.brief||'').length>160?'…':''}</div>`:''}
-            </div>
-            <div class="ev-act">
-              ${e.meetLink?`<a href="${esc(e.meetLink)}" target="_blank" class="btn-join">Join ↗</a>`:''}
-              <button class="btn-circle ${st.done?'done':''}" onclick="toggleDone('${esc(e.id)}','event')">${st.done?'✓':''}</button>
-            </div>
-          </div>`;
-        }).join('') : `<div class="empty"><div class="ei">📅</div>Nessuna riunione oggi.</div>`}
+        ${(()=>{
+          const activeEvts = events.filter(e=>!items[e.id]?.done);
+          const doneEvts   = events.filter(e=> items[e.id]?.done);
+          const evRow = e => {
+            const st=items[e.id]||{}, br=(st.brief||e.brief||'').slice(0,160);
+            return `<div class="ev-row" id="ei-${esc(e.id)}">
+              <div class="ev-time">${esc(e.time||'')}</div>
+              <div class="ev-body">
+                <div class="ev-title">${esc(e.title)}</div>
+                ${e.participants?`<div class="ev-meta">👥 ${esc(e.participants)}</div>`:''}
+                ${br?`<div class="ev-brief">${esc(br)}${(st.brief||e.brief||'').length>160?'…':''}</div>`:''}
+              </div>
+              <div class="ev-act">
+                ${e.meetLink?`<a href="${esc(e.meetLink)}" target="_blank" class="btn-join">Join ↗</a>`:''}
+                <button class="btn-circle ${st.done?'done':''}" onclick="toggleDone('${esc(e.id)}','event')">${st.done?'✓':''}</button>
+              </div>
+            </div>`;
+          };
+          const doneSec = doneEvts.length ? `
+            <div class="done-collapse">
+              <button class="done-toggle" onclick="toggleDoneSection(this)">
+                <span>✓ Completati</span><span class="dt-count">${doneEvts.length}</span><span style="margin-left:auto">↓</span>
+              </button>
+              <div class="done-section">
+                ${doneEvts.map(evRow).join('')}
+              </div>
+            </div>` : '';
+          if (!events.length) return `<div class="empty"><div class="ei">📅</div>Nessuna riunione oggi.</div>`;
+          return activeEvts.map(evRow).join('') + doneSec;
+        })()}
       </div>
 
       <!-- Salute span1 -->
@@ -802,12 +839,22 @@ function render() {
           ${qFilter!=='Q1'&&tasks.length?`<span class="bc-badge">${tasks.length} totali</span>`:''}
         </div>
         ${qFilter==='Q1' ? `
-          ${q1.filter(t=>!items[t.id]?.done).length
-            ? q1.filter(t=>!items[t.id]?.done).map(t=>tkRow(t,items[t.id]||{})).join('')
-            : q1.length
-              ? `<div style="color:var(--t2);padding:12px 16px;font-size:13px">✅ Nessuna email Q1 da gestire</div>`
-              : `<div class="empty"><div class="ei">📧</div>Nessuna email urgente.<br/>Clicca <strong>☀️ Briefing</strong> per analizzare la inbox.</div>`
-          }
+          ${(()=>{
+            const q1Active2 = q1.filter(t=>!items[t.id]?.done);
+            const q1Done    = q1.filter(t=> items[t.id]?.done);
+            const doneSec = q1Done.length ? `
+              <div class="done-collapse">
+                <button class="done-toggle" onclick="toggleDoneSection(this)">
+                  <span>✓ Completati</span><span class="dt-count">${q1Done.length}</span><span style="margin-left:auto">↓</span>
+                </button>
+                <div class="done-section">
+                  ${q1Done.map(t=>tkRow(t,items[t.id]||{})).join('')}
+                </div>
+              </div>` : '';
+            if (q1Active2.length) return q1Active2.map(t=>tkRow(t,items[t.id]||{})).join('') + doneSec;
+            if (q1.length) return `<div style="color:var(--t2);padding:12px 16px;font-size:13px">✅ Nessuna email Q1 da gestire</div>` + doneSec;
+            return `<div class="empty"><div class="ei">📧</div>Nessuna email urgente.<br/>Clicca <strong>☀️ Briefing</strong> per analizzare la inbox.</div>`;
+          })()}
           ${tasks.length > q1.length ? `<button onclick="setQ('all')" style="display:block;width:100%;padding:10px 16px;border:none;border-top:1px solid var(--line2);background:transparent;color:var(--t2);font-size:12px;cursor:pointer;text-align:left">Mostra tutte le email (${tasks.length}) →</button>` : ''}
         ` : `
           <div class="q-strip">
@@ -817,9 +864,22 @@ function render() {
             <button class="qb q3 ${qFilter==='Q3'?'on':''}" onclick="setQ('Q3')">🟠 Q3 (${q3.length})</button>
             <button class="qb q4 ${qFilter==='Q4'?'on':''}" onclick="setQ('Q4')">⚫ Q4 (${q4.length})</button>
           </div>
-          ${filteredTasks.length ? filteredTasks.map(t=>tkRow(t,items[t.id]||{})).join('')
-            : tasks.length ? `<div class="empty-sm">Nessun task in questa categoria.</div>`
-            : `<div class="empty"><div class="ei">📧</div>Nessuna email da gestire.</div>`}
+          ${(()=>{
+            const activeTasks = filteredTasks.filter(t=>!items[t.id]?.done);
+            const doneTasks   = filteredTasks.filter(t=> items[t.id]?.done);
+            const doneSec = doneTasks.length ? `
+              <div class="done-collapse">
+                <button class="done-toggle" onclick="toggleDoneSection(this)">
+                  <span>✓ Completati</span><span class="dt-count">${doneTasks.length}</span><span style="margin-left:auto">↓</span>
+                </button>
+                <div class="done-section">
+                  ${doneTasks.map(t=>tkRow(t,items[t.id]||{})).join('')}
+                </div>
+              </div>` : '';
+            if (activeTasks.length) return activeTasks.map(t=>tkRow(t,items[t.id]||{})).join('') + doneSec;
+            if (tasks.length) return (doneTasks.length ? doneSec : `<div class="empty-sm">Nessun task in questa categoria.</div>`);
+            return `<div class="empty"><div class="ei">📧</div>Nessuna email da gestire.</div>`;
+          })()}
           <button onclick="setQ('Q1')" style="display:block;width:100%;padding:10px 16px;border:none;border-top:1px solid var(--line2);background:transparent;color:var(--t2);font-size:12px;cursor:pointer;text-align:left">← Solo urgenti</button>
         `}
       </div>
@@ -934,18 +994,41 @@ function expandTask(id) {
   document.getElementById(`ap-${id}`)?.classList.toggle('open');
   document.getElementById(`ex-${id}`)?.classList.toggle('open');
 }
+function toggleDoneSection(btn) {
+  const sec = btn.nextElementSibling;
+  sec.classList.toggle('open');
+  btn.querySelector('span:last-child').textContent = sec.classList.contains('open') ? '↑' : '↓';
+}
 async function toggleDone(id, type) {
   if(!dayData) return;
   if(!dayData.items) dayData.items={};
   if(!dayData.items[id]) dayData.items[id]={};
-  dayData.items[id].done = !dayData.items[id].done;
-  render();
-  await fetch(`/api/day/${TODAY}/item/${id}`,{method:'POST',credentials:'include',headers:{'Content-Type':'application/json'},body:JSON.stringify({done:dayData.items[id].done})});
+  const nowDone = !dayData.items[id].done;
+  dayData.items[id].done = nowDone;
+  if (nowDone) {
+    const el = document.getElementById(`ei-${id}`) || document.getElementById(`ti-${id}`);
+    if (el) {
+      el.classList.add('item-removing');
+      setTimeout(() => render(), 450);
+    } else {
+      render();
+    }
+  } else {
+    render();
+  }
+  await fetch(`/api/day/${TODAY}/item/${id}`,{method:'POST',credentials:'include',headers:{'Content-Type':'application/json'},body:JSON.stringify({done:nowDone})});
 }
 async function toggleAp(tid, aid, idx) {
   const aps=dayData?.items?.[tid]?.actionPoints; if(!aps) return;
   const ap=aps.find(a=>a.id===aid)||aps[idx]; if(!ap) return;
-  ap.done=!ap.done; render();
+  ap.done=!ap.done;
+  // Auto-complete parent task se tutti i sub-task sono done
+  if (ap.done && aps.every(a=>a.done) && !dayData.items[tid]?.done) {
+    if(!dayData.items[tid]) dayData.items[tid]={};
+    dayData.items[tid].done = true;
+    await fetch(`/api/day/${TODAY}/item/${tid}`,{method:'POST',credentials:'include',headers:{'Content-Type':'application/json'},body:JSON.stringify({done:true})});
+  }
+  render();
   await fetch(`/api/day/${TODAY}/item/${tid}/action-point/${aid}`,{method:'PATCH',credentials:'include',headers:{'Content-Type':'application/json'},body:JSON.stringify({done:ap.done})});
 }
 async function toggleStudy(idx) {
