@@ -334,10 +334,12 @@ app.get('/api/day/:date', (req, res) => {
     primaryEmail: user.email || '',
     ...(db.userSettings || {})
   };
-  const network = day.network || db.network || null;
-  const localActivities = day.localActivities || db.localActivities || null;
-  const health = day.health || db.lastHealth || null;
-  res.json({ ...day, network, localActivities, health, userSettings });
+  const network        = day.network        || db.network        || null;
+  const localActivities= day.localActivities|| db.localActivities|| null;
+  const health         = day.health         || db.lastHealth     || null;
+  const insights       = day.insights       || db.lastInsights   || null;
+  const family         = day.family         || db.lastFamily     || null;
+  res.json({ ...day, network, localActivities, health, insights, family, userSettings });
 });
 
 // POST /api/day/:date/populate  → called by scheduled task to seed the day

@@ -1024,14 +1024,18 @@ In italiano, concreto e azionabile.`
     growthBrief = resp.content[0]?.text || '';
   } catch(e) { growthBrief = `Oggi è una ${dayType} day. Buona giornata, ${settings.userName || 'Marco'}!`; }
 
-  saveDb.days[date].insights = { dayType, growthBrief, driveFiles, studyItems };
+  const syncedAt = new Date().toISOString();
+  saveDb.days[date].insights        = { dayType, growthBrief, driveFiles, studyItems };
   saveDb.days[date].family          = { alessandraEvents, tommasoAlerts };
   saveDb.days[date].network         = { city: detectedCity, events: networkEvents };
   saveDb.days[date].localActivities = { city: detectedCity, items: localActivities };
+  saveDb.days[date]._syncedAt       = syncedAt;
   // Persistenti cross-day: sopravvivono ai giorni successivi senza morning-agent
-  saveDb.network         = { city: detectedCity, events: networkEvents, _refreshedAt: new Date().toISOString() };
-  saveDb.localActivities = { city: detectedCity, items: localActivities, _refreshedAt: new Date().toISOString() };
-  saveDb.googleLastSync = new Date().toISOString();
+  saveDb.network         = { city: detectedCity, events: networkEvents, _refreshedAt: syncedAt };
+  saveDb.localActivities = { city: detectedCity, items: localActivities, _refreshedAt: syncedAt };
+  saveDb.lastInsights    = { dayType, growthBrief, studyItems, _refreshedAt: syncedAt };
+  saveDb.lastFamily      = { alessandraEvents, tommasoAlerts, _refreshedAt: syncedAt };
+  saveDb.googleLastSync  = syncedAt;
   writeDBForUid(uid, saveDb);
   emit('  ↳ Dati salvati');
 

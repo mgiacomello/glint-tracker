@@ -674,6 +674,7 @@ let section = 'all';
 let qFilter = 'Q1';
 let userName = '';
 let _panelOpen = false, _logLines = [], _sumHtml = '';
+let _agentRunning = false;
 let monthData = null;
 let projectsData = null;
 let _focusTimer = null, _focusTask = null, _focusRemaining = 25*60, _focusPaused = false;
@@ -720,6 +721,11 @@ async function loadDay() {
     if (qFilter==='Q1' && !tasks.some(t=>(t.quadrant||'Q2').toUpperCase()==='Q1'))
       qFilter = 'all';
     render();
+    // Auto-trigger briefing completo se oggi non è stato ancora sincronizzato
+    const syncedToday = dayData._syncedAt?.slice(0,10) === TODAY;
+    if (!syncedToday && !_agentRunning) {
+      runAgent(false);
+    }
   } catch { renderEmpty(); }
 }
 
@@ -1065,10 +1071,10 @@ function render() {
     </div>
 
     ${!total&&!ins.growthBrief?`<div class="brief-card" style="text-align:center;padding:28px 24px;">
-      <div style="font-size:36px;margin-bottom:12px">☀️</div>
-      <div style="font-size:15px;font-weight:600;margin-bottom:6px">Nessun dato per oggi</div>
-      <div style="font-size:13px;color:var(--t2);margin-bottom:20px;line-height:1.5">Avvia il briefing mattutino per sincronizzare<br/>Gmail, Calendar e generare il tuo piano.</div>
-      <button onclick="runAgent()" style="padding:10px 24px;border-radius:10px;border:none;background:var(--accent);color:#fff;font-size:14px;font-weight:600;cursor:pointer">☀️ Avvia Briefing</button>
+      <div style="font-size:36px;margin-bottom:12px">${_agentRunning?'⏳':'☀️'}</div>
+      <div style="font-size:15px;font-weight:600;margin-bottom:6px">${_agentRunning?'Analisi in corso…':'Nessun dato per oggi'}</div>
+      <div style="font-size:13px;color:var(--t2);margin-bottom:${_agentRunning?'0':'20'}px;line-height:1.5">${_agentRunning?'Sto scaricando Gmail, Calendar, Network e Vita locale.':'Premo il briefing automaticamente — attendi un istante.'}</div>
+      ${_agentRunning?'':' <button onclick="runAgent()" style="padding:10px 24px;border-radius:10px;border:none;background:var(--accent);color:#fff;font-size:14px;font-weight:600;cursor:pointer">☀️ Avvia Briefing</button>'}
     </div>`:''}
 
     ${ins.growthBrief?`<div class="brief-card">
@@ -1354,6 +1360,8 @@ async function toggleStudy(idx) {
 
 // ── Agent runner ───────────────────────────────────────────────────────────
 async function runAgent(force=false) {
+  if (_agentRunning && !force) return;
+  _agentRunning = true;
   const btn=document.getElementById('run-btn');
   const aidot=document.getElementById('ai-dot');
   _panelOpen=true; _logLines=[]; _sumHtml='';
@@ -1387,6 +1395,7 @@ async function runAgent(force=false) {
       }
     }
   } catch(e){ _push('❌ '+e.message,'err'); }
+  _agentRunning = false;
   btn.disabled=false; btn.textContent='☀️ Briefing';
   if(aidot){aidot.className='ai-dot done-state'; setTimeout(()=>{aidot.className='ai-dot';},3000);}
 }
