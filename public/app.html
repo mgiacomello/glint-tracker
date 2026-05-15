@@ -90,15 +90,15 @@
     .um-item:hover { background: rgba(255,255,255,.05); color: var(--t0); }
 
     /* ── PAGE ── */
-    .page { max-width: 1120px; margin: 0 auto; padding: 32px 28px 80px; display: flex; flex-direction: column; gap: 28px; }
+    .page { max-width: 1120px; margin: 0 auto; padding: 28px 28px 80px; display: flex; flex-direction: column; gap: 18px; }
 
     /* ── HERO ── */
-    .hero { display: flex; align-items: flex-end; justify-content: space-between; gap: 24px; flex-wrap: wrap; }
-    .hero-l {}
-    .hero-date { font-size: 11px; color: var(--t2); font-weight: 600; letter-spacing: .06em; text-transform: uppercase; margin-bottom: 6px; }
-    .hero-name { font-size: 36px; font-weight: 900; letter-spacing: -.04em; line-height: 1.05; margin-bottom: 10px; }
+    .hero { display: grid; grid-template-columns: 1fr auto; align-items: center; gap: 32px; }
+    .hero-l { min-width: 0; }
+    .hero-date { font-size: 10px; color: var(--t2); font-weight: 600; letter-spacing: .08em; text-transform: uppercase; margin-bottom: 4px; }
+    .hero-name { font-size: 30px; font-weight: 900; letter-spacing: -.04em; line-height: 1.05; margin-bottom: 8px; }
     .hero-name em { font-style: normal; color: var(--accent); }
-    .hero-badges { display: flex; gap: 6px; flex-wrap: wrap; }
+    .hero-badges { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
     .hbadge { padding: 4px 12px; border-radius: 20px; font-size: 12px; font-weight: 600; border: 1px solid; }
     .hbadge.focus   { border-color: rgba(0,208,132,.22);  color: var(--green); background: rgba(0,208,132,.07); }
     .hbadge.maker   { border-color: rgba(255,184,0,.22);  color: var(--amber); background: rgba(255,184,0,.07); }
@@ -107,18 +107,18 @@
     .prog-bar-wrap { height: 2px; background: var(--line); border-radius: 2px; overflow: hidden; margin-top: 10px; max-width: 280px; }
     .prog-bar-fill { height: 100%; background: var(--accent); border-radius: 2px; transition: width .4s; }
     .prog-text { font-size: 11px; color: var(--t2); margin-top: 5px; font-family: 'JetBrains Mono', monospace; }
-    .prog-ring-wrap { position: relative; width: 56px; height: 56px; flex-shrink: 0; margin-top: 10px; }
-    .prog-ring-svg { transform: rotate(-90deg); }
+    .prog-ring-wrap { position: relative; flex-shrink: 0; grid-row: span 2; }
+    .prog-ring-svg { transform: rotate(-90deg); display: block; }
     .prog-ring-bg { fill: none; stroke: var(--line); stroke-width: 3.5; }
-    .prog-ring-fill { fill: none; stroke: var(--accent); stroke-width: 3.5; stroke-linecap: round; transition: stroke-dashoffset .6s ease; filter: drop-shadow(0 0 4px rgba(124,110,245,.5)); }
-    .prog-ring-inner { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 0px; }
-    .prog-ring-pct { font-family: 'JetBrains Mono', monospace; font-size: 12px; font-weight: 700; color: var(--t0); line-height: 1; }
-    .prog-ring-lbl { font-size: 8px; color: var(--t2); margin-top: 1px; }
-    .hero-kpis { display: flex; gap: 10px; flex-shrink: 0; }
-    .kpi { background: var(--s1); border: 1px solid var(--line); border-radius: var(--r); padding: 16px 22px; text-align: center; min-width: 84px; }
-    .kpi-n { font-size: 34px; font-weight: 800; letter-spacing: -.04em; line-height: 1; color: var(--t1); font-family: 'JetBrains Mono', monospace; }
+    .prog-ring-fill { fill: none; stroke: var(--accent); stroke-width: 3.5; stroke-linecap: round; transition: stroke-dashoffset .6s ease; filter: drop-shadow(0 0 5px rgba(124,110,245,.5)); }
+    .prog-ring-inner { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+    .prog-ring-pct { font-family: 'JetBrains Mono', monospace; font-size: 14px; font-weight: 700; color: var(--t0); line-height: 1; }
+    .prog-ring-lbl { font-size: 9px; color: var(--t2); margin-top: 2px; }
+    .hero-kpis { display: grid; grid-template-columns: auto 1fr 1fr; gap: 8px; align-items: center; flex-shrink: 0; }
+    .kpi { background: rgba(255,255,255,.025); border: 1px solid rgba(255,255,255,.07); border-radius: 10px; padding: 11px 14px; text-align: center; min-width: 72px; }
+    .kpi-n { font-size: 26px; font-weight: 800; letter-spacing: -.04em; line-height: 1; color: var(--t1); font-family: 'JetBrains Mono', monospace; }
     .kpi-n.red { color: var(--red); }
-    .kpi-l { font-size: 11px; color: var(--t2); margin-top: 4px; font-weight: 500; }
+    .kpi-l { font-size: 10px; color: var(--t2); margin-top: 3px; font-weight: 500; }
 
     /* ── INTELLIGENCE FEED ── */
     .intel-feed { border-left: 3px solid var(--accent); padding: 12px 18px; margin-bottom: 0; }
@@ -334,20 +334,20 @@
     @media (max-width: 860px) {
       .bento { grid-template-columns: 1fr 1fr; }
       .bc.s2, .bc.s3 { grid-column: span 2; }
-      .hero-kpis { display: none; }
+      .hero-kpis { grid-template-columns: auto 1fr 1fr; }
     }
     @media (max-width: 600px) {
       .bento { grid-template-columns: 1fr; }
       .bc.s2, .bc.s3 { grid-column: span 1; }
-      .page { padding: 16px 14px 80px; }
+      .page { padding: 14px 14px 80px; gap: 14px; }
       .tab-nav { display: none; }
       .act-grid-full { grid-template-columns: 1fr 1fr; gap: 10px; padding: 12px 14px 16px; }
       .act-tab-bar { padding: 12px 14px 0; gap: 6px; flex-wrap: nowrap; overflow-x: auto; -webkit-overflow-scrolling: touch; scrollbar-width: none; }
       .act-tab-bar::-webkit-scrollbar { display: none; }
       .act-tab { flex-shrink: 0; padding: 6px 12px; font-size: 12px; }
-      .hero-name { font-size: 28px; }
-      .hero { flex-direction: column; gap: 12px; }
-      .hero-kpis { display: none; }
+      .hero { grid-template-columns: 1fr; gap: 12px; }
+      .hero-name { font-size: 26px; }
+      .hero-kpis { grid-template-columns: auto 1fr 1fr; }
       .topbar { padding: 0 16px; }
       .tb-name { display: none; }
       .btn-run { padding: 6px 11px; font-size: 12px; }
@@ -1073,9 +1073,9 @@ function render() {
           ${badgeLabel?`<span class="hbadge ${badgeClass}">${badgeLabel}</span>`:''}
           ${q1Active>0?`<span class="hbadge warn">🔴 ${q1Active} urgent${q1Active>1?'i':''}</span>`:''}
         </div>
-        ${total>0?(()=>{const r=22,circ=2*Math.PI*r,off=circ*(1-pct/100);return`<div class="prog-ring-wrap"><svg class="prog-ring-svg" width="56" height="56" viewBox="0 0 56 56"><circle class="prog-ring-bg" cx="28" cy="28" r="${r}"/><circle class="prog-ring-fill" cx="28" cy="28" r="${r}" stroke-dasharray="${circ.toFixed(1)}" stroke-dashoffset="${off.toFixed(1)}"/></svg><div class="prog-ring-inner"><span class="prog-ring-pct">${pct}%</span><span class="prog-ring-lbl">${done}/${total}</span></div></div>`;})():''}
       </div>
       <div class="hero-kpis">
+        ${total>0?(()=>{const r=30,circ=2*Math.PI*r,off=circ*(1-pct/100);return`<div class="prog-ring-wrap" style="width:72px;height:72px"><svg class="prog-ring-svg" width="72" height="72" viewBox="0 0 72 72"><circle class="prog-ring-bg" cx="36" cy="36" r="${r}"/><circle class="prog-ring-fill" cx="36" cy="36" r="${r}" stroke-dasharray="${circ.toFixed(1)}" stroke-dashoffset="${off.toFixed(1)}"/></svg><div class="prog-ring-inner"><span class="prog-ring-pct">${pct}%</span><span class="prog-ring-lbl">${done}/${total}</span></div></div>`;})():`<div style="width:72px;height:72px"></div>`}
         <div class="kpi"><div class="kpi-n">${events.length}</div><div class="kpi-l">Riunioni</div></div>
         <div class="kpi"><div class="kpi-n ${q1Active>0?'red':''}">${q1Active}</div><div class="kpi-l">Urgenti Q1</div></div>
         <div class="kpi"><div class="kpi-n">${tasks.length}</div><div class="kpi-l">Email</div></div>
@@ -1090,14 +1090,9 @@ function render() {
       ${_agentRunning?'':' <button onclick="runAgent()" style="padding:10px 24px;border-radius:10px;border:none;background:var(--accent);color:#fff;font-size:14px;font-weight:600;cursor:pointer">☀️ Avvia Briefing</button>'}
     </div>`:''}
 
-    ${ins.intelligenceFeed?`<div class="brief-card"><div class="intel-feed">
-      <div class="intel-feed-label">✦ Intelligence Feed</div>
-      <div class="intel-feed-text">"${esc(ins.intelligenceFeed)}"</div>
-    </div></div>`:''}
-
-    ${(ins.contextualIntelligence||ins.growthBrief)?`<div class="brief-card">
-      <div class="brief-head"><span class="brief-head-label">⚡ Intelligenza Contestuale</span></div>
-      <div class="brief-body"><div class="brief-text">${esc(ins.contextualIntelligence||ins.growthBrief).replace(/\n/g,'<br/>')}</div></div>
+    ${(ins.intelligenceFeed||ins.contextualIntelligence||ins.growthBrief)?`<div class="brief-card">
+      ${ins.intelligenceFeed?`<div class="intel-feed"><div class="intel-feed-label">✦ Intelligence Feed</div><div class="intel-feed-text">"${esc(ins.intelligenceFeed)}"</div></div>`:''}
+      ${(ins.contextualIntelligence||ins.growthBrief)?`<div class="brief-body" style="border-top:${ins.intelligenceFeed?'1px solid var(--line2)':'none'}"><div class="brief-text">${esc(ins.contextualIntelligence||ins.growthBrief).replace(/\n/g,'<br/>')}</div></div>`:''}
     </div>`:''}
 
     <!-- Bento -->
@@ -1165,8 +1160,8 @@ function render() {
         ` : `<div class="empty"><div class="ei">🫀</div>Sincronizza Oura per vedere i dati.<br/><button onclick="syncOura()" style="margin-top:8px;padding:6px 14px;border-radius:8px;border:none;background:var(--accent);color:#fff;cursor:pointer;font-size:12px">⟳ Sincronizza ora</button></div>`}
       </div>
 
-      <!-- Email span2 -->
-      <div class="bc s2">
+      <!-- Email span3 -->
+      <div class="bc s3">
         <div class="bc-head">
           <span class="bc-title">📧 Email${qFilter!=='Q1'?'':' urgenti'}</span>
           ${q1Active>0?`<span class="bc-badge red">${q1Active} Q1</span>`:''}
