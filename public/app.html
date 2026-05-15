@@ -366,13 +366,13 @@
       .bn-item {
         flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center;
         gap: 3px; cursor: pointer; border: none; background: none;
-        color: var(--t2); font-size: 10px; font-weight: 500; padding: 8px 4px 4px;
+        color: var(--t2); font-size: 10px; font-weight: 500; padding: 8px 2px 4px;
         transition: color .12s; -webkit-tap-highlight-color: transparent;
-        min-width: 44px;
+        min-width: 34px;
       }
       .bn-item.on { color: var(--accent); }
       .bn-item .bn-icon { font-size: 20px; line-height: 1; }
-      .bn-item .bn-label { font-size: 9px; font-weight: 600; letter-spacing: .02em; }
+      .bn-item .bn-label { font-size: 8px; font-weight: 600; letter-spacing: .01em; }
       .bn-badge {
         position: absolute; top: 2px; right: 50%; transform: translateX(12px);
         min-width: 15px; height: 15px; padding: 0 3px;
@@ -421,6 +421,117 @@
     .done-section .tk-row, .done-section .ev-row { opacity:.5; }
     .item-removing { animation: fadeSlide .4s ease forwards; }
     @keyframes fadeSlide { to { opacity:0; max-height:0; padding:0; margin:0; overflow:hidden; } }
+
+    /* ── MONTH ── */
+    .month-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+    .kpi-list-row { display: flex; align-items: center; gap: 10px; padding: 10px 16px; border-bottom: 1px solid var(--line2); }
+    .kpi-list-row:last-child { border-bottom: none; }
+    .kpi-list-name { flex: 1; font-size: 13px; font-weight: 600; }
+    .kpi-list-val { font-size: 12px; color: var(--t2); min-width: 70px; text-align: right; font-family: 'JetBrains Mono', monospace; }
+    .kpi-pb-wrap { height: 4px; background: var(--line); border-radius: 4px; overflow: hidden; margin-top: 3px; }
+    .kpi-pb-fill { height: 100%; background: var(--accent); border-radius: 4px; transition: width .3s; }
+    .kpi-stepbtn { width: 22px; height: 22px; border-radius: 6px; border: 1px solid var(--line); background: none; color: var(--t1); cursor: pointer; font-size: 14px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; transition: background .1s; }
+    .kpi-stepbtn:hover { background: rgba(255,255,255,.07); color: var(--t0); }
+    .obj-row { display: flex; align-items: center; gap: 10px; padding: 10px 16px; border-bottom: 1px solid var(--line2); }
+    .obj-row:last-child { border-bottom: none; }
+    .obj-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; cursor: pointer; transition: transform .1s; }
+    .obj-dot:hover { transform: scale(1.3); }
+    .obj-dot.todo { background: var(--t2); }
+    .obj-dot.in-progress { background: var(--amber); box-shadow: 0 0 6px rgba(255,184,0,.4); }
+    .obj-dot.done { background: var(--green); box-shadow: 0 0 6px rgba(0,208,132,.4); }
+    .obj-name { flex: 1; font-size: 13px; }
+    .obj-status { font-size: 11px; color: var(--t2); }
+    .inline-form { display: flex; gap: 6px; padding: 10px 14px; border-top: 1px solid var(--line2); }
+    .inline-form input, .inline-form select { flex: 1; background: var(--s2); border: 1px solid var(--line); border-radius: 8px; color: var(--t0); padding: 6px 10px; font-size: 12px; outline: none; }
+    .inline-form input:focus, .inline-form select:focus { border-color: var(--accent); }
+    .inline-form input::placeholder { color: var(--t2); }
+    .btn-add { padding: 6px 12px; border-radius: 8px; border: none; background: var(--accent); color: #fff; font-size: 12px; font-weight: 600; cursor: pointer; flex-shrink: 0; }
+    .btn-del { background: none; border: none; color: var(--t2); cursor: pointer; font-size: 14px; padding: 2px 4px; transition: color .1s; flex-shrink: 0; }
+    .btn-del:hover { color: var(--red); }
+    .month-stat { background: var(--s1); border: 1px solid var(--line); border-radius: var(--r); padding: 18px 22px; display: flex; align-items: center; gap: 16px; }
+    .month-stat-n { font-size: 36px; font-weight: 800; font-family: 'JetBrains Mono', monospace; letter-spacing: -.04em; color: var(--accent); }
+    .month-stat-l { font-size: 12px; color: var(--t2); margin-top: 2px; }
+
+    /* ── PROJECTS ── */
+    .proj-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+    .proj-card { background: var(--s1); border: 1px solid var(--line); border-radius: var(--r); overflow: hidden; }
+    .proj-card-head { padding: 14px 18px 10px; border-left: 4px solid var(--accent); }
+    .proj-card-top { display: flex; align-items: flex-start; gap: 8px; margin-bottom: 4px; }
+    .proj-title { font-size: 15px; font-weight: 700; flex: 1; }
+    .proj-client { font-size: 11px; color: var(--t2); margin-bottom: 6px; }
+    .proj-desc { font-size: 12px; color: var(--t1); line-height: 1.5; }
+    .status-badge { font-size: 10px; font-weight: 700; padding: 2px 8px; border-radius: 10px; flex-shrink: 0; }
+    .status-badge.active  { background: rgba(0,208,132,.1); color: var(--green); }
+    .status-badge.paused  { background: rgba(255,184,0,.1); color: var(--amber); }
+    .status-badge.done    { background: rgba(255,255,255,.06); color: var(--t2); }
+    .proj-tasks { border-top: 1px solid var(--line2); }
+    .proj-task-row { display: flex; align-items: center; gap: 8px; padding: 8px 16px; border-bottom: 1px solid var(--line2); }
+    .proj-task-row:last-child { border-bottom: none; }
+    .proj-task-text { flex: 1; font-size: 12px; }
+    .proj-task-text.done { text-decoration: line-through; opacity: .4; }
+    .proj-task-cb { width: 14px; height: 14px; border-radius: 4px; border: 1.5px solid var(--t2); background: none; cursor: pointer; flex-shrink: 0; transition: background .1s, border-color .1s; }
+    .proj-task-cb.done { background: var(--green); border-color: var(--green); }
+    .proj-add-task { display: flex; gap: 6px; padding: 8px 14px; border-top: 1px solid var(--line2); }
+    .proj-add-task input { flex: 1; background: var(--s2); border: 1px solid var(--line); border-radius: 8px; color: var(--t0); padding: 5px 8px; font-size: 12px; outline: none; }
+    .proj-add-task input:focus { border-color: var(--accent); }
+    .proj-add-task input::placeholder { color: var(--t2); }
+    .proj-add-task button { padding: 5px 10px; border-radius: 8px; border: none; background: var(--accent); color: #fff; font-size: 12px; cursor: pointer; flex-shrink: 0; }
+    .color-pick { display: flex; gap: 6px; }
+    .color-swatch { width: 20px; height: 20px; border-radius: 50%; cursor: pointer; border: 2px solid transparent; transition: border-color .1s; flex-shrink: 0; }
+    .color-swatch.sel { border-color: #fff; }
+
+    /* ── REFLECTION MODAL ── */
+    .reflect-btn {
+      position: fixed; bottom: 80px; right: 18px; z-index: 280;
+      width: 48px; height: 48px; border-radius: 50%;
+      background: linear-gradient(135deg,#7c6ef5,#a78bfa);
+      border: none; cursor: pointer; font-size: 22px;
+      display: flex; align-items: center; justify-content: center;
+      box-shadow: 0 4px 18px rgba(124,110,245,.45);
+      animation: reflectPulse 3s ease-in-out infinite;
+    }
+    @keyframes reflectPulse { 0%,100%{box-shadow:0 4px 18px rgba(124,110,245,.45)} 50%{box-shadow:0 4px 28px rgba(124,110,245,.75)} }
+    .reflect-btn.done-state { background: linear-gradient(135deg,#00d084,#34d399); animation: none; }
+    .reflect-btn.done-state::after { content: '✅'; position: absolute; top: -6px; right: -6px; font-size: 14px; }
+    @media (min-width: 601px) { .reflect-btn { bottom: 24px; } }
+    .modal-overlay { position: fixed; inset: 0; z-index: 400; background: rgba(0,0,0,.7); backdrop-filter: blur(6px); display: flex; align-items: center; justify-content: center; padding: 20px; }
+    .modal-box { background: var(--s2); border: 1px solid var(--line); border-radius: var(--r); width: 100%; max-width: 480px; max-height: 90vh; overflow-y: auto; }
+    .modal-head { display: flex; align-items: center; gap: 10px; padding: 16px 20px; border-bottom: 1px solid var(--line); }
+    .modal-title { font-size: 16px; font-weight: 700; flex: 1; }
+    .modal-close { background: none; border: none; color: var(--t2); font-size: 22px; cursor: pointer; line-height: 1; padding: 0 4px; }
+    .modal-close:hover { color: var(--t0); }
+    .modal-body { padding: 20px; display: flex; flex-direction: column; gap: 16px; }
+    .mfield label { display: block; font-size: 11px; font-weight: 700; color: var(--t2); text-transform: uppercase; letter-spacing: .06em; margin-bottom: 6px; }
+    .mfield textarea, .mfield input[type="text"] { width: 100%; background: var(--s3); border: 1px solid var(--line); border-radius: 8px; color: var(--t0); padding: 10px 12px; font-size: 13px; font-family: inherit; outline: none; resize: vertical; }
+    .mfield textarea:focus, .mfield input[type="text"]:focus { border-color: var(--accent); }
+    .mfield textarea::placeholder, .mfield input[type="text"]::placeholder { color: var(--t2); }
+    .energy-btns { display: flex; gap: 6px; }
+    .ebtn { padding: 8px 14px; border-radius: 8px; border: 1px solid var(--line); background: none; cursor: pointer; font-size: 14px; color: var(--t1); transition: all .12s; }
+    .ebtn:hover { border-color: var(--t1); }
+    .ebtn.sel { background: rgba(124,110,245,.15); border-color: var(--accent); color: var(--t0); }
+    .modal-foot { padding: 0 20px 20px; }
+    .btn-save { width: 100%; padding: 11px; border-radius: 10px; border: none; background: var(--accent); color: #fff; font-size: 14px; font-weight: 600; cursor: pointer; transition: filter .15s; }
+    .btn-save:hover { filter: brightness(1.1); }
+
+    /* ── FOCUS TIMER ── */
+    .focus-bar {
+      position: fixed; bottom: 70px; left: 50%; transform: translateX(-50%);
+      z-index: 290; background: var(--s2); border: 1px solid var(--line);
+      border-radius: 14px; padding: 12px 18px;
+      display: flex; align-items: center; gap: 12px;
+      box-shadow: 0 8px 32px rgba(0,0,0,.5);
+      min-width: 320px; max-width: 420px; width: calc(100vw - 40px);
+    }
+    @media (min-width: 601px) { .focus-bar { bottom: 20px; } }
+    .focus-task { flex: 1; font-size: 12px; color: var(--t1); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .focus-time { font-family: 'JetBrains Mono', monospace; font-size: 18px; font-weight: 800; color: var(--t0); flex-shrink: 0; min-width: 52px; }
+    .focus-pb { position: absolute; bottom: 0; left: 0; right: 0; height: 3px; border-radius: 0 0 14px 14px; overflow: hidden; background: var(--line); }
+    .focus-pb-fill { height: 100%; background: var(--accent); transition: width 1s linear; }
+    .focus-bar { position: relative; }
+    .focus-act { display: flex; gap: 6px; flex-shrink: 0; }
+    .focus-act button { width: 30px; height: 30px; border-radius: 8px; border: 1px solid var(--line); background: none; color: var(--t1); cursor: pointer; font-size: 14px; display: flex; align-items: center; justify-content: center; transition: background .1s; }
+    .focus-act button:hover { background: rgba(255,255,255,.07); color: var(--t0); }
+    .focus-flash { position: fixed; bottom: 130px; left: 50%; transform: translateX(-50%); z-index: 500; background: var(--green); color: #0a0a0a; padding: 10px 20px; border-radius: 10px; font-size: 14px; font-weight: 700; pointer-events: none; }
   </style>
 </head>
 <body>
@@ -436,6 +547,8 @@
     <button class="tnav" onclick="nav('activities',this)">Vita locale</button>
     <button class="tnav" onclick="nav('network',this)">Network</button>
     <button class="tnav" onclick="nav('family',this)">Famiglia</button>
+    <button class="tnav" onclick="nav('month',this)">Mese</button>
+    <button class="tnav" onclick="nav('projects',this)">Progetti</button>
   </div>
   <div class="tb-right">
     <button class="btn-run" id="run-btn" onclick="runAgent(false)">☀️ Briefing</button>
@@ -492,7 +605,66 @@
     <span class="bn-icon">👨‍👩‍👦</span>
     <span class="bn-label">Famiglia</span>
   </button>
+  <button class="bn-item" id="bn-month" onclick="nav('month',this)" data-sec="month">
+    <span class="bn-icon">📊</span>
+    <span class="bn-label">Mese</span>
+  </button>
+  <button class="bn-item" id="bn-projects" onclick="nav('projects',this)" data-sec="projects">
+    <span class="bn-icon">🗂️</span>
+    <span class="bn-label">Progetti</span>
+  </button>
 </nav>
+
+<!-- Evening reflection button -->
+<button class="reflect-btn" id="reflect-btn" onclick="openReflection()" title="Riflessione serale">🌙</button>
+
+<!-- Focus timer bar -->
+<div class="focus-bar" id="focus-bar" style="display:none">
+  <div class="focus-task" id="focus-task-name">—</div>
+  <div class="focus-time" id="focus-time">25:00</div>
+  <div class="focus-act">
+    <button onclick="toggleFocusPause()" id="focus-pause-btn" title="Pausa/Riprendi">⏸</button>
+    <button onclick="stopFocus()" title="Ferma">✕</button>
+  </div>
+  <div class="focus-pb"><div class="focus-pb-fill" id="focus-pb-fill" style="width:100%"></div></div>
+</div>
+
+<!-- Reflection modal -->
+<div class="modal-overlay" id="reflect-modal" style="display:none" onclick="if(event.target===this)closeReflection()">
+  <div class="modal-box">
+    <div class="modal-head">
+      <span class="modal-title">🌙 Riflessione serale</span>
+      <button class="modal-close" onclick="closeReflection()">×</button>
+    </div>
+    <div class="modal-body">
+      <div class="mfield">
+        <label>Wins del giorno</label>
+        <textarea id="rf-wins" rows="3" placeholder="Cosa è andato bene oggi?"></textarea>
+      </div>
+      <div class="mfield">
+        <label>Sfide</label>
+        <textarea id="rf-challenges" rows="3" placeholder="Cosa ha ostacolato il tuo lavoro?"></textarea>
+      </div>
+      <div class="mfield">
+        <label>Gratitudine</label>
+        <input type="text" id="rf-gratitude" placeholder="Una cosa per cui sei grato"/>
+      </div>
+      <div class="mfield">
+        <label>Energia</label>
+        <div class="energy-btns">
+          <button class="ebtn" data-e="1" onclick="setEnergy(1)">🔴 1</button>
+          <button class="ebtn" data-e="2" onclick="setEnergy(2)">🟠 2</button>
+          <button class="ebtn" data-e="3" onclick="setEnergy(3)">🟡 3</button>
+          <button class="ebtn" data-e="4" onclick="setEnergy(4)">🟢 4</button>
+          <button class="ebtn" data-e="5" onclick="setEnergy(5)">⚡ 5</button>
+        </div>
+      </div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn-save" onclick="saveReflection()">Salva riflessione</button>
+    </div>
+  </div>
+</div>
 
 <script>
 'use strict';
@@ -502,6 +674,10 @@ let section = 'all';
 let qFilter = 'Q1';
 let userName = '';
 let _panelOpen = false, _logLines = [], _sumHtml = '';
+let monthData = null;
+let projectsData = null;
+let _focusTimer = null, _focusTask = null, _focusRemaining = 25*60, _focusPaused = false;
+let _reflectEnergy = 0;
 
 // ── Mock mode (audit/demo only — ?mock=1) ─────────────────────────────────
 const _MOCK = new URLSearchParams(location.search).get('mock') === '1';
@@ -575,11 +751,129 @@ function render() {
 
   // update tab active state
   document.querySelectorAll('.tnav').forEach(b=>b.classList.remove('on'));
-  const tabMap = {'all':0,'growth':1,'activities':2,'network':3,'family':4};
+  const tabMap = {'all':0,'growth':1,'activities':2,'network':3,'family':4,'month':5,'projects':6};
   const tabIdx = tabMap[section]??0;
   document.querySelectorAll('.tnav')[tabIdx]?.classList.add('on');
 
   const page = document.getElementById('page');
+
+  // ── SECTION: MESE ──
+  if (section==='month') {
+    const ym = TODAY.slice(0,7);
+    const md = monthData || {kpis:[],objectives:[],completedItems:0,totalItems:0};
+    const mPct = md.totalItems>0 ? Math.round(md.completedItems/md.totalItems*100) : 0;
+    const monthName = new Date(ym+'-01').toLocaleDateString('it-IT',{month:'long',year:'numeric'});
+    page.innerHTML = `
+      <div class="fw-section">
+        <div class="fw-head"><span class="fw-title">📊 ${esc(monthName.charAt(0).toUpperCase()+monthName.slice(1))}</span></div>
+        <div style="display:flex;gap:14px;flex-wrap:wrap">
+          <div class="month-stat" style="flex:1">
+            <div><div class="month-stat-n">${mPct}%</div><div class="month-stat-l">Completamento mese</div></div>
+            <div style="flex:1"><div class="kpi-pb-wrap" style="height:6px"><div class="kpi-pb-fill" style="width:${mPct}%"></div></div><div style="font-size:11px;color:var(--t2);margin-top:4px;font-family:monospace">${md.completedItems}/${md.totalItems} task</div></div>
+          </div>
+        </div>
+        <div class="month-grid">
+          <div class="card">
+            <div class="bc-head"><span class="bc-title">📈 KPI</span><span class="bc-badge">${md.kpis.length}</span></div>
+            ${md.kpis.map((k,i)=>`
+              <div class="kpi-list-row">
+                <div style="flex:1">
+                  <div class="kpi-list-name">${esc(k.name)}</div>
+                  <div class="kpi-pb-wrap"><div class="kpi-pb-fill" style="width:${k.target>0?Math.min(100,Math.round(k.current/k.target*100)):0}%"></div></div>
+                  <div class="kpi-list-val">${k.current}/${k.target} ${esc(k.unit||'')}</div>
+                </div>
+                <button class="kpi-stepbtn" onclick="kpiStep('${esc(k.id)}',-1)">−</button>
+                <button class="kpi-stepbtn" onclick="kpiStep('${esc(k.id)}',1)">+</button>
+                <button class="btn-del" onclick="deleteKpi('${esc(k.id)}')">🗑</button>
+              </div>`).join('')}
+            ${!md.kpis.length ? `<div class="empty-sm">Nessun KPI per questo mese.</div>` : ''}
+            <div class="inline-form">
+              <input id="kpi-name" placeholder="Nome KPI" style="flex:2"/>
+              <input id="kpi-target" placeholder="Target" type="number" style="flex:1;min-width:60px"/>
+              <input id="kpi-unit" placeholder="Unità" style="flex:1;min-width:50px"/>
+              <button class="btn-add" onclick="addKpi()">+</button>
+            </div>
+          </div>
+          <div class="card">
+            <div class="bc-head"><span class="bc-title">🎯 Obiettivi</span><span class="bc-badge">${md.objectives.length}</span></div>
+            ${md.objectives.map(o=>`
+              <div class="obj-row">
+                <div class="obj-dot ${esc(o.status||'todo')}" onclick="cycleObjStatus('${esc(o.id)}')" title="Clicca per cambiare stato"></div>
+                <div class="obj-name">${esc(o.name)}</div>
+                <div class="obj-status">${{'todo':'Da fare','in-progress':'In corso','done':'Fatto'}[o.status||'todo']||''}</div>
+                <button class="btn-del" onclick="deleteObjective('${esc(o.id)}')">🗑</button>
+              </div>`).join('')}
+            ${!md.objectives.length ? `<div class="empty-sm">Nessun obiettivo per questo mese.</div>` : ''}
+            <div class="inline-form">
+              <input id="obj-name" placeholder="Obiettivo del mese"/>
+              <button class="btn-add" onclick="addObjective()">+</button>
+            </div>
+          </div>
+        </div>
+      </div>`;
+    _syncReflectBtn();
+    return;
+  }
+
+  // ── SECTION: PROGETTI ──
+  if (section==='projects') {
+    const pd = projectsData || [];
+    const PRESET_COLORS = ['#7c6ef5','#3b82f6','#00d084','#ffb800','#ff4444'];
+    const projCard = (p) => `
+      <div class="proj-card">
+        <div class="proj-card-head" style="border-left-color:${esc(p.color||'#7c6ef5')}">
+          <div class="proj-card-top">
+            <div class="proj-title">${esc(p.title)}</div>
+            <span class="status-badge ${esc(p.status||'active')}">${{'active':'Attivo','paused':'In pausa','done':'Fatto'}[p.status||'active']||esc(p.status)}</span>
+          </div>
+          <div class="proj-client">${p.client?'👤 '+esc(p.client):''}</div>
+          ${p.description?`<div class="proj-desc">${esc(p.description)}</div>`:''}
+        </div>
+        <div class="proj-tasks">
+          ${(p.tasks||[]).map(t=>`
+            <div class="proj-task-row">
+              <div class="proj-task-cb ${t.done?'done':''}" onclick="toggleProjTask('${esc(p.id)}','${esc(t.id)}')"></div>
+              <span class="proj-task-text ${t.done?'done':''}">${esc(t.text)}</span>
+              <button class="btn-del" onclick="deleteProjTask('${esc(p.id)}','${esc(t.id)}')">🗑</button>
+            </div>`).join('')}
+          ${!(p.tasks||[]).length?`<div class="empty-sm">Nessun task.</div>`:''}
+        </div>
+        <div class="proj-add-task">
+          <input placeholder="Aggiungi task…" id="pt-${esc(p.id)}" onkeydown="if(event.key==='Enter')addProjTask('${esc(p.id)}')"/>
+          <button onclick="addProjTask('${esc(p.id)}')">+</button>
+        </div>
+        <div style="padding:8px 16px;border-top:1px solid var(--line2);text-align:right">
+          <button onclick="deleteProject('${esc(p.id)}')" style="font-size:11px;color:var(--t2);background:none;border:none;cursor:pointer;padding:2px 6px">🗑 Elimina progetto</button>
+        </div>
+      </div>`;
+    page.innerHTML = `
+      <div class="fw-section">
+        <div class="fw-head">
+          <span class="fw-title">🗂️ Progetti</span>
+          ${pd.length?`<span class="fw-count">${pd.length}</span>`:''}
+          <button onclick="toggleAddProject()" style="margin-left:auto;padding:6px 14px;border-radius:8px;border:1px solid var(--line);background:transparent;color:var(--t1);cursor:pointer;font-size:12px">+ Nuovo progetto</button>
+        </div>
+        <div id="add-project-form" style="display:none" class="card">
+          <div style="padding:16px 18px;display:flex;flex-direction:column;gap:10px">
+            <div style="display:flex;gap:10px;flex-wrap:wrap">
+              <input id="np-title" placeholder="Nome progetto" style="flex:2;background:var(--s2);border:1px solid var(--line);border-radius:8px;color:var(--t0);padding:8px 12px;font-size:13px;outline:none;min-width:160px"/>
+              <input id="np-client" placeholder="Cliente" style="flex:1;background:var(--s2);border:1px solid var(--line);border-radius:8px;color:var(--t0);padding:8px 12px;font-size:13px;outline:none;min-width:120px"/>
+            </div>
+            <input id="np-desc" placeholder="Descrizione (opzionale)" style="background:var(--s2);border:1px solid var(--line);border-radius:8px;color:var(--t0);padding:8px 12px;font-size:13px;outline:none;width:100%"/>
+            <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">
+              <span style="font-size:11px;color:var(--t2);font-weight:700;text-transform:uppercase;letter-spacing:.06em">Colore</span>
+              <div class="color-pick" id="np-color-pick">
+                ${PRESET_COLORS.map((c,i)=>`<div class="color-swatch ${i===0?'sel':''}" style="background:${c}" data-color="${c}" onclick="selectColor(this)"></div>`).join('')}
+              </div>
+              <button onclick="saveNewProject()" style="margin-left:auto;padding:8px 18px;border-radius:8px;border:none;background:var(--accent);color:#fff;font-size:13px;font-weight:600;cursor:pointer">Crea progetto</button>
+            </div>
+          </div>
+        </div>
+        ${pd.length ? `<div class="proj-grid">${pd.map(projCard).join('')}</div>` : `<div class="card"><div class="empty"><div class="ei">🗂️</div>Nessun progetto ancora.<br/>Clicca <strong>+ Nuovo progetto</strong> per iniziare.</div></div>`}
+      </div>`;
+    _syncReflectBtn();
+    return;
+  }
 
   // ── SECTION: CRESCITA (full width) ──
   if (section==='growth') {
@@ -614,7 +908,7 @@ function render() {
           </div>
         </div>
       </div>`;
-    _restorePanel();
+    _restorePanel(); _syncReflectBtn();
     return;
   }
 
@@ -903,6 +1197,7 @@ function render() {
     </div>`;
 
   _restorePanel();
+  _syncReflectBtn();
 }
 
 // ── Row builders ───────────────────────────────────────────────────────────
@@ -925,6 +1220,7 @@ function tkRow(t, st) {
     <div class="tk-acts">
       ${aps.length?`<button class="btn-exp" id="ex-${esc(t.id)}" onclick="expandTask('${esc(t.id)}')">⌄</button>`:''}
       <button class="btn-circle ${st.done?'done':''}" onclick="toggleDone('${esc(t.id)}','task')">${st.done?'✓':''}</button>
+      <button class="btn-circle" onclick="startFocus('${esc(t.id)}',${JSON.stringify(esc(t.title))})" title="Focus timer" style="font-size:11px">⏱</button>
     </div>
   </div>`;
 }
@@ -1000,6 +1296,8 @@ function _restorePanel() {
 // ── Navigation ─────────────────────────────────────────────────────────────
 function nav(s, _el) {
   section = s;
+  if (s === 'month' && !monthData) { loadMonth(); return; }
+  if (s === 'projects' && !projectsData) { loadProjects(); return; }
   render();
   // Sync bottom nav
   document.querySelectorAll('.bn-item').forEach(b => b.classList.toggle('on', b.dataset.sec === s));
@@ -1232,6 +1530,219 @@ function urlBase64ToUint8Array(base64String) {
 
 // Auto-subscribe push after page loads (only asks once if not already granted)
 window.addEventListener('load', () => setTimeout(subscribePush, 3000));
+
+// ── Month ──────────────────────────────────────────────────────────────────
+async function loadMonth() {
+  const ym = TODAY.slice(0,7);
+  try {
+    const r = await fetch(`/api/month/${ym}`, {credentials:'include'});
+    const d = await r.json();
+    monthData = { kpis: d.kpis||[], objectives: d.objectives||[], completedItems: d.completedItems||0, totalItems: d.totalItems||0 };
+  } catch { monthData = {kpis:[],objectives:[],completedItems:0,totalItems:0}; }
+  render();
+  document.querySelectorAll('.bn-item').forEach(b => b.classList.toggle('on', b.dataset.sec === 'month'));
+}
+async function addKpi() {
+  const name = document.getElementById('kpi-name')?.value?.trim();
+  const target = parseFloat(document.getElementById('kpi-target')?.value) || 0;
+  const unit = document.getElementById('kpi-unit')?.value?.trim() || '';
+  if (!name) return;
+  const ym = TODAY.slice(0,7);
+  const r = await fetch(`/api/month/${ym}/kpi`, {method:'POST',credentials:'include',headers:{'Content-Type':'application/json'},body:JSON.stringify({name,target,current:0,unit})});
+  const d = await r.json();
+  if (!monthData.kpis) monthData.kpis = [];
+  monthData.kpis.push(d.kpi || {id:d.id,name,target,current:0,unit});
+  render();
+}
+async function kpiStep(id, delta) {
+  const ym = TODAY.slice(0,7);
+  const kpi = monthData?.kpis?.find(k=>k.id===id); if(!kpi) return;
+  kpi.current = Math.max(0, (kpi.current||0) + delta);
+  render();
+  await fetch(`/api/month/${ym}/kpi/${id}`, {method:'PATCH',credentials:'include',headers:{'Content-Type':'application/json'},body:JSON.stringify({current:kpi.current})});
+}
+async function deleteKpi(id) {
+  const ym = TODAY.slice(0,7);
+  monthData.kpis = monthData.kpis.filter(k=>k.id!==id);
+  render();
+  await fetch(`/api/month/${ym}/kpi/${id}`, {method:'DELETE',credentials:'include'});
+}
+async function addObjective() {
+  const name = document.getElementById('obj-name')?.value?.trim();
+  if (!name) return;
+  const ym = TODAY.slice(0,7);
+  const r = await fetch(`/api/month/${ym}/objective`, {method:'POST',credentials:'include',headers:{'Content-Type':'application/json'},body:JSON.stringify({name,status:'todo'})});
+  const d = await r.json();
+  if (!monthData.objectives) monthData.objectives = [];
+  monthData.objectives.push(d.objective || {id:d.id,name,status:'todo'});
+  render();
+}
+async function cycleObjStatus(id) {
+  const ym = TODAY.slice(0,7);
+  const obj = monthData?.objectives?.find(o=>o.id===id); if(!obj) return;
+  const cycle = {todo:'in-progress','in-progress':'done',done:'todo'};
+  obj.status = cycle[obj.status||'todo'];
+  render();
+  await fetch(`/api/month/${ym}/objective/${id}`, {method:'PATCH',credentials:'include',headers:{'Content-Type':'application/json'},body:JSON.stringify({status:obj.status})});
+}
+async function deleteObjective(id) {
+  const ym = TODAY.slice(0,7);
+  monthData.objectives = monthData.objectives.filter(o=>o.id!==id);
+  render();
+  await fetch(`/api/month/${ym}/objective/${id}`, {method:'DELETE',credentials:'include'});
+}
+
+// ── Projects ───────────────────────────────────────────────────────────────
+async function loadProjects() {
+  try {
+    const r = await fetch('/api/projects', {credentials:'include'});
+    const d = await r.json();
+    projectsData = Array.isArray(d) ? d : (d.projects || []);
+  } catch { projectsData = []; }
+  render();
+  document.querySelectorAll('.bn-item').forEach(b => b.classList.toggle('on', b.dataset.sec === 'projects'));
+}
+function toggleAddProject() {
+  const f = document.getElementById('add-project-form');
+  if (f) f.style.display = f.style.display === 'none' ? '' : 'none';
+}
+function selectColor(el) {
+  document.querySelectorAll('#np-color-pick .color-swatch').forEach(s=>s.classList.remove('sel'));
+  el.classList.add('sel');
+}
+async function saveNewProject() {
+  const title = document.getElementById('np-title')?.value?.trim();
+  if (!title) return;
+  const client = document.getElementById('np-client')?.value?.trim() || '';
+  const description = document.getElementById('np-desc')?.value?.trim() || '';
+  const colorEl = document.querySelector('#np-color-pick .color-swatch.sel');
+  const color = colorEl?.dataset.color || '#7c6ef5';
+  const r = await fetch('/api/projects', {method:'POST',credentials:'include',headers:{'Content-Type':'application/json'},body:JSON.stringify({title,client,color,status:'active',description})});
+  const d = await r.json();
+  projectsData.push(d.project || {id:d.id,title,client,color,status:'active',description,tasks:[]});
+  render();
+}
+async function addProjTask(pid) {
+  const inp = document.getElementById(`pt-${pid}`);
+  const text = inp?.value?.trim(); if (!text) return;
+  const r = await fetch(`/api/projects/${pid}/task`, {method:'POST',credentials:'include',headers:{'Content-Type':'application/json'},body:JSON.stringify({text})});
+  const d = await r.json();
+  const proj = projectsData?.find(p=>p.id===pid); if(!proj) return;
+  if (!proj.tasks) proj.tasks = [];
+  proj.tasks.push(d.task || {id:d.id,text,done:false});
+  render();
+}
+async function toggleProjTask(pid, tid) {
+  const proj = projectsData?.find(p=>p.id===pid); if(!proj) return;
+  const task = proj.tasks?.find(t=>t.id===tid); if(!task) return;
+  task.done = !task.done;
+  render();
+  await fetch(`/api/projects/${pid}/task/${tid}`, {method:'PATCH',credentials:'include',headers:{'Content-Type':'application/json'},body:JSON.stringify({done:task.done})});
+}
+async function deleteProjTask(pid, tid) {
+  const proj = projectsData?.find(p=>p.id===pid); if(!proj) return;
+  proj.tasks = (proj.tasks||[]).filter(t=>t.id!==tid);
+  render();
+  await fetch(`/api/projects/${pid}/task/${tid}`, {method:'DELETE',credentials:'include'});
+}
+async function deleteProject(pid) {
+  if (!confirm('Eliminare il progetto?')) return;
+  projectsData = projectsData.filter(p=>p.id!==pid);
+  render();
+  await fetch(`/api/projects/${pid}`, {method:'DELETE',credentials:'include'});
+}
+
+// ── Evening Reflection ─────────────────────────────────────────────────────
+function openReflection() {
+  const m = document.getElementById('reflect-modal');
+  if (!m) return;
+  // Pre-fill if reflection exists
+  if (dayData?.reflection) {
+    try {
+      const rf = typeof dayData.reflection === 'string' ? JSON.parse(dayData.reflection) : dayData.reflection;
+      if (rf.wins) document.getElementById('rf-wins').value = rf.wins;
+      if (rf.challenges) document.getElementById('rf-challenges').value = rf.challenges;
+      if (rf.gratitude) document.getElementById('rf-gratitude').value = rf.gratitude;
+      if (rf.energy) setEnergy(rf.energy);
+    } catch { document.getElementById('rf-wins').value = dayData.reflection; }
+  }
+  m.style.display = 'flex';
+}
+function closeReflection() {
+  document.getElementById('reflect-modal').style.display = 'none';
+}
+function setEnergy(n) {
+  _reflectEnergy = n;
+  document.querySelectorAll('.ebtn').forEach(b => b.classList.toggle('sel', parseInt(b.dataset.e)===n));
+}
+async function saveReflection() {
+  const wins = document.getElementById('rf-wins')?.value || '';
+  const challenges = document.getElementById('rf-challenges')?.value || '';
+  const gratitude = document.getElementById('rf-gratitude')?.value || '';
+  const energy = _reflectEnergy;
+  const payload = {wins, challenges, gratitude, energy};
+  if (dayData) dayData.reflection = payload;
+  closeReflection();
+  document.getElementById('reflect-btn')?.classList.add('done-state');
+  await fetch(`/api/day/${TODAY}/reflection`, {method:'POST',credentials:'include',headers:{'Content-Type':'application/json'},body:JSON.stringify({wins,challenges,gratitude,energy,reflection:JSON.stringify(payload)})});
+}
+// Mark reflection button done if reflection already saved
+function _syncReflectBtn() {
+  const btn = document.getElementById('reflect-btn');
+  if (!btn) return;
+  const r = dayData?.reflection;
+  const hasDone = r && (typeof r === 'string' ? r !== '' : (r.wins || r.challenges || r.gratitude || r.energy));
+  if (hasDone) btn.classList.add('done-state');
+  else btn.classList.remove('done-state');
+}
+// Call after loadDay
+const _origLoadDay = loadDay;
+
+// ── Focus Timer ────────────────────────────────────────────────────────────
+function startFocus(id, title) {
+  if (_focusTimer) clearInterval(_focusTimer);
+  _focusTask = {id, title};
+  _focusRemaining = 25 * 60;
+  _focusPaused = false;
+  _updateFocusBar();
+  document.getElementById('focus-bar').style.display = 'flex';
+  document.getElementById('focus-pause-btn').textContent = '⏸';
+  _focusTimer = setInterval(_focusTick, 1000);
+}
+function _focusTick() {
+  if (_focusPaused) return;
+  _focusRemaining--;
+  _updateFocusBar();
+  if (_focusRemaining <= 0) {
+    clearInterval(_focusTimer); _focusTimer = null;
+    document.getElementById('focus-bar').style.display = 'none';
+    const flash = document.createElement('div');
+    flash.className = 'focus-flash';
+    flash.textContent = '✅ Focus completato!';
+    document.body.appendChild(flash);
+    setTimeout(() => flash.remove(), 3000);
+  }
+}
+function _updateFocusBar() {
+  const mins = Math.floor(_focusRemaining/60);
+  const secs = _focusRemaining % 60;
+  const timeEl = document.getElementById('focus-time');
+  const nameEl = document.getElementById('focus-task-name');
+  const pbEl = document.getElementById('focus-pb-fill');
+  if (timeEl) timeEl.textContent = `${String(mins).padStart(2,'0')}:${String(secs).padStart(2,'0')}`;
+  if (nameEl) nameEl.textContent = _focusTask?.title ? (_focusTask.title.length>35?_focusTask.title.slice(0,35)+'…':_focusTask.title) : '—';
+  if (pbEl) pbEl.style.width = `${Math.round(_focusRemaining/(25*60)*100)}%`;
+}
+function toggleFocusPause() {
+  _focusPaused = !_focusPaused;
+  const btn = document.getElementById('focus-pause-btn');
+  if (btn) btn.textContent = _focusPaused ? '▶' : '⏸';
+}
+function stopFocus() {
+  if (_focusTimer) { clearInterval(_focusTimer); _focusTimer = null; }
+  document.getElementById('focus-bar').style.display = 'none';
+  _focusTask = null;
+}
 </script>
 </body>
 </html>

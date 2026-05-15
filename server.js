@@ -397,7 +397,12 @@ app.post('/api/day/:date/item/:id', (req, res) => {
 app.post('/api/day/:date/reflection', (req, res) => {
   const db = readDB();
   const day = ensureDay(db, req.params.date);
-  day.reflection = req.body.reflection || '';
+  const { wins, challenges, gratitude, energy, reflection } = req.body;
+  if (wins !== undefined || challenges !== undefined || gratitude !== undefined || energy !== undefined) {
+    day.reflection = { wins: wins||'', challenges: challenges||'', gratitude: gratitude||'', energy: energy||0 };
+  } else {
+    day.reflection = reflection || '';
+  }
   writeDB(db);
   res.json({ ok: true });
 });
