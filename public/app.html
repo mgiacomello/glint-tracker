@@ -378,13 +378,30 @@
     .st-btn-later { padding: 4px 11px; border-radius: 7px; font-size: 11px; font-weight: 600; background: transparent; border: 1px solid var(--line); color: var(--t2); cursor: pointer; transition: all .12s; }
     .st-btn-later:hover { background: rgba(255,255,255,.05); color: var(--t1); }
 
+    /* ── ENERGY SCHEDULE ── */
+    .es-card { grid-column: span 3; }
+    .es-slots { display: flex; flex-direction: column; gap: 8px; }
+    .es-slot { display: flex; gap: 10px; align-items: flex-start; padding: 10px 12px; border-radius: 10px; background: var(--s3); border: 1px solid var(--line); }
+    .es-bar { width: 4px; border-radius: 4px; flex-shrink: 0; min-height: 42px; align-self: stretch; }
+    .es-meta { display: flex; flex-direction: column; gap: 3px; flex: 1; min-width: 0; }
+    .es-header { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+    .es-time { font-size: 11px; font-weight: 700; color: var(--t2); font-family: 'JetBrains Mono', monospace; min-width: 40px; }
+    .es-dur { font-size: 10px; color: var(--t2); background: var(--s2); border-radius: 4px; padding: 1px 6px; }
+    .es-label { font-size: 12px; font-weight: 700; color: var(--t0); flex: 1; }
+    .es-tasks { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 3px; }
+    .es-task { font-size: 11px; color: var(--t1); background: rgba(255,255,255,.05); border: 1px solid var(--line); border-radius: 5px; padding: 2px 8px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 220px; }
+    .es-reason { font-size: 11px; color: var(--t2); line-height: 1.4; margin-top: 3px; }
+    .es-insight { font-size: 10px; font-weight: 600; color: #a78bfa; margin-top: 3px; }
+
     @media (max-width: 860px) {
+      .es-card { grid-column: span 2; }
       .bento { grid-template-columns: 1fr 1fr; }
       .bc.s2, .bc.s3 { grid-column: span 2; }
       .hero-kpis { grid-template-columns: auto 1fr 1fr; }
       .tb-context { display: none; }
     }
     @media (max-width: 600px) {
+      .es-card { grid-column: span 1; }
       .bento { grid-template-columns: 1fr; }
       .bc.s2, .bc.s3 { grid-column: span 1; }
       .page { padding: 14px 14px 80px; gap: 14px; }
@@ -1323,6 +1340,36 @@ function render() {
               ${mf.location?`<div class="momento-meta">📍 ${esc(mf.location)}</div>`:''}
             </div>
           </div>
+        </div>`;
+      })()}
+
+      ${(()=>{
+        const slots = ins?.energySchedule || [];
+        if (!slots.length) return '';
+        const energyColors = { peak:'#7c6ef5', high:'#00d084', medium:'#f59e0b', low:'#94a3b8', recovery:'#64748b' };
+        const slotsHtml = slots.map(s => {
+          const color = s.color || energyColors[s.energyLevel] || '#7c6ef5';
+          const tasks = (s.tasks||[]).slice(0,3);
+          return `<div class="es-slot">
+            <div class="es-bar" style="background:${esc(color)}"></div>
+            <div class="es-meta">
+              <div class="es-header">
+                <span class="es-time">${esc(s.time||'')}</span>
+                ${s.duration?`<span class="es-dur">${esc(String(s.duration))}min</span>`:''}
+                <span class="es-label">${esc(s.label||'')}</span>
+              </div>
+              ${tasks.length?`<div class="es-tasks">${tasks.map(t=>`<span class="es-task">${esc(t)}</span>`).join('')}</div>`:''}
+              ${s.reason?`<div class="es-reason">${esc(s.reason)}</div>`:''}
+              ${s.ouraInsight?`<div class="es-insight">⚡ ${esc(s.ouraInsight)}</div>`:''}
+            </div>
+          </div>`;
+        }).join('');
+        return `<div class="bc es-card">
+          <div class="bc-head">
+            <span class="bc-title">⚡ Piano Energia del Giorno</span>
+            <span class="bc-badge">${slots.length} slot</span>
+          </div>
+          <div class="es-slots">${slotsHtml}</div>
         </div>`;
       })()}
 

@@ -1146,6 +1146,70 @@ Rispondi SOLO con JSON array.`;
     emit(`  ↳ ✅ ${proactiveActions.length} suggerimenti Proactive AI generati`);
   } catch(e) { emit(`  ↳ Proactive AI skip: ${e.message?.slice(0,80)}`); }
 
+  // ── STEP 6g: Energy-aware daily schedule ──────────────────────────────────────
+  let energySchedule = [];
+  try {
+    const readiness  = health?.readinessScore || health?.readinessScore || null;
+    const sleepScore = health?.sleepScore || null;
+    const hrv        = health?.hrv || null;
+    const sleepH     = health?.totalSleepMin ? (health.totalSleepMin / 60).toFixed(1) : null;
+    const stressN    = health?.stressLevel || null;
+
+    if (readiness || sleepScore) {
+      emit('[6g] Generazione piano energia giornaliero...');
+      const taskList = result.tasks
+        .filter(t => !saveDb.days[date]?.items?.[t.id]?.done)
+        .slice(0, 10)
+        .map(t => `"${t.title}" (${t.priority || t.quadrant})`).join(', ');
+      const meetingList = calendarEvents.map(e => `${e.time} ${e.title}`).join(', ') || 'nessuno';
+
+      const schedulePrompt = `Sei il performance coach di ${settings.userName||'Marco'}.
+
+DATI BIOMETRICI DI OGGI (da Oura Ring):
+- Readiness Score: ${readiness||'?'}/100
+- Sleep Score: ${sleepScore||'?'}/100
+- HRV: ${hrv||'?'} ms
+- Ore di sonno: ${sleepH||'?'}h
+- Stress level: ${stressN||'?'}
+- Tipo giornata: ${dayType.toUpperCase()}
+
+TASK DA COMPLETARE (da email/progetti):
+${taskList || 'nessuno'}
+
+RIUNIONI FISSE:
+${meetingList}
+
+Basandoti sui dati biometrici, crea un piano orario ottimale per la giornata di ${settings.userName||'Marco'}.
+Regole:
+- Readiness/HRV alti (>75) = finestra per deep work cognitivo al mattino
+- Readiness medio (55-75) = priorità a meeting e comunicazione, deep work breve
+- Readiness basso (<55) = solo task semplici, delega, recupero
+- Il picco cognitivo è tipicamente 2-4h dopo il risveglio
+- Post-pranzo (13:30-15:00) sempre zona di bassa energia
+- Slot Oura: specifica l'ora ESATTA suggerita per ogni attività
+
+Genera 5-7 slot orari. Formato JSON array:
+[{
+  "time": "09:00",
+  "duration": 90,
+  "energyLevel": "peak|high|medium|low|recovery",
+  "label": "🧠 Picco Cognitivo",
+  "color": "#7c6ef5",
+  "tasks": ["titolo task 1", "titolo task 2"],
+  "reason": "1 frase: perché questo slot per questi task (cita i valori biometrici specifici)",
+  "ouraInsight": "insight biometrico specifico breve (es. HRV 65ms → resilienza alta)"
+}]
+SOLO JSON array.`;
+
+      const schedText = await aiCall(aiKeys, schedulePrompt, 2000);
+      energySchedule = safeJsonParse(schedText, []);
+      if (!Array.isArray(energySchedule)) energySchedule = [];
+      emit(`  ↳ ✅ ${energySchedule.length} slot piano energia generati`);
+    } else {
+      emit('[6g] Piano energia: dati Oura non disponibili, skip');
+    }
+  } catch(e) { emit(`  ↳ Piano energia skip: ${e.message?.slice(0,80)}`); }
+
   // ── STEP 6f: Spotify playlists ────────────────────────────────────────────────
   let spotifyPlaylists = [];
   try {
@@ -1162,7 +1226,7 @@ SOLO JSON array.`, 500);
   } catch(e) { spotifyPlaylists = []; }
 
   const syncedAt = new Date().toISOString();
-  saveDb.days[date].insights        = { dayType, growthBrief, contextualIntelligence, intelligenceFeed, driveFiles, studyItems, proactiveActions, spotifyPlaylists };
+  saveDb.days[date].insights        = { dayType, growthBrief, contextualIntelligence, intelligenceFeed, driveFiles, studyItems, proactiveActions, spotifyPlaylists, energySchedule };
   saveDb.days[date].family          = { alessandraEvents, tommasoAlerts, momentoFamiglia };
   saveDb.days[date].network         = { city: detectedCity, events: networkEvents };
   saveDb.days[date].localActivities = { city: detectedCity, items: localActivities };
@@ -1170,7 +1234,7 @@ SOLO JSON array.`, 500);
   // Persistenti cross-day: sopravvivono ai giorni successivi senza morning-agent
   saveDb.network         = { city: detectedCity, events: networkEvents, _refreshedAt: syncedAt };
   saveDb.localActivities = { city: detectedCity, items: localActivities, _refreshedAt: syncedAt };
-  saveDb.lastInsights    = { dayType, growthBrief, contextualIntelligence, intelligenceFeed, studyItems, proactiveActions, spotifyPlaylists, _refreshedAt: syncedAt };
+  saveDb.lastInsights    = { dayType, growthBrief, contextualIntelligence, intelligenceFeed, studyItems, proactiveActions, spotifyPlaylists, energySchedule, _refreshedAt: syncedAt };
   saveDb.lastFamily      = { alessandraEvents, tommasoAlerts, momentoFamiglia, _refreshedAt: syncedAt };
   saveDb.googleLastSync  = syncedAt;
   writeDBForUid(uid, saveDb);
