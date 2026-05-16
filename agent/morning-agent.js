@@ -712,18 +712,22 @@ EMAIL:\n${emailList}`, 32768);
         `EMAIL_${i+1} [id:${e.id}] [${e.category}]\nDa: ${e.from}\nOggetto: ${e.subject}\n${e.body}`
       ).join('\n\n---\n\n');
 
+      const marcoCtxStudy = `Marco è founder di Glint (AI executive tracker, B2C launch) e Sellrapido/Domopay (fintech startup, protezione marchio, integrazioni pagamenti). Sta anche negoziando un accordo franchise. Interessi chiave: AI applicata al business, fintech legal, startup growth, VC ecosystem, brand protection, product strategy B2C, wellness/biohacking.`;
+
       const studyText = await aiCall(aiKeys,
-        `Sei l'assistente personale di ${settings.userName||'Marco'}.
-Interessi: ${interests}.
+        `Sei il content curator personale di ${settings.userName||'Marco'}.
+${marcoCtxStudy}
+Interessi generali: ${interests}.
 Data oggi: ${date}.
 
 Analizza TUTTE queste email da Aggiornamenti, Social e Promozioni.
-Per OGNI email crea un record JSON:
-{"id":"SOLO_IL_CODICE_ID","title":"titolo o oggetto email","summary":"sintesi 1-2 frasi del contenuto","source":"nome newsletter o mittente","recommendation":"leggi|acquista|ignora|salva|iscriviti","category":"AI|business|tool|promo|social|news|evento|marketing|finanza|altro","priority":"high|medium|low","gmailCategory":"categoria Gmail originale","suggestedTime":"HH:MM (slot ideale nella giornata per questo contenuto, es 14:30 per lettura pomeridiana)","duration":15}
+Per OGNI email crea un record JSON con questi campi ESATTI:
+{"id":"SOLO_IL_CODICE_ID","title":"titolo editoriale (non l'oggetto email grezzo, ma un titolo che cattura il valore del contenuto)","summary":"sintesi 2-3 frasi del contenuto con focus su perché è rilevante per Marco","source":"nome newsletter o mittente","recommendation":"leggi|acquista|ignora|salva|iscriviti","category":"AI|business|fintech|legal|growth|tool|promo|social|news|evento|marketing|finanza|wellness|altro","priority":"high|medium|low","gmailCategory":"categoria Gmail originale","suggestedTime":"HH:MM (slot ideale, es 08:00 per lettura mattutina, 14:30 pomeridiana, 21:00 serale)","duration":15}
 
-HIGH = molto rilevante per gli interessi di Marco.
-MEDIUM = interessante ma non urgente.
-LOW = spam, promozioni banali, notifiche automatiche.
+PRIORITÀ:
+HIGH = direttamente rilevante per Glint, Sellrapido, franchise, AI business, fintech legal, brand protection
+MEDIUM = interessante per crescita professionale o wellness
+LOW = spam, promozioni banali, notifiche automatiche irrilevanti
 
 Includi TUTTE le email nell'array JSON. Rispondi SOLO con array JSON.
 
@@ -983,9 +987,10 @@ Return ONLY a valid JSON array. No text before or after.`;
     const spouseNameM = spouseMemberM?.name;
     if ((childNameM || spouseNameM) && detectedCity) {
       const mText = await aiCall(aiKeys,
-        `Suggerisci UN'attività specifica di qualità da fare con ${childNameM || spouseNameM} a ${detectedCity} oggi.
-Formato JSON: {"person":"${childNameM || spouseNameM}","icon":"🏛️","title":"Titolo attività concisa","description":"1-2 frasi","location":"quartiere/luogo specifico"}
-SOLO JSON oggetto.`, 300);
+        `Suggerisci UN'attività specifica di qualità da fare con ${childNameM ? childNameM+` (8 anni, curioso, ama scienza e sport)` : spouseNameM} a ${detectedCity}.
+L'attività deve essere concreta, disponibile oggi, adatta all'età se è con un bambino, e nel contesto di ${detectedCity}.
+Formato JSON: {"person":"${childNameM || spouseNameM}","icon":"🏛️","title":"Titolo attività breve","description":"1-2 frasi descrittive e motivanti","location":"quartiere o luogo specifico a ${detectedCity}"}
+SOLO JSON oggetto singolo.`, 400);
       momentoFamiglia = safeJsonParse(mText, null);
       if (Array.isArray(momentoFamiglia)) momentoFamiglia = momentoFamiglia[0] || null;
       if (momentoFamiglia) emit(`  ↳ Momento famiglia: ${momentoFamiglia.title}`);
@@ -1046,21 +1051,28 @@ SOLO JSON oggetto.`, 300);
     const travelCtx = detectedCity !== (settings.homeCity || '') ? `In viaggio: ${detectedCity}` : '';
     const networkCtx = networkEvents.slice(0, 2).map(e => e.title).join(', ');
 
+    const marcoProjects = `Progetti attivi di ${settings.userName||'Marco'}:
+- Glint: app AI executive tracker (questo tool) — fase B2C, crescita utenti
+- Sellrapido/Domopay: startup fintech pagamenti — integrazione in corso, marchio in protezione legale
+- Draft Accordo Franchise: in bozza, milestone imminenti
+- Contesto: founder-level, investor relations attive, pendolante Milano↔London`;
+
     const contextPrompt = `Sei l'AI chief of staff di ${settings.userName || 'Marco'}.
+${marcoProjects}
 Data: ${date} · Tipo giornata: ${dayType.toUpperCase()} · Riunioni: ${calendarEvents.length} · Location: ${detectedCity}
 Salute: ${sleepInfo}
-Task CRITICI: ${critici || 'nessuno'}
+Task CRITICI oggi: ${critici || 'nessuno'}
 Task HIGH: ${highTasks || 'nessuno'}
-${familyCtx ? 'Famiglia: ' + familyCtx : ''}
+${familyCtx ? 'Famiglia oggi: ' + familyCtx : ''}
 ${travelCtx}
 ${networkCtx ? 'Network oggi: ' + networkCtx : ''}
-${studyItems.length ? 'Top newsletter: ' + studyItems.slice(0,2).map(s=>s.title).join(', ') : ''}
+${studyItems.length ? 'Top segnali dal mercato: ' + studyItems.slice(0,3).map(s=>s.title).join(', ') : ''}
 
 Scrivi 2 output separati:
 
-1) INTELLIGENCE_FEED: UNA sola frase (max 120 caratteri) che cattura la priorità assoluta del giorno. Esempio: "Oggi la priorità è [azione specifica] che richiede [contesto]." Senza virgolette.
+1) INTELLIGENCE_FEED: UNA sola frase (max 130 caratteri) che cattura la priorità assoluta del giorno, collegata ai progetti reali di Marco. Diretta e specifica. Senza virgolette.
 
-2) CONTEXTUAL_INTELLIGENCE: Analisi esecutiva di 4-6 frasi in italiano. Sintetizza il quadro reale della giornata integrando: task critici specifici, condizione fisica, contesto familiare/location se rilevante, opportunità di network. Parla direttamente dei fatti senza "ti consiglio". Concreto, specifico, niente generic coaching.
+2) CONTEXTUAL_INTELLIGENCE: Analisi esecutiva di 4-6 frasi in italiano. Integra: task critici specifici con nome, condizione fisica e impatto su performance, contesto familiare/location se rilevante, connessioni tra progetti (es. come un task Sellrapido impatta il franchise o viceversa). Parla direttamente dei fatti, usa i nomi reali dei progetti. Niente generic coaching, zero frasi vaghe.
 
 Formato risposta:
 INTELLIGENCE_FEED: [testo]
@@ -1093,30 +1105,32 @@ CONTEXTUAL_INTELLIGENCE: [testo]`;
     const hourNow = new Date().getHours();
     const timeCtx = hourNow < 10 ? 'mattina presto' : hourNow < 14 ? 'mattina/pranzo' : hourNow < 18 ? 'pomeriggio' : 'sera';
 
+    const marcoCtxPA = `Marco è founder/CEO di Glint (B2C launch in corso) e Sellrapido/Domopay (fintech, brand in protezione). Ha un Draft Accordo Franchise da finalizzare. Opera tra Milano e London. Usa Oura per il recovery.`;
+
     const paPrompt = `Sei il Proactive AI chief of staff di ${settings.userName||'Marco'}.
-Data: ${date} · Ora: ${timeCtx} · Location: ${detectedCity}
+${marcoCtxPA}
+Data: ${date} · Ora: ${timeCtx} · Location: ${detectedCity} · Tipo giornata: ${dayType}
 Health Recovery: ${healthScore ? healthScore+'/100' : 'non disponibile'}
 Task pendenti critici: ${pendingTasks.map(t=>`"${t.title}" (${t.priority||t.quadrant})`).join(', ')||'nessuno'}
 Riunioni oggi: ${calendarEvents.length}
 
-Genera 4-5 suggerimenti proattivi SPECIFICI e CONTESTUALI per ${settings.userName||'Marco'}. Ogni suggerimento deve:
-- Essere collegato a un task o evento REALE della lista
-- Considerare la recovery/salute attuale
-- Avere un'azione concreta
-- Essere tempificato (slot orario suggerito)
+Genera 4-5 suggerimenti proattivi IPER-SPECIFICI per ${settings.userName||'Marco'}. Ogni suggerimento deve:
+- Fare riferimento ESPLICITO a un suo progetto reale (Glint, Sellrapido, franchise, salute Oura, famiglia)
+- Considerare la recovery attuale e il tipo di giornata per calibrare l'intensità
+- Proporre un'azione concreta e tempificata realistica
 
 Formato JSON array:
 [{
   "id":"pa-1",
   "icon":"🧠",
-  "title":"Titolo breve (max 40 car)",
-  "description":"2-3 frasi: perché ora, perché è rilevante per salute/task, cosa fare concretamente",
+  "title":"Titolo breve (max 45 car) con nome progetto",
+  "description":"2-3 frasi: perché ora, impatto specifico sul progetto, cosa fare concretamente",
   "actionType":"azione|sposta|aggiungi|ascolta",
   "actionLabel":"✨ Azione",
   "suggestedTime":"HH:MM",
   "duration":30,
-  "healthScore":${healthScore||50},
-  "taskRef":"nome task collegato se esiste"
+  "healthScore":${healthScore||60},
+  "taskRef":"nome task/progetto collegato"
 }]
 
 Rispondi SOLO con JSON array.`;

@@ -1306,6 +1306,26 @@ function render() {
         </div>`;
       })()}
 
+      ${(()=>{
+        const fam = dayData?.family || {};
+        const mf = fam.momentoFamiglia || null;
+        if (!mf) return '';
+        return `<div class="bc">
+          <div class="bc-head">
+            <span class="bc-title">❤️ Momento ${esc(mf.person||'Famiglia')}</span>
+            <button onclick="nav('family', document.querySelector('.tnav:nth-child(5)'))" style="margin-left:auto;padding:3px 10px;border-radius:6px;border:1px solid var(--line);background:transparent;color:var(--t2);font-size:11px;cursor:pointer">Apri →</button>
+          </div>
+          <div class="momento-card" style="border-bottom:none">
+            <span class="momento-icon">${esc(mf.icon||'❤️')}</span>
+            <div class="momento-body">
+              <div class="momento-title">${esc(mf.title)}</div>
+              <div class="momento-desc">${esc(mf.description||'')}</div>
+              ${mf.location?`<div class="momento-meta">📍 ${esc(mf.location)}</div>`:''}
+            </div>
+          </div>
+        </div>`;
+      })()}
+
     </div>`;
 
   // Update header context line
@@ -1367,7 +1387,11 @@ function stRow(s, idx) {
         ${s.category?`<span class="stag cat">${esc(s.category)}</span>`:''}
         ${s.gmailCategory?`<span class="stag gmail">${esc(s.gmailCategory)}</span>`:''}
       </div>
-      ${s.link?`<div class="st-actions"><a href="${esc(s.link)}" target="_blank" class="st-btn-play">▶ Ascolta/Guarda</a><button class="st-btn-later" onclick="toggleStudy(${idx})">Dopo</button></div>`:''}
+      ${(()=>{
+  const lbl = s.category==='AI'||s.category==='tech'?'🤖 Leggi':s.category==='podcast'||s.category==='audio'?'🎧 Ascolta':s.category==='video'?'▶ Guarda':s.category==='finanza'||s.category==='legal'||s.category==='Legal'?'⚖️ Leggi':s.category==='business'||s.category==='Growth'?'📈 Leggi':'📖 Apri';
+  const href = s.contentUrl||s.link;
+  return href?`<div class="st-actions"><a href="${esc(href)}" target="_blank" class="st-btn-play">${lbl}</a><button class="st-btn-later" onclick="toggleStudy(${idx})">Dopo</button></div>`:'<div class="st-actions"><button class="st-btn-later" onclick="toggleStudy(${idx})">Dopo</button></div>';
+})()}
     </div>
     <button class="btn-circle ${s.done?'done':''}" style="margin-top:2px;flex-shrink:0" onclick="toggleStudy(${idx})">${s.done?'✓':''}</button>
   </div>`;
@@ -1383,6 +1407,7 @@ function stRowCompact(s, idx) {
         <span class="stag ${s.priority||'medium'}">${s.priority||'medium'}</span>
         ${s.category?`<span class="stag cat">${esc(s.category)}</span>`:''}
       </div>
+      <div class="st-actions"><button class="st-btn-later" onclick="toggleStudy(${idx})">Dopo</button></div>
     </div>
     <button class="btn-circle ${s.done?'done':''}" style="margin-top:2px;flex-shrink:0" onclick="toggleStudy(${idx})">${s.done?'✓':''}</button>
   </div>`;
@@ -1420,9 +1445,24 @@ function acceptPA(i) {
   dismissPA(i);
 }
 
-function refreshProactiveAI() {
-  if (!confirm('Rigenero i suggerimenti Proactive AI con il briefing completo?')) return;
-  runAgent(false);
+async function refreshProactiveAI() {
+  if (!confirm('Rigenero i suggerimenti Proactive AI?')) return;
+  const btn = document.querySelector('[onclick="refreshProactiveAI()"]');
+  if (btn) { btn.disabled = true; btn.textContent = '⏳'; }
+  try {
+    const r = await fetch(`/api/day/${TODAY}/proactive`, { method: 'POST', credentials: 'include', headers: { 'Content-Type': 'application/json' } });
+    if (!r.ok) throw new Error(`HTTP ${r.status}`);
+    const d = await r.json();
+    if (d.proactiveActions && dayData?.insights) {
+      dayData.insights.proactiveActions = d.proactiveActions;
+      render();
+      showToast(`${d.proactiveActions.length} suggerimenti aggiornati ✓`);
+    }
+  } catch(e) {
+    showToast('Errore refresh PA: ' + e.message);
+  } finally {
+    if (btn) { btn.disabled = false; btn.textContent = '⟳ Check'; }
+  }
 }
 
 function netRow(e) {

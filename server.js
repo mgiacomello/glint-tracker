@@ -3390,6 +3390,96 @@ app.post('/api/morning-agent/:date/run', async (req, res) => {
   res.end();
 });
 
+// POST /api/day/:date/proactive  → lightweight Proactive AI refresh (no full agent)
+app.post('/api/day/:date/proactive', async (req, res) => {
+  const uid = getCurrentUid();
+  if (!uid) return res.status(401).json({ error: 'Non autenticato' });
+  const date = req.params.date;
+  const cfg = readConfig();
+  if (!cfg.anthropicApiKey && !cfg.geminiApiKey && !cfg.groqApiKey) return res.status(400).json({ error: 'API AI non configurata' });
+
+  try {
+    const db = readDB();
+    const users = readUsers();
+    const user = users[uid] || {};
+    const settings = { ...DEFAULT_SETTINGS, userName: user.name || '', ...(db.userSettings || {}) };
+    const day = db.days?.[date] || {};
+    const health = day.health || db.lastOura || null;
+    const tasks = (day.tasks || []).filter(t => !day.items?.[t.id]?.done).slice(0, 8);
+    const events = day.events || [];
+    const insights = day.insights || db.lastInsights || {};
+    const userName = settings.userName || 'Marco';
+    const detectedCity = day.network?.city || settings.homeCity || 'Milano';
+
+    const { makeAIClient } = require('./agent/morning-agent');
+    const aiKeys = { anthropicApiKey: cfg.anthropicApiKey, geminiApiKey: cfg.geminiApiKey, groqApiKey: cfg.groqApiKey };
+    const claude = makeAIClient(aiKeys);
+
+    function safeJsonParse(text, fallback) {
+      try {
+        const s = text.replace(/```json\n?/gi,'').replace(/```\n?/gi,'').trim();
+        return JSON.parse(s);
+      } catch { return fallback; }
+    }
+
+    const healthScore = health?.readinessScore || health?.sleepScore || null;
+    const hourNow = new Date().getHours();
+    const timeCtx = hourNow < 10 ? 'mattina presto' : hourNow < 14 ? 'mattina/pranzo' : hourNow < 18 ? 'pomeriggio' : 'sera';
+    const dayType = insights.dayType || 'focus';
+
+    const marcoCtx = `Marco è founder/CEO di Glint (AI executive tracker) e Sellrapido/Domopay (fintech payments startup). Ha un accordo franchise in bozza. Opera tra Milano e London. Usa Oura Ring per la salute.`;
+
+    const paPrompt = `Sei il Proactive AI chief of staff di ${userName}.
+${marcoCtx}
+Data: ${date} · Ora: ${timeCtx} · Location: ${detectedCity} · Tipo giornata: ${dayType}
+Health Recovery: ${healthScore ? healthScore+'/100' : 'non disponibile'}
+Task pendenti: ${tasks.slice(0,6).map(t=>`"${t.title}"`).join(', ')||'nessuno'}
+Riunioni oggi: ${events.length}
+
+Genera 4-5 suggerimenti proattivi SPECIFICI e CONTESTUALI per ${userName}. Ogni suggerimento deve:
+- Essere collegato a un task o progetto REALE (Glint, Sellrapido, franchise, salute)
+- Considerare la recovery/salute attuale e il tipo di giornata
+- Avere un'azione concreta e tempificata
+
+Formato JSON array:
+[{
+  "id":"pa-1",
+  "icon":"🧠",
+  "title":"Titolo breve (max 40 car)",
+  "description":"2-3 frasi: perché ora, perché è rilevante, cosa fare concretamente",
+  "actionType":"azione|sposta|aggiungi|ascolta",
+  "actionLabel":"✨ Azione",
+  "suggestedTime":"HH:MM",
+  "duration":30,
+  "healthScore":${healthScore||60},
+  "taskRef":"nome progetto/task collegato"
+}]
+Rispondi SOLO con JSON array.`;
+
+    const resp = await claude.messages.create({
+      model: claude._provider === 'gemini' ? 'gemini-2.5-flash' : claude._provider === 'groq' ? 'llama-3.3-70b-versatile' : 'claude-3-5-sonnet-20241022',
+      max_tokens: 2000,
+      messages: [{ role: 'user', content: paPrompt }]
+    });
+    const paText = resp.content[0]?.text || '[]';
+    let proactiveActions = safeJsonParse(paText, []);
+    if (!Array.isArray(proactiveActions)) proactiveActions = [];
+
+    // Save back to DB
+    if (!db.days) db.days = {};
+    if (!db.days[date]) db.days[date] = {};
+    if (!db.days[date].insights) db.days[date].insights = {};
+    db.days[date].insights.proactiveActions = proactiveActions;
+    if (db.lastInsights) db.lastInsights.proactiveActions = proactiveActions;
+    writeDB(db);
+
+    res.json({ ok: true, proactiveActions });
+  } catch(e) {
+    console.error('Proactive AI endpoint error:', e);
+    res.status(500).json({ error: e.message });
+  }
+});
+
 // POST /api/local/refresh  → regenerate network + local activities only (SSE)
 app.post('/api/local/refresh', async (req, res) => {
   const uid = getCurrentUid();
