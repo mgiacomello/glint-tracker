@@ -160,7 +160,7 @@ async function gcalEvents(token, calendarId, timeMin, timeMax) {
   const url = 'https://www.googleapis.com/calendar/v3/calendars/' +
     encodeURIComponent(calendarId) + '/events?' +
     new URLSearchParams({ timeMin, timeMax, singleEvents: 'true', orderBy: 'startTime', maxResults: '100' });
-  const r = await fetch(url, { headers: { Authorization: `Bearer ${token}` }, signal: AbortSignal.timeout(10000) });
+  const r = await fetch(url, { headers: { Authorization: `Bearer ${token}` }, signal: AbortSignal.timeout(20000) });
   const d = await r.json();
   if (d.error) throw new Error(`Calendar API error: ${d.error.message}`);
   return d.items || [];
@@ -169,7 +169,7 @@ async function gcalEvents(token, calendarId, timeMin, timeMax) {
 async function gmailSearch(token, q, maxResults = 50) {
   const url = 'https://gmail.googleapis.com/gmail/v1/users/me/messages?' +
     new URLSearchParams({ q, maxResults: String(maxResults) });
-  const r = await fetch(url, { headers: { Authorization: `Bearer ${token}` }, signal: AbortSignal.timeout(10000) });
+  const r = await fetch(url, { headers: { Authorization: `Bearer ${token}` }, signal: AbortSignal.timeout(20000) });
   const d = await r.json();
   if (d.error) throw new Error(`Gmail search error: ${d.error.message}`);
   return d.messages || [];
