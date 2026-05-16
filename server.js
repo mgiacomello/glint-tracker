@@ -1710,7 +1710,14 @@ app.delete('/api/pipeline/target/:year', (req, res) => {
 
 const GOOGLE_CLIENT_ID     = process.env.GOOGLE_CLIENT_ID     || '';
 const GOOGLE_CLIENT_SECRET = process.env.GOOGLE_CLIENT_SECRET || '';
-const GOOGLE_REDIRECT_URI  = process.env.GOOGLE_REDIRECT_URI || `http://localhost:${PORT}/auth/google/callback`;
+// Auto-detect Railway URL se non impostato esplicitamente
+const _railwayDomain = process.env.RAILWAY_PUBLIC_DOMAIN || process.env.RAILWAY_STATIC_URL || '';
+const _baseUrl = process.env.GOOGLE_REDIRECT_URI
+  ? null  // usa sotto
+  : _railwayDomain
+    ? `https://${_railwayDomain.replace(/^https?:\/\//, '')}`
+    : `http://localhost:${PORT}`;
+const GOOGLE_REDIRECT_URI  = process.env.GOOGLE_REDIRECT_URI || `${_baseUrl}/auth/google/callback`;
 const GOOGLE_SCOPES = [
   'https://www.googleapis.com/auth/fitness.body.read',
   'https://www.googleapis.com/auth/fitness.sleep.read',
