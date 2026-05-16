@@ -31,7 +31,7 @@ function makeAIClient({ anthropicApiKey, geminiApiKey, groqApiKey }) {
   // ── Gemini Flash — con fallback automatico a Groq su quota esaurita ──────────
   if (geminiApiKey) {
     // Prova tutti i modelli Gemini disponibili in ordine
-    const GEMINI_MODELS = ['gemini-2.5-flash', 'gemini-2.5-flash', 'gemini-1.5-flash'];
+    const GEMINI_MODELS = ['gemini-2.5-flash', 'gemini-2.5-flash-lite-preview-06-17', 'gemini-2.0-flash'];
     return {
       _provider: 'gemini',
       messages: {
@@ -53,7 +53,6 @@ function makeAIClient({ anthropicApiKey, geminiApiKey, groqApiKey }) {
               const data = await resp.json();
               if (data.error) {
                 lastErr = new Error(`Gemini/${model}: ${data.error.status} — ${data.error.message}`);
-                // Su quota esaurita o modello non trovato, proviamo il successivo
                 if (['RESOURCE_EXHAUSTED','NOT_FOUND','PERMISSION_DENIED'].includes(data.error.status)) continue;
                 throw lastErr;
               }
@@ -61,11 +60,12 @@ function makeAIClient({ anthropicApiKey, geminiApiKey, groqApiKey }) {
               return { content: [{ type: 'text', text }] };
             } catch(e) {
               lastErr = e;
-              if (e.message?.includes('RESOURCE_EXHAUSTED')) continue;
+              // Fallback su quota, modello non trovato, o errore di rete
+              if (e.message?.includes('RESOURCE_EXHAUSTED') || e.message?.includes('NOT_FOUND') || e.name === 'TypeError') continue;
               throw e;
             }
           }
-          // Tutti i modelli Gemini hanno quota 0 → fallback a Groq
+          // Tutti i modelli Gemini falliti → fallback a Groq
           if (groqApiKey) {
             return callGroq(messages, max_tokens);
           }
@@ -113,7 +113,7 @@ function makeAIClient({ anthropicApiKey, geminiApiKey, groqApiKey }) {
 
 // ── Chiamata AI diretta con fallback automatico Gemini→Groq ──────────────────
 async function aiCall({ geminiApiKey, groqApiKey, anthropicApiKey }, prompt, maxTokens = 2048) {
-  const GEMINI_MODELS = ['gemini-2.5-flash', 'gemini-2.5-flash', 'gemini-1.5-flash'];
+  const GEMINI_MODELS = ['gemini-2.5-flash', 'gemini-2.5-flash-lite-preview-06-17', 'gemini-2.0-flash'];
   if (geminiApiKey) {
     for (const model of GEMINI_MODELS) {
       try {
@@ -130,7 +130,8 @@ async function aiCall({ geminiApiKey, groqApiKey, anthropicApiKey }, prompt, max
         }
         return d.candidates?.[0]?.content?.parts?.[0]?.text || '';
       } catch(e) {
-        if (e.message?.includes('RESOURCE_EXHAUSTED') || e.message?.includes('NOT_FOUND')) continue;
+        // Fallback su quota, modello non trovato, o errore di rete (fetch failed)
+        if (e.message?.includes('RESOURCE_EXHAUSTED') || e.message?.includes('NOT_FOUND') || e.name === 'TypeError') continue;
         throw e;
       }
     }

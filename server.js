@@ -2458,14 +2458,27 @@ app.get('/api/ai/status', (req, res) => {
   res.json({ configured: !!(cfg.anthropicApiKey), model: cfg.aiModel || 'claude-3-5-haiku-20241022' });
 });
 
-// POST /api/ai/config → save API key
+// POST /api/ai/config → save API keys (Anthropic + Gemini + Groq)
 app.post('/api/ai/config', (req, res) => {
-  const { apiKey, model } = req.body;
+  const { apiKey, model, geminiApiKey, groqApiKey } = req.body;
   const cfg = readConfig();
   if (apiKey !== undefined) cfg.anthropicApiKey = apiKey;
+  if (geminiApiKey !== undefined) cfg.geminiApiKey = geminiApiKey;
+  if (groqApiKey !== undefined) cfg.groqApiKey = groqApiKey;
   if (model) cfg.aiModel = model;
   writeConfig(cfg);
   res.json({ ok: true });
+});
+
+// GET /api/ai/keys-status → which keys are configured (masked)
+app.get('/api/ai/keys-status', (req, res) => {
+  const cfg = readConfig();
+  res.json({
+    anthropic: !!cfg.anthropicApiKey,
+    gemini: !!cfg.geminiApiKey,
+    groq: !!cfg.groqApiKey,
+    activeProvider: cfg.geminiApiKey ? 'gemini' : cfg.groqApiKey ? 'groq' : cfg.anthropicApiKey ? 'anthropic' : 'none'
+  });
 });
 
 const AI_TOOLS = [

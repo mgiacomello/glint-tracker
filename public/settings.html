@@ -617,14 +617,34 @@
   <div class="section">
     <div class="section-header">
       <span class="icon">🔌</span>
-      <h2>Integrazioni</h2>
+      <h2>Integrazioni AI</h2>
     </div>
     <div class="section-body">
+
       <div class="field">
+        <label>Groq API Key <span id="groq-status-badge" style="font-weight:400;font-size:11px;padding:2px 8px;border-radius:6px;background:rgba(255,255,255,.06);color:var(--muted)">non configurata</span></label>
+        <div style="display:flex;gap:8px;align-items:center">
+          <input type="password" id="s-groqApiKey" placeholder="gsk_..." style="flex:1"/>
+          <button onclick="saveGroqKey()" style="padding:7px 16px;border-radius:8px;border:none;background:var(--accent);color:#fff;font-size:13px;font-weight:600;cursor:pointer;white-space:nowrap">Salva key</button>
+        </div>
+        <span class="hint">🆓 Gratuita · 14.400 req/giorno · Modello llama-3.3-70b — Ottieni la key su <a href="https://console.groq.com" target="_blank" style="color:var(--accent)">console.groq.com</a>. Usata come fallback quando Gemini esaurisce la quota giornaliera.</span>
+      </div>
+
+      <div class="field" style="margin-top:16px">
+        <label>Gemini API Key <span id="gemini-status-badge" style="font-weight:400;font-size:11px;padding:2px 8px;border-radius:6px;background:rgba(255,255,255,.06);color:var(--muted)">non configurata</span></label>
+        <div style="display:flex;gap:8px;align-items:center">
+          <input type="password" id="s-geminiApiKey" placeholder="AIza..." style="flex:1"/>
+          <button onclick="saveGeminiKey()" style="padding:7px 16px;border-radius:8px;border:none;background:var(--accent);color:#fff;font-size:13px;font-weight:600;cursor:pointer;white-space:nowrap">Salva key</button>
+        </div>
+        <span class="hint">Provider principale per analisi email, networking, attività locali. Ottieni la key su <a href="https://ai.google.dev" target="_blank" style="color:var(--accent)">ai.google.dev</a>.</span>
+      </div>
+
+      <div class="field" style="margin-top:16px">
         <label>Perplexity API Key <span style="color:var(--muted);font-weight:400;">(non più necessaria)</span></label>
         <input type="password" id="s-perplexityApiKey" placeholder="pplx-..." disabled style="opacity:.4;cursor:not-allowed"/>
-        <span class="hint">⚠️ La ricerca eventi networking usa ora <strong>Gemini + Google Search</strong> (gratis, nessuna key richiesta). Puoi ignorare questo campo.</span>
+        <span class="hint">La ricerca eventi networking usa <strong>Gemini + Google Search</strong>. Puoi ignorare questo campo.</span>
       </div>
+
     </div>
   </div>
 
@@ -703,6 +723,45 @@ async function loadSettings() {
     settings = await r.json();
     applySettingsToUI(settings);
   } catch(e) { console.error('loadSettings', e); }
+  loadAIKeysStatus();
+}
+
+async function loadAIKeysStatus() {
+  try {
+    const r = await fetch('/api/ai/keys-status', { credentials: 'include' });
+    if (!r.ok) return;
+    const d = await r.json();
+    const setBadge = (id, active, label) => {
+      const el = document.getElementById(id);
+      if (!el) return;
+      el.textContent = active ? '✓ configurata' : 'non configurata';
+      el.style.background = active ? 'rgba(0,208,132,.12)' : 'rgba(255,255,255,.06)';
+      el.style.color = active ? '#00d084' : 'var(--muted)';
+    };
+    setBadge('groq-status-badge', d.groq);
+    setBadge('gemini-status-badge', d.gemini);
+  } catch(e) {}
+}
+
+async function saveGroqKey() {
+  const key = document.getElementById('s-groqApiKey')?.value?.trim();
+  if (!key) return;
+  const r = await fetch('/api/ai/config', { method: 'POST', credentials: 'include', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ groqApiKey: key }) });
+  if (r.ok) { document.getElementById('s-groqApiKey').value = ''; loadAIKeysStatus(); showSaved('✓ Groq key salvata'); }
+}
+
+async function saveGeminiKey() {
+  const key = document.getElementById('s-geminiApiKey')?.value?.trim();
+  if (!key) return;
+  const r = await fetch('/api/ai/config', { method: 'POST', credentials: 'include', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ geminiApiKey: key }) });
+  if (r.ok) { document.getElementById('s-geminiApiKey').value = ''; loadAIKeysStatus(); showSaved('✓ Gemini key salvata'); }
+}
+
+function showSaved(msg) {
+  const el = document.getElementById('saved-msg');
+  if (!el) return;
+  el.textContent = msg; el.style.opacity = '1';
+  setTimeout(() => { el.style.opacity = '0'; el.textContent = '✓ Salvato'; }, 2500);
 }
 
 function applySettingsToUI(s) {
