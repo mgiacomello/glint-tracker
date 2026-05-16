@@ -1496,4 +1496,4 @@ Return ONLY a valid JSON array. Each item: {"title":"","date":"dd Month yyyy","t
   return { logs, networkEvents, localActivities, city: detectedCity };
 }
 
-module.exports = { runMorningAgent, runLocalRefresh };
+module.exports = { runMorningAgent, runLocalRefresh, makeAIClient, aiCall };
