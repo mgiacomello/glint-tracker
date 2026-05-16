@@ -60,8 +60,8 @@ function makeAIClient({ anthropicApiKey, geminiApiKey, groqApiKey }) {
               return { content: [{ type: 'text', text }] };
             } catch(e) {
               lastErr = e;
-              // Fallback su quota, modello non trovato, o errore di rete
-              if (e.message?.includes('RESOURCE_EXHAUSTED') || e.message?.includes('NOT_FOUND') || e.name === 'TypeError') continue;
+              // Fallback su quota, modello non trovato, errore di rete, o timeout
+              if (e.message?.includes('RESOURCE_EXHAUSTED') || e.message?.includes('NOT_FOUND') || e.name === 'TypeError' || e.name === 'AbortError' || e.name === 'TimeoutError') continue;
               throw e;
             }
           }
@@ -130,18 +130,22 @@ async function aiCall({ geminiApiKey, groqApiKey, anthropicApiKey }, prompt, max
         }
         return d.candidates?.[0]?.content?.parts?.[0]?.text || '';
       } catch(e) {
-        // Fallback su quota, modello non trovato, o errore di rete (fetch failed)
-        if (e.message?.includes('RESOURCE_EXHAUSTED') || e.message?.includes('NOT_FOUND') || e.name === 'TypeError') continue;
+        // Fallback su quota, modello non trovato, errore di rete, o timeout
+        if (e.message?.includes('RESOURCE_EXHAUSTED') || e.message?.includes('NOT_FOUND') || e.name === 'TypeError' || e.name === 'AbortError' || e.name === 'TimeoutError') continue;
         throw e;
       }
     }
   }
   if (groqApiKey) {
+    // Timeout 120s per call grandi (analisi email batch), 60s per call piccole
+    const groqTimeout = maxTokens > 4096 ? 120000 : 60000;
+    // Groq llama-3.3-70b ha max 32768 output tokens — cap per evitare errori
+    const groqMaxTokens = Math.min(maxTokens, 32768);
     const r = await fetch('https://api.groq.com/openai/v1/chat/completions', {
       method: 'POST',
       headers: { 'Authorization': `Bearer ${groqApiKey}`, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ model: 'llama-3.3-70b-versatile', messages: [{ role: 'user', content: prompt }], max_tokens: maxTokens, temperature: 0.3 }),
-      signal: AbortSignal.timeout(60000)
+      body: JSON.stringify({ model: 'llama-3.3-70b-versatile', messages: [{ role: 'user', content: prompt }], max_tokens: groqMaxTokens, temperature: 0.3 }),
+      signal: AbortSignal.timeout(groqTimeout)
     });
     const d = await r.json();
     if (d.error) throw new Error(`Groq: ${d.error.message}`);
@@ -621,14 +625,14 @@ async function runMorningAgent({
   const principaleHeaders = emailHeaders.filter(e => e.category === 'Principale');
   emit(`  ↳ ${principaleHeaders.length} email Principale trovate`);
   if (principaleHeaders.length > 0) {
-    const toAnalyze = principaleHeaders.slice(0, 100);  // fino a 100 email Principale
+    const toAnalyze = principaleHeaders.slice(0, 35);  // cap a 35 per tenere il payload sotto i limiti
     emit(`  ↳ Scarico corpo di ${toAnalyze.length} email Principale...`);
 
     const emailsWithBody = [];
     for (const e of toAnalyze) {
       try {
         const full = await gmailGetMessage(token, e.id);
-        emailsWithBody.push({ ...e, body: gmailBody(full, 600) });
+        emailsWithBody.push({ ...e, body: gmailBody(full, 250) });
       } catch { emailsWithBody.push({ ...e, body: '' }); }
     }
 
@@ -696,14 +700,14 @@ EMAIL:\n${emailList}`, 32768);
     const sortedGrowth = [...growthHeaders].sort((a, b) =>
       GROWTH_ORDER.indexOf(a.category) - GROWTH_ORDER.indexOf(b.category)
     );
-    const toStudy = sortedGrowth.slice(0, 80);
+    const toStudy = sortedGrowth.slice(0, 50);
     emit(`  ↳ Scarico corpo di ${toStudy.length} email per Crescita...`);
 
     const studyWithBody = [];
     for (const e of toStudy) {
       try {
         const full = await gmailGetMessage(token, e.id);
-        studyWithBody.push({ ...e, body: gmailBody(full, 400) });
+        studyWithBody.push({ ...e, body: gmailBody(full, 200) });
       } catch { studyWithBody.push({ ...e, body: '' }); }
     }
 
