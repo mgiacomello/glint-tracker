@@ -3734,7 +3734,12 @@ const OURA_TOKEN_URL = 'https://api.ouraring.com/oauth/token';
 const OURA_API = 'https://api.ouraring.com/v2';
 
 function getOuraRedirectUri(req) {
-  if (OURA_REDIRECT_URI_OVERRIDE) return OURA_REDIRECT_URI_OVERRIDE;
+  // Se OURA_REDIRECT_URI è localhost (dev locale), ignoralo in produzione
+  if (OURA_REDIRECT_URI_OVERRIDE && !OURA_REDIRECT_URI_OVERRIDE.includes('localhost')) {
+    return OURA_REDIRECT_URI_OVERRIDE;
+  }
+  // Auto-detect: usa Railway domain se disponibile, altrimenti headers
+  if (_railwayDomain) return `https://${_railwayDomain.replace(/^https?:\/\//, '')}/auth/oura/callback`;
   const proto = req.headers['x-forwarded-proto'] || req.protocol || 'http';
   const host  = req.headers['x-forwarded-host'] || req.headers.host || `localhost:${PORT}`;
   return `${proto}://${host}/auth/oura/callback`;
