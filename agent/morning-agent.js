@@ -604,11 +604,14 @@ async function runMorningAgent({
 
   // ── STEP 3: Gmail — tutte le categorie ────────────────────────────────────────
   emit('[3/9] Lettura Gmail (tutte le categorie)...');
-  if (force && dbNow.days?.[date]?.tasks) {
-    dbNow.days[date].tasks = (dbNow.days[date].tasks || []).filter(t => !t.id.startsWith('mail-'));
-    emit('  ↳ Force refresh: task email precedenti rimossi');
-  }
-  const existingTaskIds = new Set((dbNow.days?.[date]?.tasks || []).map(t => t.id));
+  // Sistema INCREMENTALE: non si cancella mai il pregresso.
+  // Vengono analizzate solo le email con ID non ancora visto (né in tasks né in studyItems né in processedEmailIds).
+  const processedEmailIds = new Set(dbNow.processedEmailIds || []);
+  const existingTaskIds   = new Set((dbNow.days?.[date]?.tasks || []).map(t => t.id));
+  const existingStudyIds  = new Set([
+    ...(dbNow.days?.[date]?.insights?.studyItems || []),
+    ...(dbNow.lastInsights?.studyItems || [])
+  ].map(s => s.id));
 
   // Scarica da tutte le categorie Gmail in parallelo (100 per categoria)
   const GMAIL_CATEGORIES = [
@@ -638,7 +641,10 @@ async function runMorningAgent({
     for (const msg of msgs) {
       if (seenMsgIds.has(msg.id)) continue;
       seenMsgIds.add(msg.id);
-      if (existingTaskIds.has(`mail-${msg.id}`)) { skippedExisting++; continue; }
+      // Skip se già visto come task, come studyItem, o nel registro globale processedEmailIds
+      if (existingTaskIds.has(`mail-${msg.id}`) || existingStudyIds.has(msg.id) || processedEmailIds.has(msg.id)) {
+        skippedExisting++; continue;
+      }
       try {
         const r = await fetch(
           `https://gmail.googleapis.com/gmail/v1/users/me/messages/${msg.id}?format=metadata&metadataHeaders=Subject&metadataHeaders=From&metadataHeaders=Date`,
@@ -1118,14 +1124,6 @@ SOLO JSON oggetto singolo.`, 400);
   if (!saveDb.days[date]) saveDb.days[date] = { events: [], tasks: [], items: {}, reflection: '', briefing: '' };
   const day = saveDb.days[date];
 
-  // If force=true, clear old mail tasks and their items from saveDb too
-  if (force) {
-    const mailTaskIds = (day.tasks || []).filter(t => t.id.startsWith('mail-')).map(t => t.id);
-    day.tasks = (day.tasks || []).filter(t => !t.id.startsWith('mail-'));
-    for (const id of mailTaskIds) delete day.items[id];
-    emit(`  ↳ Force: rimossi ${mailTaskIds.length} task email dal DB per sostituzione`);
-  }
-
   day.briefing = `${dayType === 'focus' ? '🧘' : dayType === 'maker' ? '🛠️' : '👔'} ${dayType.charAt(0).toUpperCase() + dayType.slice(1)} Day · ${calendarEvents.length} eventi · ${result.tasks.length} mail da gestire`;
 
   for (const evt of calendarEvents) {
@@ -1359,8 +1357,20 @@ SOLO JSON array.`, 500);
     emit(`  ↳ ✅ ${spotifyPlaylists.length} playlist Spotify suggerite`);
   } catch(e) { emit(`  ↳ Spotify skip: ${e.message?.slice(0,80)}`); spotifyPlaylists = []; }
 
+  // Merge studyItems: keep existing ones, append only new IDs
+  const existingStudyInDb = saveDb.days[date]?.insights?.studyItems || saveDb.lastInsights?.studyItems || [];
+  const existingStudyIdSet2 = new Set(existingStudyInDb.map(s => s.id));
+  const mergedStudyItems = [
+    ...existingStudyInDb,
+    ...studyItems.filter(s => !existingStudyIdSet2.has(s.id))
+  ].sort((a, b) => ({ high: 0, medium: 1, low: 2 }[a.priority] ?? 1) - ({ high: 0, medium: 1, low: 2 }[b.priority] ?? 1));
+
+  // Persist set of all processed email IDs so next run skips them
+  const allRunEmailIds = emailHeaders.map(e => e.id);
+  saveDb.processedEmailIds = [...new Set([...(saveDb.processedEmailIds || []), ...allRunEmailIds])];
+
   const syncedAt = new Date().toISOString();
-  saveDb.days[date].insights        = { dayType, growthBrief, contextualIntelligence, intelligenceFeed, driveFiles, studyItems, proactiveActions, spotifyPlaylists, energySchedule };
+  saveDb.days[date].insights        = { dayType, growthBrief, contextualIntelligence, intelligenceFeed, driveFiles, studyItems: mergedStudyItems, proactiveActions, spotifyPlaylists, energySchedule };
   saveDb.days[date].family          = { alessandraEvents, tommasoAlerts, momentoFamiglia };
   saveDb.days[date].network         = { city: detectedCity, events: networkEvents };
   saveDb.days[date].localActivities = { city: detectedCity, items: localActivities };
@@ -1368,7 +1378,7 @@ SOLO JSON array.`, 500);
   // Persistenti cross-day: sopravvivono ai giorni successivi senza morning-agent
   saveDb.network         = { city: detectedCity, events: networkEvents, _refreshedAt: syncedAt };
   saveDb.localActivities = { city: detectedCity, items: localActivities, _refreshedAt: syncedAt };
-  saveDb.lastInsights    = { dayType, growthBrief, contextualIntelligence, intelligenceFeed, studyItems, proactiveActions, spotifyPlaylists, energySchedule, _refreshedAt: syncedAt };
+  saveDb.lastInsights    = { dayType, growthBrief, contextualIntelligence, intelligenceFeed, studyItems: mergedStudyItems, proactiveActions, spotifyPlaylists, energySchedule, _refreshedAt: syncedAt };
   saveDb.lastFamily      = { alessandraEvents, tommasoAlerts, momentoFamiglia, _refreshedAt: syncedAt };
   saveDb.googleLastSync  = syncedAt;
   writeDBForUid(uid, saveDb);

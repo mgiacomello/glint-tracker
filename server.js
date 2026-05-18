@@ -216,7 +216,7 @@ if (USE_REDIS) {
 }
 
 // ── DB helpers ────────────────────────────────────────────────────────────────
-const EMPTY_DB = () => ({ days: {}, months: {}, contacts: {}, projects: [], pipeline: { deals: [], invoices: [], targets: [] }, tasks: [], lists: [] });
+const EMPTY_DB = () => ({ days: {}, months: {}, contacts: {}, projects: [], pipeline: { deals: [], invoices: [], targets: [] }, tasks: [], lists: [], boards: [] });
 
 function userDbPath(uid) {
   return uid ? path.join(__dirname, 'data', 'users', uid, 'db.json') : DB_PATH;
@@ -4252,6 +4252,561 @@ async function sendPushToUser(uid, payload) {
   }
   return results;
 }
+
+// ── GMAIL → BOARD ─────────────────────────────────────────────────────────────
+
+// GET /api/gmail/inbox?q=&max=20
+app.get('/api/gmail/inbox', async (req, res) => {
+  const token = await getGoogleAccessToken();
+  if (!token) return res.status(401).json({ error: 'Google non connesso' });
+  const q      = req.query.q || 'in:inbox';
+  const max    = Math.min(Number(req.query.max) || 20, 50);
+  try {
+    const listResp = await fetch(
+      'https://gmail.googleapis.com/gmail/v1/users/me/messages?' +
+      new URLSearchParams({ q, maxResults: String(max) }),
+      { headers: { Authorization: `Bearer ${token}` }, signal: AbortSignal.timeout(15000) }
+    );
+    const listData = await listResp.json();
+    if (listData.error) return res.status(500).json({ error: listData.error.message });
+    const ids = (listData.messages || []).map(m => m.id);
+    // Fetch metadata in parallel (subject, from, date, snippet)
+    const metas = await Promise.all(ids.map(async id => {
+      const r = await fetch(
+        `https://gmail.googleapis.com/gmail/v1/users/me/messages/${id}?format=metadata&metadataHeaders=Subject&metadataHeaders=From&metadataHeaders=Date`,
+        { headers: { Authorization: `Bearer ${token}` }, signal: AbortSignal.timeout(8000) }
+      );
+      const m = await r.json();
+      if (m.error) return null;
+      const headers = {};
+      (m.payload?.headers || []).forEach(h => { headers[h.name.toLowerCase()] = h.value; });
+      return {
+        id: m.id,
+        threadId: m.threadId,
+        subject: headers.subject || '(nessun oggetto)',
+        from: headers.from || '',
+        date: headers.date || '',
+        snippet: m.snippet || '',
+        labelIds: m.labelIds || []
+      };
+    }));
+    res.json(metas.filter(Boolean));
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// GET /api/gmail/message/:id
+app.get('/api/gmail/message/:id', async (req, res) => {
+  const token = await getGoogleAccessToken();
+  if (!token) return res.status(401).json({ error: 'Google non connesso' });
+  try {
+    const r = await fetch(
+      `https://gmail.googleapis.com/gmail/v1/users/me/messages/${req.params.id}?format=full`,
+      { headers: { Authorization: `Bearer ${token}` }, signal: AbortSignal.timeout(10000) }
+    );
+    const m = await r.json();
+    if (m.error) return res.status(500).json({ error: m.error.message });
+    const headers = {};
+    (m.payload?.headers || []).forEach(h => { headers[h.name.toLowerCase()] = h.value; });
+    function extractBody(payload) {
+      if (!payload) return '';
+      if (payload.body?.data) return Buffer.from(payload.body.data, 'base64').toString('utf8');
+      const parts = payload.parts || [];
+      const plain = parts.find(p => p.mimeType === 'text/plain');
+      if (plain?.body?.data) return Buffer.from(plain.body.data, 'base64').toString('utf8');
+      const html = parts.find(p => p.mimeType === 'text/html');
+      if (html?.body?.data) return Buffer.from(html.body.data, 'base64').toString('utf8').replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
+      for (const p of parts) { const r2 = extractBody(p); if (r2) return r2; }
+      return '';
+    }
+    const body = extractBody(m.payload)
+      .replace(/<style[^>]*>[\s\S]*?<\/style>/gi, '')
+      .replace(/<[^>]+>/g, ' ')
+      .replace(/\s+/g, ' ')
+      .trim()
+      .slice(0, 3000);
+    res.json({
+      id: m.id,
+      threadId: m.threadId,
+      subject: headers.subject || '(nessun oggetto)',
+      from: headers.from || '',
+      to: headers.to || '',
+      date: headers.date || '',
+      snippet: m.snippet || '',
+      body,
+      gmailLink: `https://mail.google.com/mail/u/0/#inbox/${m.id}`
+    });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// ── BOARDS (Monday.com-style) ─────────────────────────────────────────────────
+
+const DEFAULT_STATUS_OPTIONS = () => [
+  { id: 's1', label: 'Non iniziato', color: '#c4c4c4' },
+  { id: 's2', label: 'In corso',     color: '#fdab3d' },
+  { id: 's3', label: 'Fatto',        color: '#00c875' },
+  { id: 's4', label: 'Bloccato',     color: '#e2445c' }
+];
+
+const DEFAULT_PRIORITY_OPTIONS = () => [
+  { id: 'p1', label: 'Critica', color: '#e2445c' },
+  { id: 'p2', label: 'Alta',    color: '#fdab3d' },
+  { id: 'p3', label: 'Media',   color: '#579bfc' },
+  { id: 'p4', label: 'Bassa',   color: '#c4c4c4' }
+];
+
+function makeBoardDefaults(name, uid) {
+  const titleColId = 'col-title';
+  const statusColId = uuidv4();
+  const personColId = uuidv4();
+  const dateColId   = uuidv4();
+  const prioColId   = uuidv4();
+  return {
+    id: uuidv4(),
+    name,
+    description: '',
+    color: '#579bfc',
+    icon: '📋',
+    ownerId: uid,
+    sharedWith: [],
+    columns: [
+      { id: titleColId,  type: 'text',     title: 'Attività',    width: 320, fixed: true },
+      { id: statusColId, type: 'status',   title: 'Stato',       width: 150, options: DEFAULT_STATUS_OPTIONS() },
+      { id: personColId, type: 'person',   title: 'Assegnato a', width: 160 },
+      { id: dateColId,   type: 'date',     title: 'Scadenza',    width: 140 },
+      { id: prioColId,   type: 'priority', title: 'Priorità',    width: 130, options: DEFAULT_PRIORITY_OPTIONS() }
+    ],
+    groups: [
+      { id: uuidv4(), title: 'Da fare',      color: '#579bfc', collapsed: false, items: [] },
+      { id: uuidv4(), title: 'In corso',     color: '#fdab3d', collapsed: false, items: [] },
+      { id: uuidv4(), title: 'Completato',   color: '#00c875', collapsed: false, items: [] }
+    ],
+    automations: [],
+    defaultView: 'table',
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString()
+  };
+}
+
+function getBoardPermission(board, uid) {
+  if (board.ownerId === uid) return 'owner';
+  const sw = (board.sharedWith || []).find(s => s.userId === uid);
+  return sw ? sw.role : null;
+}
+
+function findItem(board, iid) {
+  for (const g of board.groups) {
+    const item = g.items.find(i => i.id === iid);
+    if (item) return { group: g, item };
+  }
+  return null;
+}
+
+function runAutomations(board, triggerType, payload, uid) {
+  const s = readShared();
+  const allUsers = readUsers();
+  const ownerName = allUsers[uid]?.name || 'Utente';
+  for (const auto of (board.automations || [])) {
+    if (!auto.enabled) continue;
+    if (auto.trigger.type !== triggerType) continue;
+    let matches = false;
+    if (triggerType === 'status_change') {
+      matches = auto.trigger.columnId === payload.columnId && auto.trigger.value === payload.value;
+    } else if (triggerType === 'item_created') {
+      matches = true;
+    } else if (triggerType === 'date_arrives') {
+      matches = auto.trigger.columnId === payload.columnId;
+    }
+    if (!matches) continue;
+    const { action } = auto;
+    const boardMembers = [board.ownerId, ...(board.sharedWith || []).map(s => s.userId)];
+    if (action.type === 'notify') {
+      boardMembers.forEach(memberId => {
+        createNotification(memberId, 'board_auto', action.message || `Automazione su "${board.name}"`, { boardId: board.id, fromUid: uid });
+      });
+    } else if (action.type === 'move_to_group' && payload.item) {
+      const srcGroup = board.groups.find(g => g.items.some(i => i.id === payload.item.id));
+      const dstGroup = board.groups.find(g => g.id === action.groupId);
+      if (srcGroup && dstGroup && srcGroup.id !== dstGroup.id) {
+        srcGroup.items = srcGroup.items.filter(i => i.id !== payload.item.id);
+        dstGroup.items.push(payload.item);
+      }
+    } else if (action.type === 'assign_person' && payload.item && action.userId) {
+      const personCols = board.columns.filter(c => c.type === 'person');
+      if (personCols.length > 0) {
+        const col = personCols[0];
+        const current = payload.item.values[col.id] || [];
+        if (!current.includes(action.userId)) payload.item.values[col.id] = [...current, action.userId];
+      }
+    }
+  }
+  writeShared(s);
+}
+
+// GET /api/boards
+app.get('/api/boards', (req, res) => {
+  const uid = getCurrentUid();
+  const db = readDB();
+  const own = (db.boards || []).map(b => ({ ...b, _permission: 'owner' }));
+  const allUsers = readUsers();
+  const shared = [];
+  Object.entries(allUsers).forEach(([ownerId, _]) => {
+    if (ownerId === uid) return;
+    const ownerDb = readDBForUid(ownerId);
+    (ownerDb.boards || []).forEach(b => {
+      const perm = getBoardPermission(b, uid);
+      if (perm) shared.push({ ...b, _permission: perm, _ownerName: allUsers[ownerId]?.name || 'Utente' });
+    });
+  });
+  res.json([...own, ...shared]);
+});
+
+// POST /api/boards
+app.post('/api/boards', (req, res) => {
+  const uid = getCurrentUid();
+  const db = readDB();
+  if (!db.boards) db.boards = [];
+  const board = makeBoardDefaults(req.body.name || 'Nuova board', uid);
+  if (req.body.color) board.color = req.body.color;
+  if (req.body.icon)  board.icon  = req.body.icon;
+  db.boards.push(board);
+  writeDB(db);
+  res.json(board);
+});
+
+// GET /api/boards/:id
+app.get('/api/boards/:id', (req, res) => {
+  const uid = getCurrentUid();
+  const db = readDB();
+  let board = (db.boards || []).find(b => b.id === req.params.id);
+  let perm = 'owner';
+  if (!board) {
+    const allUsers = readUsers();
+    for (const [ownerId] of Object.entries(allUsers)) {
+      if (ownerId === uid) continue;
+      const oDb = readDBForUid(ownerId);
+      const found = (oDb.boards || []).find(b => b.id === req.params.id);
+      if (found) { board = found; perm = getBoardPermission(found, uid); break; }
+    }
+  }
+  if (!board || !perm) return res.status(404).json({ error: 'Board non trovata' });
+  res.json({ ...board, _permission: perm });
+});
+
+// PUT /api/boards/:id
+app.put('/api/boards/:id', (req, res) => {
+  const db = readDB();
+  const board = (db.boards || []).find(b => b.id === req.params.id);
+  if (!board) return res.status(404).json({ error: 'Board non trovata' });
+  const { name, description, color, icon, defaultView } = req.body;
+  if (name        !== undefined) board.name        = name;
+  if (description !== undefined) board.description = description;
+  if (color       !== undefined) board.color       = color;
+  if (icon        !== undefined) board.icon        = icon;
+  if (defaultView !== undefined) board.defaultView = defaultView;
+  board.updatedAt = new Date().toISOString();
+  writeDB(db);
+  res.json(board);
+});
+
+// DELETE /api/boards/:id
+app.delete('/api/boards/:id', (req, res) => {
+  const db = readDB();
+  db.boards = (db.boards || []).filter(b => b.id !== req.params.id);
+  writeDB(db);
+  res.json({ ok: true });
+});
+
+// POST /api/boards/:id/columns
+app.post('/api/boards/:id/columns', (req, res) => {
+  const db = readDB();
+  const board = (db.boards || []).find(b => b.id === req.params.id);
+  if (!board) return res.status(404).json({ error: 'Board non trovata' });
+  const col = {
+    id: uuidv4(),
+    type: req.body.type || 'text',
+    title: req.body.title || 'Colonna',
+    width: req.body.width || 150
+  };
+  if (['status', 'priority', 'dropdown'].includes(col.type)) {
+    col.options = req.body.options || (col.type === 'status' ? DEFAULT_STATUS_OPTIONS() : DEFAULT_PRIORITY_OPTIONS());
+  }
+  board.columns.push(col);
+  board.updatedAt = new Date().toISOString();
+  writeDB(db);
+  res.json(col);
+});
+
+// PUT /api/boards/:id/columns/:cid
+app.put('/api/boards/:id/columns/:cid', (req, res) => {
+  const db = readDB();
+  const board = (db.boards || []).find(b => b.id === req.params.id);
+  if (!board) return res.status(404).json({ error: 'Board non trovata' });
+  const col = board.columns.find(c => c.id === req.params.cid);
+  if (!col) return res.status(404).json({ error: 'Colonna non trovata' });
+  Object.assign(col, req.body);
+  col.id = req.params.cid;
+  board.updatedAt = new Date().toISOString();
+  writeDB(db);
+  res.json(col);
+});
+
+// DELETE /api/boards/:id/columns/:cid
+app.delete('/api/boards/:id/columns/:cid', (req, res) => {
+  const db = readDB();
+  const board = (db.boards || []).find(b => b.id === req.params.id);
+  if (!board) return res.status(404).json({ error: 'Board non trovata' });
+  board.columns = board.columns.filter(c => c.id !== req.params.cid);
+  board.groups.forEach(g => g.items.forEach(item => { delete item.values[req.params.cid]; }));
+  board.updatedAt = new Date().toISOString();
+  writeDB(db);
+  res.json({ ok: true });
+});
+
+// PUT /api/boards/:id/columns/reorder
+app.put('/api/boards/:id/columns/reorder', (req, res) => {
+  const db = readDB();
+  const board = (db.boards || []).find(b => b.id === req.params.id);
+  if (!board) return res.status(404).json({ error: 'Board non trovata' });
+  const { order } = req.body;
+  if (!Array.isArray(order)) return res.status(400).json({ error: 'order deve essere un array' });
+  board.columns.sort((a, b) => order.indexOf(a.id) - order.indexOf(b.id));
+  board.updatedAt = new Date().toISOString();
+  writeDB(db);
+  res.json({ ok: true });
+});
+
+// POST /api/boards/:id/groups
+app.post('/api/boards/:id/groups', (req, res) => {
+  const db = readDB();
+  const board = (db.boards || []).find(b => b.id === req.params.id);
+  if (!board) return res.status(404).json({ error: 'Board non trovata' });
+  const group = {
+    id: uuidv4(),
+    title: req.body.title || 'Nuovo gruppo',
+    color: req.body.color || '#579bfc',
+    collapsed: false,
+    items: []
+  };
+  board.groups.push(group);
+  board.updatedAt = new Date().toISOString();
+  writeDB(db);
+  res.json(group);
+});
+
+// PUT /api/boards/:id/groups/:gid
+app.put('/api/boards/:id/groups/:gid', (req, res) => {
+  const db = readDB();
+  const board = (db.boards || []).find(b => b.id === req.params.id);
+  if (!board) return res.status(404).json({ error: 'Board non trovata' });
+  const group = board.groups.find(g => g.id === req.params.gid);
+  if (!group) return res.status(404).json({ error: 'Gruppo non trovato' });
+  const { title, color, collapsed } = req.body;
+  if (title     !== undefined) group.title     = title;
+  if (color     !== undefined) group.color     = color;
+  if (collapsed !== undefined) group.collapsed = collapsed;
+  board.updatedAt = new Date().toISOString();
+  writeDB(db);
+  res.json(group);
+});
+
+// DELETE /api/boards/:id/groups/:gid
+app.delete('/api/boards/:id/groups/:gid', (req, res) => {
+  const db = readDB();
+  const board = (db.boards || []).find(b => b.id === req.params.id);
+  if (!board) return res.status(404).json({ error: 'Board non trovata' });
+  board.groups = board.groups.filter(g => g.id !== req.params.gid);
+  board.updatedAt = new Date().toISOString();
+  writeDB(db);
+  res.json({ ok: true });
+});
+
+// PUT /api/boards/:id/groups/reorder
+app.put('/api/boards/:id/groups/reorder', (req, res) => {
+  const db = readDB();
+  const board = (db.boards || []).find(b => b.id === req.params.id);
+  if (!board) return res.status(404).json({ error: 'Board non trovata' });
+  const { order } = req.body;
+  if (!Array.isArray(order)) return res.status(400).json({ error: 'order deve essere un array' });
+  board.groups.sort((a, b) => order.indexOf(a.id) - order.indexOf(b.id));
+  board.updatedAt = new Date().toISOString();
+  writeDB(db);
+  res.json({ ok: true });
+});
+
+// POST /api/boards/:id/groups/:gid/items
+app.post('/api/boards/:id/groups/:gid/items', (req, res) => {
+  const uid = getCurrentUid();
+  const db = readDB();
+  const board = (db.boards || []).find(b => b.id === req.params.id);
+  if (!board) return res.status(404).json({ error: 'Board non trovata' });
+  const group = board.groups.find(g => g.id === req.params.gid);
+  if (!group) return res.status(404).json({ error: 'Gruppo non trovato' });
+  const item = {
+    id: uuidv4(),
+    title: req.body.title || 'Nuovo elemento',
+    values: req.body.values || {},
+    subitems: [],
+    createdBy: uid,
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString()
+  };
+  group.items.push(item);
+  board.updatedAt = new Date().toISOString();
+  runAutomations(board, 'item_created', { item }, uid);
+  writeDB(db);
+  res.json(item);
+});
+
+// PUT /api/boards/:id/groups/:gid/items/:iid
+app.put('/api/boards/:id/groups/:gid/items/:iid', (req, res) => {
+  const uid = getCurrentUid();
+  const db = readDB();
+  const board = (db.boards || []).find(b => b.id === req.params.id);
+  if (!board) return res.status(404).json({ error: 'Board non trovata' });
+  const group = board.groups.find(g => g.id === req.params.gid);
+  if (!group) return res.status(404).json({ error: 'Gruppo non trovato' });
+  const item = group.items.find(i => i.id === req.params.iid);
+  if (!item) return res.status(404).json({ error: 'Elemento non trovato' });
+  if (req.body.title   !== undefined) item.title   = req.body.title;
+  if (req.body.values  !== undefined) {
+    const oldValues = { ...item.values };
+    Object.assign(item.values, req.body.values);
+    Object.keys(req.body.values).forEach(colId => {
+      const col = board.columns.find(c => c.id === colId);
+      if (col && col.type === 'status' && oldValues[colId] !== req.body.values[colId]) {
+        runAutomations(board, 'status_change', { columnId: colId, value: req.body.values[colId], item }, uid);
+      }
+    });
+  }
+  if (req.body.subitems !== undefined) item.subitems = req.body.subitems;
+  item.updatedAt = new Date().toISOString();
+  board.updatedAt = new Date().toISOString();
+  writeDB(db);
+  res.json(item);
+});
+
+// DELETE /api/boards/:id/groups/:gid/items/:iid
+app.delete('/api/boards/:id/groups/:gid/items/:iid', (req, res) => {
+  const db = readDB();
+  const board = (db.boards || []).find(b => b.id === req.params.id);
+  if (!board) return res.status(404).json({ error: 'Board non trovata' });
+  const group = board.groups.find(g => g.id === req.params.gid);
+  if (!group) return res.status(404).json({ error: 'Gruppo non trovato' });
+  group.items = group.items.filter(i => i.id !== req.params.iid);
+  board.updatedAt = new Date().toISOString();
+  writeDB(db);
+  res.json({ ok: true });
+});
+
+// PUT /api/boards/:id/items/:iid/move
+app.put('/api/boards/:id/items/:iid/move', (req, res) => {
+  const db = readDB();
+  const board = (db.boards || []).find(b => b.id === req.params.id);
+  if (!board) return res.status(404).json({ error: 'Board non trovata' });
+  const result = findItem(board, req.params.iid);
+  if (!result) return res.status(404).json({ error: 'Elemento non trovato' });
+  const dstGroup = board.groups.find(g => g.id === req.body.groupId);
+  if (!dstGroup) return res.status(404).json({ error: 'Gruppo destinazione non trovato' });
+  result.group.items = result.group.items.filter(i => i.id !== req.params.iid);
+  const insertAt = req.body.position !== undefined ? req.body.position : dstGroup.items.length;
+  dstGroup.items.splice(insertAt, 0, result.item);
+  board.updatedAt = new Date().toISOString();
+  writeDB(db);
+  res.json({ ok: true });
+});
+
+// PUT /api/boards/:id/groups/:gid/items/reorder
+app.put('/api/boards/:id/groups/:gid/items/reorder', (req, res) => {
+  const db = readDB();
+  const board = (db.boards || []).find(b => b.id === req.params.id);
+  if (!board) return res.status(404).json({ error: 'Board non trovata' });
+  const group = board.groups.find(g => g.id === req.params.gid);
+  if (!group) return res.status(404).json({ error: 'Gruppo non trovato' });
+  const { order } = req.body;
+  if (!Array.isArray(order)) return res.status(400).json({ error: 'order deve essere un array' });
+  group.items.sort((a, b) => order.indexOf(a.id) - order.indexOf(b.id));
+  board.updatedAt = new Date().toISOString();
+  writeDB(db);
+  res.json({ ok: true });
+});
+
+// POST /api/boards/:id/automations
+app.post('/api/boards/:id/automations', (req, res) => {
+  const db = readDB();
+  const board = (db.boards || []).find(b => b.id === req.params.id);
+  if (!board) return res.status(404).json({ error: 'Board non trovata' });
+  const automation = {
+    id: uuidv4(),
+    enabled: true,
+    trigger: req.body.trigger,
+    action: req.body.action,
+    createdAt: new Date().toISOString()
+  };
+  board.automations.push(automation);
+  board.updatedAt = new Date().toISOString();
+  writeDB(db);
+  res.json(automation);
+});
+
+// PUT /api/boards/:id/automations/:aid
+app.put('/api/boards/:id/automations/:aid', (req, res) => {
+  const db = readDB();
+  const board = (db.boards || []).find(b => b.id === req.params.id);
+  if (!board) return res.status(404).json({ error: 'Board non trovata' });
+  const auto = board.automations.find(a => a.id === req.params.aid);
+  if (!auto) return res.status(404).json({ error: 'Automazione non trovata' });
+  Object.assign(auto, req.body);
+  auto.id = req.params.aid;
+  board.updatedAt = new Date().toISOString();
+  writeDB(db);
+  res.json(auto);
+});
+
+// DELETE /api/boards/:id/automations/:aid
+app.delete('/api/boards/:id/automations/:aid', (req, res) => {
+  const db = readDB();
+  const board = (db.boards || []).find(b => b.id === req.params.id);
+  if (!board) return res.status(404).json({ error: 'Board non trovata' });
+  board.automations = board.automations.filter(a => a.id !== req.params.aid);
+  board.updatedAt = new Date().toISOString();
+  writeDB(db);
+  res.json({ ok: true });
+});
+
+// POST /api/boards/:id/share
+app.post('/api/boards/:id/share', (req, res) => {
+  const uid = getCurrentUid();
+  const db = readDB();
+  const board = (db.boards || []).find(b => b.id === req.params.id);
+  if (!board) return res.status(404).json({ error: 'Board non trovata' });
+  const { userId, role } = req.body;
+  if (!userId || userId === uid) return res.status(400).json({ error: 'userId non valido' });
+  const allUsers = readUsers();
+  if (!allUsers[userId]) return res.status(404).json({ error: 'Utente non trovato' });
+  const existing = (board.sharedWith || []).find(s => s.userId === userId);
+  if (existing) { existing.role = role || 'viewer'; }
+  else { if (!board.sharedWith) board.sharedWith = []; board.sharedWith.push({ userId, role: role || 'viewer' }); }
+  const ownerName = allUsers[uid]?.name || 'Utente';
+  createNotification(userId, 'board_shared', `${ownerName} ha condiviso la board "${board.name}" con te`, { boardId: board.id, fromUid: uid });
+  board.updatedAt = new Date().toISOString();
+  writeDB(db);
+  res.json({ ok: true });
+});
+
+// DELETE /api/boards/:id/share/:userId
+app.delete('/api/boards/:id/share/:userId', (req, res) => {
+  const db = readDB();
+  const board = (db.boards || []).find(b => b.id === req.params.id);
+  if (!board) return res.status(404).json({ error: 'Board non trovata' });
+  board.sharedWith = (board.sharedWith || []).filter(s => s.userId !== req.params.userId);
+  board.updatedAt = new Date().toISOString();
+  writeDB(db);
+  res.json({ ok: true });
+});
 
 // ── START ─────────────────────────────────────────────────────────────────────
 
