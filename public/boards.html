@@ -1,0 +1,2002 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Glint · Board</title>
+  <link rel="manifest" href="/manifest.json"/>
+  <meta name="theme-color" content="#7c6ef5"/>
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet"/>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --bg:    #0a0a0a;
+      --s1:    #111111;
+      --s2:    #181818;
+      --s3:    #1f1f1f;
+      --s4:    #262626;
+      --line:  rgba(255,255,255,.06);
+      --line2: rgba(255,255,255,.03);
+      --t0:    #f5f5f7;
+      --t1:    #a0a0a8;
+      --t2:    #555560;
+      --accent:#7c6ef5;
+      --adim:  rgba(124,110,245,.14);
+      --red:   #e2445c;
+      --green: #00c875;
+      --amber: #fdab3d;
+      --blue:  #579bfc;
+      --r:     10px;
+    }
+    html { scroll-behavior: smooth; }
+    body { background: var(--bg); color: var(--t0); font-family: 'Inter', system-ui, sans-serif; font-size: 13px; line-height: 1.5; min-height: 100vh; -webkit-font-smoothing: antialiased; display: flex; flex-direction: column; overflow: hidden; height: 100vh; }
+
+    /* ── TOPBAR ── */
+    .topbar {
+      height: 52px; padding: 0 20px; display: flex; align-items: center; gap: 6px; flex-shrink: 0;
+      background: rgba(10,10,10,.95); backdrop-filter: blur(20px);
+      border-bottom: 1px solid var(--line); z-index: 300;
+    }
+    .tb-logo { display: flex; align-items: center; gap: 8px; text-decoration: none; margin-right: 16px; }
+    .tb-gem { width: 26px; height: 26px; border-radius: 7px; background: linear-gradient(135deg,#7c6ef5,#a78bfa); display: flex; align-items: center; justify-content: center; font-size: 12px; }
+    .tb-name { font-size: 15px; font-weight: 800; letter-spacing: -.03em; color: var(--t0); }
+    .tnav { padding: 5px 12px; border-radius: 7px; font-size: 12px; font-weight: 500; color: var(--t2); cursor: pointer; border: none; background: none; transition: color .12s, background .12s; }
+    .tnav:hover { color: var(--t1); background: rgba(255,255,255,.04); }
+    .tnav.on { color: var(--t0); background: rgba(255,255,255,.08); }
+    .tb-right { margin-left: auto; display: flex; align-items: center; gap: 6px; }
+    .btn { display: inline-flex; align-items: center; gap: 5px; background: var(--accent); border: none; border-radius: 7px; color: #fff; padding: 5px 12px; font-size: 12px; font-weight: 600; cursor: pointer; transition: filter .15s; }
+    .btn:hover { filter: brightness(1.1); }
+    .btn.ghost { background: rgba(255,255,255,.06); color: var(--t1); }
+    .btn.ghost:hover { background: rgba(255,255,255,.1); color: var(--t0); filter: none; }
+    .btn.sm { padding: 3px 9px; font-size: 11px; }
+    .btn.danger { background: rgba(226,68,92,.15); color: var(--red); }
+    .btn.danger:hover { background: rgba(226,68,92,.25); filter: none; }
+
+    /* ── LAYOUT ── */
+    .app-body { display: flex; flex: 1; overflow: hidden; }
+
+    /* ── SIDEBAR ── */
+    .sidebar {
+      width: 240px; flex-shrink: 0; background: var(--s1); border-right: 1px solid var(--line);
+      display: flex; flex-direction: column; overflow: hidden;
+    }
+    .sidebar-header { padding: 16px 16px 8px; display: flex; align-items: center; justify-content: space-between; }
+    .sidebar-title { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; color: var(--t2); }
+    .sidebar-scroll { flex: 1; overflow-y: auto; padding: 4px 8px 16px; }
+    .board-item {
+      display: flex; align-items: center; gap: 8px; padding: 7px 8px; border-radius: 7px;
+      cursor: pointer; color: var(--t1); transition: background .1s, color .1s; user-select: none;
+    }
+    .board-item:hover { background: var(--s3); color: var(--t0); }
+    .board-item.active { background: var(--adim); color: var(--t0); }
+    .board-dot { width: 10px; height: 10px; border-radius: 3px; flex-shrink: 0; }
+    .board-icon { font-size: 14px; flex-shrink: 0; }
+    .board-name { font-size: 12px; font-weight: 500; flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .board-shared-badge { font-size: 9px; color: var(--t2); background: var(--s3); padding: 1px 4px; border-radius: 3px; }
+
+    /* ── MAIN AREA ── */
+    .main { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+
+    /* ── BOARD HEADER ── */
+    .board-header {
+      padding: 16px 24px 0; flex-shrink: 0;
+    }
+    .board-header-top { display: flex; align-items: center; gap: 12px; margin-bottom: 12px; }
+    .board-header-icon { font-size: 24px; cursor: pointer; }
+    .board-header-title { font-size: 20px; font-weight: 800; letter-spacing: -.03em; cursor: pointer; }
+    .board-header-title:hover { opacity: .8; }
+    .board-desc { font-size: 12px; color: var(--t2); cursor: pointer; }
+    .board-desc:hover { color: var(--t1); }
+    .view-bar { display: flex; align-items: center; gap: 2px; border-bottom: 1px solid var(--line); padding-bottom: 0; }
+    .view-btn {
+      padding: 6px 14px; font-size: 12px; font-weight: 500; color: var(--t2);
+      cursor: pointer; border: none; background: none; border-bottom: 2px solid transparent;
+      transition: color .12s; margin-bottom: -1px;
+    }
+    .view-btn:hover { color: var(--t1); }
+    .view-btn.on { color: var(--t0); border-bottom-color: var(--accent); }
+    .board-toolbar { display: flex; align-items: center; gap: 8px; padding: 10px 24px; flex-shrink: 0; border-bottom: 1px solid var(--line2); }
+    .search-input { background: var(--s2); border: 1px solid var(--line); border-radius: 7px; color: var(--t0); padding: 5px 10px; font-size: 12px; outline: none; width: 200px; font-family: inherit; }
+    .search-input:focus { border-color: var(--accent); }
+    .search-input::placeholder { color: var(--t2); }
+
+    /* ── TABLE VIEW ── */
+    .board-content { flex: 1; overflow: auto; padding: 12px 24px 40px; }
+    .group-block { margin-bottom: 24px; }
+    .group-header {
+      display: flex; align-items: center; gap: 8px; padding: 5px 0; cursor: pointer; user-select: none;
+    }
+    .group-color-bar { width: 14px; height: 14px; border-radius: 4px; flex-shrink: 0; }
+    .group-chevron { font-size: 10px; color: var(--t2); transition: transform .15s; }
+    .group-chevron.collapsed { transform: rotate(-90deg); }
+    .group-label { font-size: 13px; font-weight: 700; }
+    .group-count { font-size: 11px; color: var(--t2); }
+    .group-actions { margin-left: auto; display: flex; gap: 4px; opacity: 0; transition: opacity .1s; }
+    .group-header:hover .group-actions { opacity: 1; }
+    .group-action-btn { padding: 3px 7px; border-radius: 5px; background: var(--s3); border: none; color: var(--t2); font-size: 11px; cursor: pointer; }
+    .group-action-btn:hover { background: var(--s4); color: var(--t0); }
+
+    .table-wrap { overflow-x: auto; }
+    .board-table { width: 100%; border-collapse: collapse; min-width: 600px; }
+    .board-table th {
+      background: var(--s2); border-bottom: 1px solid var(--line); padding: 6px 10px;
+      text-align: left; font-size: 11px; font-weight: 600; color: var(--t2); white-space: nowrap;
+      position: relative; user-select: none;
+    }
+    .board-table th:first-child { border-radius: 8px 0 0 0; padding-left: 14px; }
+    .board-table th:last-child { border-radius: 0 8px 0 0; }
+    .col-type-icon { margin-right: 4px; opacity: .6; }
+    .board-table td {
+      border-bottom: 1px solid var(--line2); padding: 0; vertical-align: middle;
+      transition: background .08s;
+    }
+    .board-table tr:hover td { background: rgba(255,255,255,.02); }
+    .board-table tr.item-row td:first-child { border-left: 3px solid transparent; }
+    .board-table tr.item-row:hover td:first-child { border-left-color: var(--accent); }
+    .cell { padding: 7px 10px; min-height: 36px; display: flex; align-items: center; }
+    .cell-title { font-size: 13px; font-weight: 500; cursor: pointer; flex: 1; }
+    .cell-title:hover { color: var(--accent); }
+    .cell-edit { background: none; border: none; color: var(--t0); font-size: 13px; font-weight: 500; font-family: inherit; outline: none; width: 100%; padding: 0; }
+    .cell-edit:focus { color: var(--accent); }
+
+    /* Status / Priority pills */
+    .status-pill {
+      display: inline-flex; align-items: center; padding: 3px 10px; border-radius: 5px;
+      font-size: 11px; font-weight: 600; cursor: pointer; transition: filter .1s; white-space: nowrap;
+    }
+    .status-pill:hover { filter: brightness(1.15); }
+    .status-empty { color: var(--t2); font-size: 11px; cursor: pointer; padding: 3px 6px; border-radius: 5px; background: var(--s3); }
+    .status-empty:hover { color: var(--t1); }
+
+    /* Person cell */
+    .person-avatars { display: flex; gap: -4px; }
+    .person-avatar { width: 24px; height: 24px; border-radius: 50%; background: var(--accent); display: flex; align-items: center; justify-content: center; font-size: 10px; font-weight: 700; color: #fff; flex-shrink: 0; border: 1px solid var(--bg); margin-right: -4px; }
+    .person-avatar img { width: 100%; height: 100%; border-radius: 50%; object-fit: cover; }
+    .add-person-btn { width: 22px; height: 22px; border-radius: 50%; background: var(--s3); border: 1px dashed var(--t2); display: flex; align-items: center; justify-content: center; font-size: 14px; color: var(--t2); cursor: pointer; margin-left: 4px; }
+    .add-person-btn:hover { background: var(--s4); color: var(--t1); }
+
+    /* Date cell */
+    .date-cell { font-size: 11px; color: var(--t1); cursor: pointer; padding: 2px 6px; border-radius: 4px; }
+    .date-cell:hover { background: var(--s3); }
+    .date-cell.overdue { color: var(--red); }
+    .date-cell.today { color: var(--amber); }
+    .date-cell.empty { color: var(--t2); }
+
+    /* Number cell */
+    .number-cell { font-size: 12px; color: var(--t1); text-align: right; }
+
+    /* Checkbox */
+    .checkbox-cell { width: 32px; text-align: center; }
+    input[type="checkbox"] { appearance: none; width: 14px; height: 14px; border: 1.5px solid var(--t2); border-radius: 3px; cursor: pointer; background: transparent; position: relative; }
+    input[type="checkbox"]:checked { background: var(--green); border-color: var(--green); }
+    input[type="checkbox"]:checked::after { content: '✓'; position: absolute; top: -2px; left: 1px; font-size: 11px; color: #000; font-weight: 900; }
+
+    /* Add item row */
+    .add-item-row td { padding: 6px 10px; }
+    .add-item-btn {
+      display: inline-flex; align-items: center; gap: 5px; color: var(--t2); font-size: 12px;
+      cursor: pointer; padding: 4px 8px; border-radius: 5px; border: none; background: none; font-family: inherit;
+    }
+    .add-item-btn:hover { color: var(--t1); background: rgba(255,255,255,.04); }
+
+    /* ── KANBAN VIEW ── */
+    .kanban-scroll { overflow-x: auto; padding: 16px 0; display: flex; gap: 16px; min-height: 0; flex: 1; }
+    .kanban-col {
+      flex-shrink: 0; width: 280px; display: flex; flex-direction: column;
+      background: var(--s2); border-radius: 10px; overflow: hidden;
+    }
+    .kanban-col-header {
+      padding: 10px 12px; display: flex; align-items: center; gap: 6px;
+      border-bottom: 1px solid var(--line);
+    }
+    .kanban-col-dot { width: 10px; height: 10px; border-radius: 3px; }
+    .kanban-col-title { font-size: 12px; font-weight: 700; flex: 1; }
+    .kanban-col-count { font-size: 11px; color: var(--t2); }
+    .kanban-cards { padding: 8px; display: flex; flex-direction: column; gap: 6px; overflow-y: auto; flex: 1; }
+    .kanban-card {
+      background: var(--s3); border-radius: 8px; padding: 10px 12px; cursor: pointer;
+      transition: background .1s, transform .1s; border: 1px solid var(--line);
+    }
+    .kanban-card:hover { background: var(--s4); transform: translateY(-1px); }
+    .kanban-card-title { font-size: 12px; font-weight: 600; margin-bottom: 8px; }
+    .kanban-card-meta { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+    .kanban-card-date { font-size: 10px; color: var(--t2); }
+    .kanban-add { padding: 8px; }
+    .kanban-add-btn { width: 100%; padding: 7px; border-radius: 6px; background: none; border: 1px dashed var(--line); color: var(--t2); font-size: 11px; cursor: pointer; font-family: inherit; }
+    .kanban-add-btn:hover { background: var(--s3); color: var(--t1); }
+
+    /* ── GANTT VIEW ── */
+    .gantt-wrap { display: flex; flex-direction: column; flex: 1; overflow: hidden; padding: 12px 0; }
+    .gantt-header { display: flex; border-bottom: 1px solid var(--line); padding-bottom: 6px; margin-bottom: 0; }
+    .gantt-left-header { width: 260px; flex-shrink: 0; padding: 0 16px; font-size: 11px; font-weight: 600; color: var(--t2); }
+    .gantt-timeline-header { flex: 1; overflow: hidden; display: flex; }
+    .gantt-month-label { font-size: 10px; color: var(--t2); font-weight: 600; text-align: center; border-right: 1px solid var(--line2); padding: 2px 0; }
+    .gantt-body { flex: 1; overflow-y: auto; }
+    .gantt-row { display: flex; align-items: center; border-bottom: 1px solid var(--line2); min-height: 36px; }
+    .gantt-row-label { width: 260px; flex-shrink: 0; padding: 0 16px; font-size: 12px; font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .gantt-row-timeline { flex: 1; position: relative; height: 36px; overflow: hidden; }
+    .gantt-bar {
+      position: absolute; top: 7px; height: 22px; border-radius: 5px;
+      display: flex; align-items: center; padding: 0 8px; font-size: 10px; font-weight: 600; color: rgba(255,255,255,.9);
+      cursor: pointer; white-space: nowrap; overflow: hidden;
+    }
+    .gantt-today-line { position: absolute; top: 0; width: 1px; height: 100%; background: var(--red); opacity: .6; z-index: 5; }
+    .gantt-group-label { padding: 6px 16px; font-size: 11px; font-weight: 700; color: var(--t2); background: var(--s2); display: flex; align-items: center; gap: 6px; }
+
+    /* ── CALENDAR VIEW ── */
+    .calendar-wrap { flex: 1; overflow: auto; padding: 12px 0; }
+    .calendar-nav { display: flex; align-items: center; gap: 12px; padding: 0 16px 12px; }
+    .cal-nav-btn { background: var(--s2); border: 1px solid var(--line); border-radius: 6px; color: var(--t1); padding: 4px 10px; cursor: pointer; font-size: 12px; }
+    .cal-nav-btn:hover { color: var(--t0); background: var(--s3); }
+    .cal-month-label { font-size: 15px; font-weight: 700; }
+    .calendar-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 1px; background: var(--line); border: 1px solid var(--line); border-radius: 8px; overflow: hidden; }
+    .cal-day-header { background: var(--s2); padding: 6px 10px; font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .05em; color: var(--t2); text-align: center; }
+    .cal-day { background: var(--s1); min-height: 90px; padding: 6px; position: relative; }
+    .cal-day.other-month { opacity: .4; }
+    .cal-day.today .cal-day-num { background: var(--accent); color: #fff; border-radius: 50%; width: 20px; height: 20px; display: flex; align-items: center; justify-content: center; }
+    .cal-day-num { font-size: 11px; color: var(--t2); margin-bottom: 4px; display: inline-block; padding: 1px 3px; }
+    .cal-item { font-size: 10px; padding: 2px 5px; border-radius: 3px; margin-bottom: 2px; cursor: pointer; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 500; }
+    .cal-item:hover { filter: brightness(1.2); }
+
+    /* ── ITEM DETAIL MODAL ── */
+    .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,.7); z-index: 500; display: flex; align-items: center; justify-content: center; padding: 20px; }
+    .modal-overlay.hidden { display: none; }
+    .modal { background: var(--s2); border-radius: 14px; width: 680px; max-width: 100%; max-height: 90vh; overflow-y: auto; border: 1px solid var(--line); }
+    .modal-header { padding: 20px 24px 16px; display: flex; align-items: flex-start; gap: 12px; border-bottom: 1px solid var(--line); }
+    .modal-title { font-size: 18px; font-weight: 800; letter-spacing: -.02em; flex: 1; outline: none; border: none; background: none; color: var(--t0); font-family: inherit; }
+    .modal-title:focus { border-bottom: 1px solid var(--accent); }
+    .modal-close { background: var(--s3); border: none; border-radius: 6px; color: var(--t2); width: 28px; height: 28px; cursor: pointer; font-size: 16px; display: flex; align-items: center; justify-content: center; }
+    .modal-close:hover { color: var(--t0); background: var(--s4); }
+    .modal-body { padding: 20px 24px; display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+    .modal-field { display: flex; flex-direction: column; gap: 5px; }
+    .modal-field-label { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; color: var(--t2); }
+    .modal-field-value { background: var(--s3); border: 1px solid var(--line); border-radius: 7px; padding: 8px 10px; font-size: 13px; }
+    .modal-footer { padding: 16px 24px; border-top: 1px solid var(--line); display: flex; justify-content: space-between; align-items: center; }
+
+    /* Subitems */
+    .subitems-section { padding: 0 24px 20px; }
+    .subitem-row { display: flex; align-items: center; gap: 8px; padding: 6px 0; border-bottom: 1px solid var(--line2); }
+    .subitem-title { flex: 1; font-size: 12px; }
+    .subitem-add { display: flex; align-items: center; gap: 6px; padding: 6px 0; }
+    .subitem-input { background: none; border: none; border-bottom: 1px solid var(--line); color: var(--t0); font-size: 12px; font-family: inherit; outline: none; flex: 1; padding: 3px 0; }
+    .subitem-input::placeholder { color: var(--t2); }
+
+    /* ── COLUMN SETTINGS PANEL ── */
+    .col-settings-panel {
+      position: absolute; top: 100%; left: 0; min-width: 240px; background: var(--s3);
+      border: 1px solid var(--line); border-radius: 10px; z-index: 200; padding: 12px;
+      box-shadow: 0 8px 24px rgba(0,0,0,.4);
+    }
+    .col-settings-panel h4 { font-size: 12px; font-weight: 700; color: var(--t1); margin-bottom: 10px; }
+    .col-type-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 5px; margin-bottom: 10px; }
+    .col-type-btn { padding: 6px 8px; border-radius: 6px; background: var(--s4); border: 1px solid var(--line); color: var(--t1); font-size: 11px; cursor: pointer; text-align: center; }
+    .col-type-btn:hover { background: var(--adim); color: var(--t0); }
+    .col-type-btn.selected { background: var(--adim); color: var(--accent); border-color: var(--accent); }
+    .col-input { width: 100%; background: var(--s4); border: 1px solid var(--line); border-radius: 6px; color: var(--t0); padding: 6px 8px; font-size: 12px; font-family: inherit; outline: none; }
+    .col-input:focus { border-color: var(--accent); }
+    .col-input + .col-input { margin-top: 6px; }
+
+    /* ── AUTOMATIONS PANEL ── */
+    .auto-panel { position: fixed; right: 0; top: 0; width: 400px; height: 100vh; background: var(--s2); border-left: 1px solid var(--line); z-index: 400; overflow-y: auto; transform: translateX(100%); transition: transform .25s; }
+    .auto-panel.open { transform: translateX(0); }
+    .auto-panel-header { padding: 20px 20px 16px; border-bottom: 1px solid var(--line); display: flex; align-items: center; justify-content: space-between; }
+    .auto-panel-title { font-size: 15px; font-weight: 800; }
+    .auto-item { padding: 12px 16px; border: 1px solid var(--line); border-radius: 8px; margin: 12px; }
+    .auto-trigger { font-size: 11px; color: var(--t2); margin-bottom: 4px; }
+    .auto-desc { font-size: 12px; font-weight: 600; }
+    .auto-actions { display: flex; gap: 6px; margin-top: 8px; }
+
+    /* ── SHARE MODAL ── */
+    .share-modal { background: var(--s2); border-radius: 14px; width: 460px; max-width: 100%; border: 1px solid var(--line); padding: 24px; }
+    .share-user-row { display: flex; align-items: center; gap: 10px; padding: 8px 0; border-bottom: 1px solid var(--line2); }
+    .share-user-avatar { width: 32px; height: 32px; border-radius: 50%; background: var(--accent); display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 700; color: #fff; flex-shrink: 0; }
+    .share-user-avatar img { width: 100%; height: 100%; border-radius: 50%; object-fit: cover; }
+    .share-role-select { background: var(--s3); border: 1px solid var(--line); border-radius: 5px; color: var(--t0); padding: 3px 7px; font-size: 11px; font-family: inherit; outline: none; margin-left: auto; }
+
+    /* ── EMPTY STATE ── */
+    .empty-state { display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 80px 40px; gap: 12px; color: var(--t2); text-align: center; }
+    .empty-state-icon { font-size: 48px; }
+    .empty-state-title { font-size: 16px; font-weight: 700; color: var(--t1); }
+    .empty-state-desc { font-size: 13px; max-width: 320px; }
+
+    /* ── DROPDOWN MENU ── */
+    .dropdown-menu {
+      position: absolute; background: var(--s3); border: 1px solid var(--line); border-radius: 9px;
+      z-index: 400; min-width: 180px; padding: 5px; box-shadow: 0 8px 24px rgba(0,0,0,.5);
+    }
+    .dropdown-menu.hidden { display: none; }
+    .dropdown-item { padding: 7px 10px; border-radius: 5px; font-size: 12px; cursor: pointer; color: var(--t1); display: flex; align-items: center; gap: 8px; }
+    .dropdown-item:hover { background: var(--s4); color: var(--t0); }
+    .dropdown-item.danger { color: var(--red); }
+    .dropdown-item.danger:hover { background: rgba(226,68,92,.1); }
+    .dropdown-divider { height: 1px; background: var(--line); margin: 4px 0; }
+
+    /* ── COLOR PICKER ── */
+    .color-grid { display: flex; flex-wrap: wrap; gap: 6px; padding: 8px; }
+    .color-swatch { width: 22px; height: 22px; border-radius: 5px; cursor: pointer; border: 2px solid transparent; }
+    .color-swatch:hover, .color-swatch.selected { border-color: #fff; }
+
+    /* ── OPTION EDITOR ── */
+    .option-row { display: flex; align-items: center; gap: 6px; margin-bottom: 5px; }
+    .option-color-dot { width: 14px; height: 14px; border-radius: 3px; cursor: pointer; flex-shrink: 0; }
+    .option-label-input { flex: 1; background: var(--s4); border: 1px solid var(--line); border-radius: 5px; color: var(--t0); padding: 4px 7px; font-size: 11px; font-family: inherit; outline: none; }
+    .option-remove { background: none; border: none; color: var(--t2); cursor: pointer; font-size: 14px; padding: 2px; }
+    .option-remove:hover { color: var(--red); }
+
+    /* ── GMAIL PANEL ── */
+    .gmail-panel { position: fixed; right: 0; top: 0; width: 380px; height: 100vh; background: var(--s2); border-left: 1px solid var(--line); z-index: 400; display: flex; flex-direction: column; transform: translateX(100%); transition: transform .25s; }
+    .gmail-panel.open { transform: translateX(0); }
+    .gmail-panel-header { padding: 18px 16px 12px; border-bottom: 1px solid var(--line); display: flex; align-items: center; justify-content: space-between; flex-shrink: 0; }
+    .gmail-panel-title { font-size: 14px; font-weight: 800; }
+    .gmail-search-wrap { padding: 10px 12px; border-bottom: 1px solid var(--line); flex-shrink: 0; }
+    .gmail-list { flex: 1; overflow-y: auto; }
+    .gmail-item { padding: 10px 14px; border-bottom: 1px solid var(--line2); cursor: pointer; transition: background .1s; }
+    .gmail-item:hover { background: var(--s3); }
+    .gmail-item.expanded { background: var(--s3); }
+    .gmail-item-subject { font-size: 12px; font-weight: 600; color: var(--t0); margin-bottom: 2px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .gmail-item-from { font-size: 11px; color: var(--t2); margin-bottom: 2px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .gmail-item-snippet { font-size: 11px; color: var(--t2); display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+    .gmail-item-date { font-size: 10px; color: var(--t2); margin-top: 3px; }
+    .gmail-preview { padding: 10px 14px; background: var(--s4); border-bottom: 1px solid var(--line); display: none; }
+    .gmail-preview.show { display: block; }
+    .gmail-preview-body { font-size: 11px; color: var(--t1); line-height: 1.6; max-height: 120px; overflow-y: auto; margin-bottom: 10px; white-space: pre-wrap; }
+    .gmail-create-form { padding: 10px 14px; background: var(--s3); border-bottom: 2px solid var(--line); display: none; }
+    .gmail-create-form.show { display: block; }
+    .gmail-create-form label { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; color: var(--t2); display: block; margin-bottom: 4px; margin-top: 8px; }
+    .gmail-create-form label:first-child { margin-top: 0; }
+    .gmail-input { width: 100%; background: var(--s4); border: 1px solid var(--line); border-radius: 6px; color: var(--t0); padding: 6px 8px; font-size: 12px; font-family: inherit; outline: none; }
+    .gmail-input:focus { border-color: var(--accent); }
+    .gmail-select { width: 100%; background: var(--s4); border: 1px solid var(--line); border-radius: 6px; color: var(--t0); padding: 6px 8px; font-size: 12px; font-family: inherit; outline: none; cursor: pointer; }
+
+    /* ── TOAST ── */
+    .toast { position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%); background: var(--s3); border: 1px solid var(--line); border-radius: 8px; padding: 9px 18px; font-size: 12px; font-weight: 600; color: var(--t0); z-index: 9999; opacity: 0; transition: opacity .2s; pointer-events: none; }
+    .toast.show { opacity: 1; }
+
+    /* ── MISC ── */
+    .separator { height: 1px; background: var(--line); margin: 6px 0; }
+    ::-webkit-scrollbar { width: 5px; height: 5px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: var(--s4); border-radius: 3px; }
+    select { cursor: pointer; }
+
+    /* NEW BOARD FORM */
+    .new-board-form { padding: 12px 8px; border-top: 1px solid var(--line); }
+    .new-board-input { width: 100%; background: var(--s2); border: 1px solid var(--line); border-radius: 6px; color: var(--t0); padding: 6px 8px; font-size: 12px; font-family: inherit; outline: none; }
+    .new-board-input:focus { border-color: var(--accent); }
+  </style>
+</head>
+<body>
+
+<!-- TOPBAR -->
+<div class="topbar">
+  <a href="/app.html" class="tb-logo">
+    <div class="tb-gem">💎</div>
+    <span class="tb-name">Glint</span>
+  </a>
+  <a href="/app.html"    class="tnav">Giornata</a>
+  <a href="/app.html#todo" class="tnav">To Do</a>
+  <a href="/boards.html" class="tnav on">Board</a>
+  <a href="/settings.html" class="tnav">Impostazioni</a>
+  <div class="tb-right">
+    <button class="btn ghost sm" id="btn-share" onclick="openShareModal()" style="display:none">⬆ Condividi</button>
+    <button class="btn ghost sm" id="btn-automations" onclick="toggleAutoPanel()" style="display:none">⚡ Automazioni</button>
+    <button class="btn sm" onclick="showNewBoardForm()">＋ Nuova board</button>
+    <div id="user-avatar" style="width:28px;height:28px;border-radius:50%;background:var(--accent);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:#fff;flex-shrink:0;margin-left:4px;"></div>
+  </div>
+</div>
+
+<div class="app-body">
+
+  <!-- SIDEBAR -->
+  <div class="sidebar">
+    <div class="sidebar-header">
+      <span class="sidebar-title">Board</span>
+    </div>
+    <div class="sidebar-scroll" id="sidebar-list">
+      <div style="color:var(--t2);font-size:11px;padding:8px 8px">Caricamento…</div>
+    </div>
+    <div class="new-board-form" id="new-board-form" style="display:none">
+      <input class="new-board-input" id="new-board-name" placeholder="Nome board…" onkeydown="if(event.key==='Enter')createBoard();if(event.key==='Escape')hideNewBoardForm()"/>
+      <div style="display:flex;gap:5px;margin-top:6px">
+        <button class="btn sm" onclick="createBoard()">Crea</button>
+        <button class="btn ghost sm" onclick="hideNewBoardForm()">Annulla</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MAIN -->
+  <div class="main" id="main">
+    <div class="empty-state" id="empty-state">
+      <div class="empty-state-icon">📋</div>
+      <div class="empty-state-title">Nessuna board selezionata</div>
+      <div class="empty-state-desc">Seleziona una board dalla sidebar o creane una nuova per iniziare.</div>
+      <button class="btn" onclick="showNewBoardForm()">＋ Crea la prima board</button>
+    </div>
+    <div id="board-view" style="display:none;flex-direction:column;flex:1;overflow:hidden;display:none;"></div>
+  </div>
+</div>
+
+<!-- AUTOMATIONS PANEL -->
+<div class="auto-panel" id="auto-panel">
+  <div class="auto-panel-header">
+    <span class="auto-panel-title">⚡ Automazioni</span>
+    <button class="btn ghost sm" onclick="toggleAutoPanel()">✕</button>
+  </div>
+  <div style="padding:12px">
+    <button class="btn" onclick="openNewAutoModal()">＋ Nuova automazione</button>
+  </div>
+  <div id="auto-list"></div>
+</div>
+
+<!-- ITEM DETAIL MODAL -->
+<div class="modal-overlay hidden" id="item-modal">
+  <div class="modal">
+    <div class="modal-header">
+      <input class="modal-title" id="modal-item-title" placeholder="Titolo elemento…"/>
+      <button class="modal-close" onclick="closeItemModal()">✕</button>
+    </div>
+    <div class="modal-body" id="modal-fields"></div>
+    <div class="subitems-section">
+      <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--t2);margin-bottom:8px">Sottoelementi</div>
+      <div id="modal-subitems"></div>
+      <div class="subitem-add">
+        <input class="subitem-input" id="subitem-input" placeholder="Aggiungi sottoelemento…" onkeydown="if(event.key==='Enter')addSubitem()"/>
+        <button class="btn ghost sm" onclick="addSubitem()">＋</button>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <div style="font-size:11px;color:var(--t2)" id="modal-meta"></div>
+      <div style="display:flex;gap:6px">
+        <button class="btn danger sm" onclick="deleteCurrentItem()">Elimina</button>
+        <button class="btn sm" onclick="saveItemModal()">Salva</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- COLUMN SETTINGS MODAL -->
+<div class="modal-overlay hidden" id="col-modal">
+  <div class="modal" style="width:460px">
+    <div class="modal-header">
+      <span style="font-size:16px;font-weight:800;" id="col-modal-title">Modifica colonna</span>
+      <button class="modal-close" onclick="document.getElementById('col-modal').classList.add('hidden')">✕</button>
+    </div>
+    <div style="padding:20px 24px">
+      <div style="margin-bottom:12px">
+        <label style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--t2);display:block;margin-bottom:5px">Nome colonna</label>
+        <input class="col-input" id="col-modal-name" placeholder="Nome…"/>
+      </div>
+      <div style="margin-bottom:12px">
+        <label style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--t2);display:block;margin-bottom:5px">Tipo</label>
+        <div class="col-type-grid" id="col-type-grid"></div>
+      </div>
+      <div id="col-options-section" style="display:none">
+        <label style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--t2);display:block;margin-bottom:5px">Opzioni</label>
+        <div id="col-options-list"></div>
+        <button class="btn ghost sm" style="margin-top:6px" onclick="addColOption()">＋ Aggiungi opzione</button>
+      </div>
+    </div>
+    <div style="padding:12px 24px 20px;border-top:1px solid var(--line);display:flex;justify-content:space-between">
+      <button class="btn danger sm" id="col-modal-delete" onclick="deleteCurrentColumn()">Elimina colonna</button>
+      <div style="display:flex;gap:6px">
+        <button class="btn ghost sm" onclick="document.getElementById('col-modal').classList.add('hidden')">Annulla</button>
+        <button class="btn sm" onclick="saveColumnModal()">Salva</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- NEW AUTOMATION MODAL -->
+<div class="modal-overlay hidden" id="auto-modal">
+  <div class="modal" style="width:520px">
+    <div class="modal-header">
+      <span style="font-size:16px;font-weight:800;">⚡ Nuova automazione</span>
+      <button class="modal-close" onclick="document.getElementById('auto-modal').classList.add('hidden')">✕</button>
+    </div>
+    <div style="padding:20px 24px;display:flex;flex-direction:column;gap:16px">
+      <div>
+        <label style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--t2);display:block;margin-bottom:8px">Trigger — Quando…</label>
+        <select class="col-input" id="auto-trigger-type" onchange="updateAutoForm()">
+          <option value="status_change">Lo stato di un elemento cambia</option>
+          <option value="item_created">Viene creato un elemento</option>
+          <option value="date_arrives">La data scadenza arriva</option>
+        </select>
+        <div id="auto-trigger-extra" style="margin-top:8px"></div>
+      </div>
+      <div>
+        <label style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--t2);display:block;margin-bottom:8px">Azione — Allora…</label>
+        <select class="col-input" id="auto-action-type" onchange="updateAutoForm()">
+          <option value="notify">Invia notifica</option>
+          <option value="move_to_group">Sposta nel gruppo</option>
+          <option value="assign_person">Assegna persona</option>
+        </select>
+        <div id="auto-action-extra" style="margin-top:8px"></div>
+      </div>
+    </div>
+    <div style="padding:12px 24px 20px;border-top:1px solid var(--line);display:flex;justify-content:flex-end;gap:6px">
+      <button class="btn ghost sm" onclick="document.getElementById('auto-modal').classList.add('hidden')">Annulla</button>
+      <button class="btn sm" onclick="saveAutomation()">Crea automazione</button>
+    </div>
+  </div>
+</div>
+
+<!-- SHARE MODAL -->
+<div class="modal-overlay hidden" id="share-modal">
+  <div class="share-modal">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
+      <span style="font-size:16px;font-weight:800">⬆ Condividi board</span>
+      <button class="modal-close" onclick="document.getElementById('share-modal').classList.add('hidden')">✕</button>
+    </div>
+    <div style="margin-bottom:12px">
+      <label style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--t2);display:block;margin-bottom:6px">Aggiungi utente</label>
+      <div style="display:flex;gap:6px">
+        <select class="col-input" id="share-user-select" style="flex:1"></select>
+        <select class="col-input" id="share-role-select" style="width:100px">
+          <option value="editor">Editor</option>
+          <option value="viewer">Viewer</option>
+        </select>
+        <button class="btn sm" onclick="addShare()">Aggiungi</button>
+      </div>
+    </div>
+    <div id="share-list"></div>
+  </div>
+</div>
+
+<!-- GMAIL PANEL -->
+<div class="gmail-panel" id="gmail-panel">
+  <div class="gmail-panel-header">
+    <span class="gmail-panel-title">📧 Crea task da email</span>
+    <button class="btn ghost sm" onclick="toggleGmailPanel()">✕</button>
+  </div>
+  <div class="gmail-search-wrap">
+    <input class="search-input" style="width:100%" id="gmail-search-input" placeholder="🔍 Cerca email… (es. da:mario)" oninput="debounceGmailSearch()"/>
+  </div>
+  <div class="gmail-list" id="gmail-list">
+    <div style="padding:24px;text-align:center;color:var(--t2);font-size:12px">Caricamento email…</div>
+  </div>
+</div>
+
+<!-- BOARD RENAME MODAL -->
+<div class="modal-overlay hidden" id="rename-modal">
+  <div class="modal" style="width:400px">
+    <div class="modal-header">
+      <span style="font-size:16px;font-weight:800">Rinomina board</span>
+      <button class="modal-close" onclick="document.getElementById('rename-modal').classList.add('hidden')">✕</button>
+    </div>
+    <div style="padding:20px 24px">
+      <input class="col-input" id="rename-input" placeholder="Nome board…" onkeydown="if(event.key==='Enter')saveBoardRename()"/>
+      <input class="col-input" id="rename-desc" placeholder="Descrizione (opzionale)…" style="margin-top:8px" onkeydown="if(event.key==='Enter')saveBoardRename()"/>
+    </div>
+    <div style="padding:0 24px 20px;display:flex;gap:6px;justify-content:flex-end">
+      <button class="btn ghost sm" onclick="document.getElementById('rename-modal').classList.add('hidden')">Annulla</button>
+      <button class="btn sm" onclick="saveBoardRename()">Salva</button>
+    </div>
+  </div>
+</div>
+
+<!-- GROUP RENAME INLINE is done in-place -->
+
+<!-- TOAST -->
+<div class="toast" id="toast"></div>
+
+<!-- GLOBAL DROPDOWN (context menus) -->
+<div class="dropdown-menu hidden" id="global-dropdown"></div>
+
+<script>
+// ── STATE ──────────────────────────────────────────────────────────────────────
+let boards = [];
+let currentBoard = null;
+let currentView = 'table';
+let currentMe = null;
+let allUsers = [];
+let editingItem = null;
+let editingColumn = null;
+let ganttRange = null;
+
+const COL_TYPES = [
+  { id: 'text',     icon: '𝐓', label: 'Testo' },
+  { id: 'status',   icon: '●', label: 'Stato' },
+  { id: 'priority', icon: '↑', label: 'Priorità' },
+  { id: 'person',   icon: '👤', label: 'Persona' },
+  { id: 'date',     icon: '📅', label: 'Data' },
+  { id: 'number',   icon: '#', label: 'Numero' },
+  { id: 'checkbox', icon: '☑', label: 'Checkbox' },
+  { id: 'timeline', icon: '↔', label: 'Timeline' },
+  { id: 'url',      icon: '🔗', label: 'URL' },
+  { id: 'dropdown', icon: '▾', label: 'Dropdown' }
+];
+
+const BOARD_COLORS = ['#579bfc','#fdab3d','#e2445c','#00c875','#7c6ef5','#a78bfa','#fb275d','#ff7575','#9aadbd','#66ccff'];
+
+// ── INIT ───────────────────────────────────────────────────────────────────────
+async function init() {
+  try {
+    const me = await api('/api/me');
+    currentMe = me;
+    const av = document.getElementById('user-avatar');
+    if (me.picture) { av.innerHTML = `<img src="${me.picture}" style="width:28px;height:28px;border-radius:50%;object-fit:cover"/>`; }
+    else { av.textContent = (me.name || me.email || '?')[0].toUpperCase(); }
+  } catch(e) { window.location.href = '/login.html'; return; }
+
+  try {
+    const usersResp = await api('/api/users');
+    allUsers = Object.entries(usersResp).map(([id, u]) => ({ id, ...u }));
+  } catch(e) {}
+
+  await loadBoards();
+  const hash = location.hash.replace('#','');
+  if (hash) selectBoard(hash);
+}
+
+async function loadBoards() {
+  boards = await api('/api/boards');
+  renderSidebar();
+}
+
+function renderSidebar() {
+  const el = document.getElementById('sidebar-list');
+  if (!boards.length) {
+    el.innerHTML = `<div style="color:var(--t2);font-size:11px;padding:8px 8px">Nessuna board ancora</div>`;
+    return;
+  }
+  el.innerHTML = boards.map(b => `
+    <div class="board-item ${currentBoard?.id === b.id ? 'active' : ''}" onclick="selectBoard('${b.id}')">
+      <span class="board-icon">${b.icon || '📋'}</span>
+      <span class="board-name">${esc(b.name)}</span>
+      ${b._ownerName ? `<span class="board-shared-badge">condivisa</span>` : ''}
+    </div>
+  `).join('');
+}
+
+// ── BOARD SELECT ───────────────────────────────────────────────────────────────
+async function selectBoard(id) {
+  currentBoard = await api(`/api/boards/${id}`);
+  currentView = currentBoard.defaultView || 'table';
+  location.hash = id;
+  document.getElementById('empty-state').style.display = 'none';
+  document.getElementById('btn-share').style.display = (currentBoard._permission === 'owner') ? '' : 'none';
+  document.getElementById('btn-automations').style.display = '';
+  renderSidebar();
+  renderBoardView();
+  renderAutoList();
+}
+
+function renderBoardView() {
+  const el = document.getElementById('board-view');
+  el.style.display = 'flex';
+  el.style.flexDirection = 'column';
+  el.style.flex = '1';
+  el.style.overflow = 'hidden';
+  el.innerHTML = `
+    <div class="board-header">
+      <div class="board-header-top">
+        <span class="board-header-icon" onclick="openRenameModal()">${currentBoard.icon || '📋'}</span>
+        <div>
+          <div class="board-header-title" onclick="openRenameModal()" style="color:${currentBoard.color || '#fff'}">${esc(currentBoard.name)}</div>
+          ${currentBoard.description ? `<div class="board-desc">${esc(currentBoard.description)}</div>` : ''}
+        </div>
+        ${currentBoard._permission === 'owner' ? `<button class="btn danger sm" style="margin-left:auto" onclick="deleteBoard()">🗑 Elimina</button>` : ''}
+      </div>
+      <div class="view-bar">
+        <button class="view-btn ${currentView==='table'?'on':''}"    onclick="switchView('table')">⊞ Tabella</button>
+        <button class="view-btn ${currentView==='kanban'?'on':''}"   onclick="switchView('kanban')">☰ Kanban</button>
+        <button class="view-btn ${currentView==='gantt'?'on':''}"    onclick="switchView('gantt')">↔ Gantt</button>
+        <button class="view-btn ${currentView==='calendar'?'on':''}" onclick="switchView('calendar')">📅 Calendario</button>
+      </div>
+    </div>
+    <div class="board-toolbar">
+      <input class="search-input" id="board-search" placeholder="🔍 Cerca…" oninput="applySearch()"/>
+      ${currentBoard._permission !== 'viewer' ? `<button class="btn ghost sm" onclick="openAddColumnModal()">＋ Colonna</button>` : ''}
+      ${currentBoard._permission !== 'viewer' ? `<button class="btn ghost sm" onclick="addGroup()">＋ Gruppo</button>` : ''}
+      ${currentBoard._permission !== 'viewer' ? `<button class="btn ghost sm" onclick="toggleGmailPanel()" style="margin-left:auto">📧 Da email</button>` : ''}
+    </div>
+    <div id="view-container" style="flex:1;overflow:hidden;display:flex;flex-direction:column;"></div>
+  `;
+  renderView();
+}
+
+function switchView(v) {
+  currentView = v;
+  // Update default view silently
+  api(`/api/boards/${currentBoard.id}`, 'PUT', { defaultView: v });
+  renderBoardView();
+}
+
+function renderView() {
+  if (currentView === 'table')    renderTableView();
+  else if (currentView === 'kanban') renderKanbanView();
+  else if (currentView === 'gantt')  renderGanttView();
+  else if (currentView === 'calendar') renderCalendarView();
+}
+
+function filteredGroups() {
+  const q = (document.getElementById('board-search')?.value || '').toLowerCase();
+  if (!q) return currentBoard.groups;
+  return currentBoard.groups.map(g => ({
+    ...g,
+    items: g.items.filter(i => i.title.toLowerCase().includes(q))
+  }));
+}
+
+// ── TABLE VIEW ─────────────────────────────────────────────────────────────────
+function renderTableView() {
+  const vc = document.getElementById('view-container');
+  const cols = currentBoard.columns;
+  const canEdit = currentBoard._permission !== 'viewer';
+
+  let html = `<div class="board-content">`;
+  for (const group of filteredGroups()) {
+    html += `
+      <div class="group-block" id="grp-${group.id}">
+        <div class="group-header" onclick="toggleGroupCollapse('${group.id}')">
+          <div class="group-color-bar" style="background:${group.color}"></div>
+          <span class="group-chevron ${group.collapsed?'collapsed':''}">▼</span>
+          <span class="group-label">${esc(group.title)}</span>
+          <span class="group-count">${group.items.length} elementi</span>
+          <div class="group-actions" onclick="event.stopPropagation()">
+            <button class="group-action-btn" onclick="openGroupMenu('${group.id}', event)">⋮</button>
+          </div>
+        </div>
+        ${group.collapsed ? '' : `
+        <div class="table-wrap">
+          <table class="board-table">
+            <thead>
+              <tr>
+                ${cols.map(col => `
+                  <th style="width:${col.width||150}px;position:relative" title="${esc(col.title)}">
+                    <span class="col-type-icon">${COL_TYPES.find(t=>t.id===col.type)?.icon||'𝐓'}</span>
+                    ${esc(col.title)}
+                    ${canEdit && !col.fixed ? `<span style="cursor:pointer;margin-left:6px;opacity:.4;font-size:10px" onclick="openColumnModal('${col.id}', event)">✎</span>` : ''}
+                  </th>
+                `).join('')}
+                <th style="width:40px"></th>
+              </tr>
+            </thead>
+            <tbody>
+              ${group.items.map(item => renderTableRow(group.id, item, cols, canEdit)).join('')}
+              ${canEdit ? `
+                <tr class="add-item-row">
+                  <td colspan="${cols.length+1}">
+                    <button class="add-item-btn" onclick="addItem('${group.id}')">＋ Aggiungi elemento</button>
+                  </td>
+                </tr>
+              ` : ''}
+            </tbody>
+          </table>
+        </div>
+        `}
+      </div>
+    `;
+  }
+  html += `</div>`;
+  vc.innerHTML = html;
+}
+
+function renderTableRow(groupId, item, cols, canEdit) {
+  return `
+    <tr class="item-row" id="item-${item.id}">
+      ${cols.map(col => `
+        <td>
+          <div class="cell">${renderCell(groupId, item, col, canEdit)}</div>
+        </td>
+      `).join('')}
+      <td>
+        <div class="cell" style="justify-content:center">
+          <button style="background:none;border:none;color:var(--t2);cursor:pointer;font-size:14px;padding:2px" onclick="openItemModal('${groupId}','${item.id}')">⋯</button>
+        </div>
+      </td>
+    </tr>
+  `;
+}
+
+function renderCell(groupId, item, col, canEdit) {
+  const v = item.values?.[col.id];
+
+  if (col.fixed && col.type === 'text') {
+    if (!canEdit) return `<span class="cell-title">${esc(item.title)}</span>`;
+    return `<input class="cell-edit" value="${esc(item.title)}" onblur="updateItemTitle('${groupId}','${item.id}',this.value)" onkeydown="if(event.key==='Enter')this.blur()" onclick="event.stopPropagation()"/>`;
+  }
+
+  if (col.type === 'status' || col.type === 'priority' || col.type === 'dropdown') {
+    const opt = (col.options||[]).find(o => o.id === v);
+    if (!canEdit) {
+      return opt ? `<span class="status-pill" style="background:${opt.color}20;color:${opt.color}">${esc(opt.label)}</span>` : `<span class="status-empty">—</span>`;
+    }
+    const pills = (col.options||[]).map(o => `
+      <div class="dropdown-item ${v===o.id?'':''}">
+        <span class="color-swatch" style="background:${o.color};width:10px;height:10px;margin:0"></span>
+        <span onclick="setStatus('${groupId}','${item.id}','${col.id}','${o.id}')">${esc(o.label)}</span>
+      </div>
+    `).join('');
+    const menuId = `sm-${item.id}-${col.id}`;
+    return opt
+      ? `<span class="status-pill" style="background:${opt.color}25;color:${opt.color}" onclick="toggleDropdown('${menuId}',event)">${esc(opt.label)}</span>
+         <div class="dropdown-menu hidden" id="${menuId}">${pills}</div>`
+      : `<span class="status-empty" onclick="toggleDropdown('${menuId}',event)">— Imposta</span>
+         <div class="dropdown-menu hidden" id="${menuId}">${pills}</div>`;
+  }
+
+  if (col.type === 'person') {
+    const ids = Array.isArray(v) ? v : (v ? [v] : []);
+    const avatars = ids.map(uid => {
+      const u = allUsers.find(x => x.id === uid);
+      const initials = (u?.name || u?.email || '?')[0].toUpperCase();
+      const pic = u?.picture;
+      return pic
+        ? `<div class="person-avatar"><img src="${pic}" title="${esc(u?.name||uid)}"/></div>`
+        : `<div class="person-avatar" title="${esc(u?.name||uid)}">${initials}</div>`;
+    }).join('');
+    if (!canEdit) return `<div class="person-avatars">${avatars}</div>`;
+    const menuId = `pm-${item.id}-${col.id}`;
+    const userOpts = allUsers.filter(u => u.id !== currentMe?.uid).map(u => `
+      <div class="dropdown-item" onclick="togglePerson('${groupId}','${item.id}','${col.id}','${u.id}')">
+        ${ids.includes(u.id) ? '✓ ' : ''}${esc(u.name||u.email)}
+      </div>
+    `).join('');
+    return `
+      <div style="display:flex;align-items:center;gap:4px;cursor:pointer" onclick="toggleDropdown('${menuId}',event)">
+        <div class="person-avatars">${avatars}</div>
+        <span class="add-person-btn" title="Assegna">+</span>
+      </div>
+      <div class="dropdown-menu hidden" id="${menuId}">${userOpts || '<div class="dropdown-item" style="color:var(--t2)">Nessun utente</div>'}</div>
+    `;
+  }
+
+  if (col.type === 'date') {
+    const today = new Date().toISOString().slice(0,10);
+    let cls = 'date-cell';
+    if (!v) cls += ' empty';
+    else if (v < today) cls += ' overdue';
+    else if (v === today) cls += ' today';
+    if (!canEdit) return `<span class="${cls}">${v ? formatDate(v) : '—'}</span>`;
+    return `<input type="date" class="${cls}" value="${v||''}" onchange="setCellValue('${groupId}','${item.id}','${col.id}',this.value)" style="background:none;border:none;color:inherit;font-family:inherit;font-size:11px;cursor:pointer;outline:none"/>`;
+  }
+
+  if (col.type === 'number') {
+    if (!canEdit) return `<span class="number-cell">${v !== undefined && v !== null && v !== '' ? v : '—'}</span>`;
+    return `<input type="number" style="background:none;border:none;color:var(--t1);font-size:12px;font-family:inherit;outline:none;width:100%;text-align:right" value="${v||''}" onblur="setCellValue('${groupId}','${item.id}','${col.id}',this.value?Number(this.value):null)" onkeydown="if(event.key==='Enter')this.blur()"/>`;
+  }
+
+  if (col.type === 'checkbox') {
+    return `<div class="checkbox-cell"><input type="checkbox" ${v?'checked':''} ${canEdit?`onchange="setCellValue('${groupId}','${item.id}','${col.id}',this.checked)"`:'disabled'}/></div>`;
+  }
+
+  if (col.type === 'url') {
+    if (!v) {
+      if (!canEdit) return `<span style="color:var(--t2)">—</span>`;
+      return `<input class="cell-edit" style="font-size:11px" placeholder="https://…" value="${esc(v||'')}" onblur="setCellValue('${groupId}','${item.id}','${col.id}',this.value)" onkeydown="if(event.key==='Enter')this.blur()"/>`;
+    }
+    return `<a href="${esc(v)}" target="_blank" style="color:var(--blue);font-size:11px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:130px;display:block">${esc(v)}</a>`;
+  }
+
+  if (col.type === 'timeline') {
+    const start = v?.start, end = v?.end;
+    if (!start && !end) {
+      if (!canEdit) return `<span style="color:var(--t2)">—</span>`;
+      return `<div style="display:flex;gap:4px;align-items:center">
+        <input type="date" style="background:none;border:none;color:var(--t2);font-size:10px;font-family:inherit;outline:none;cursor:pointer" placeholder="Inizio" value="" onchange="setTimeline('${groupId}','${item.id}','${col.id}','start',this.value)"/>
+        <span style="color:var(--t2)">→</span>
+        <input type="date" style="background:none;border:none;color:var(--t2);font-size:10px;font-family:inherit;outline:none;cursor:pointer" placeholder="Fine" value="" onchange="setTimeline('${groupId}','${item.id}','${col.id}','end',this.value)"/>
+      </div>`;
+    }
+    return `<div style="display:flex;gap:4px;align-items:center">
+      <input type="date" style="background:none;border:none;color:var(--t1);font-size:10px;font-family:inherit;outline:none;cursor:pointer" value="${start||''}" ${canEdit?`onchange="setTimeline('${groupId}','${item.id}','${col.id}','start',this.value)"`:'disabled'}/>
+      <span style="color:var(--t2)">→</span>
+      <input type="date" style="background:none;border:none;color:var(--t1);font-size:10px;font-family:inherit;outline:none;cursor:pointer" value="${end||''}" ${canEdit?`onchange="setTimeline('${groupId}','${item.id}','${col.id}','end',this.value)"`:'disabled'}/>
+    </div>`;
+  }
+
+  // Default text
+  if (!canEdit) return `<span style="font-size:12px;color:var(--t1)">${esc(v||'')}</span>`;
+  return `<input class="cell-edit" style="font-size:12px" value="${esc(v||'')}" onblur="setCellValue('${groupId}','${item.id}','${col.id}',this.value)" onkeydown="if(event.key==='Enter')this.blur()" placeholder="…"/>`;
+}
+
+// ── KANBAN VIEW ────────────────────────────────────────────────────────────────
+function renderKanbanView() {
+  const vc = document.getElementById('view-container');
+  const statusCol = currentBoard.columns.find(c => c.type === 'status');
+  const canEdit = currentBoard._permission !== 'viewer';
+
+  if (!statusCol) {
+    vc.innerHTML = `<div class="empty-state"><div class="empty-state-icon">📊</div><div class="empty-state-title">Aggiungi una colonna Stato</div><div class="empty-state-desc">La vista Kanban richiede almeno una colonna di tipo "Stato".</div></div>`;
+    return;
+  }
+
+  const allItems = currentBoard.groups.flatMap(g => g.items.map(i => ({ ...i, _groupId: g.id })));
+
+  let html = `<div class="kanban-scroll" style="padding:16px 24px;flex:1;overflow-x:auto;display:flex;gap:16px;align-items:flex-start">`;
+  const noStatus = allItems.filter(i => !i.values?.[statusCol.id]);
+  const cols = [...statusCol.options, { id: '__none', label: 'Nessuno stato', color: '#555' }];
+
+  for (const opt of cols) {
+    const items = opt.id === '__none' ? noStatus : allItems.filter(i => i.values?.[statusCol.id] === opt.id);
+    html += `
+      <div class="kanban-col">
+        <div class="kanban-col-header">
+          <div class="kanban-col-dot" style="background:${opt.color}"></div>
+          <span class="kanban-col-title">${esc(opt.label)}</span>
+          <span class="kanban-col-count">${items.length}</span>
+        </div>
+        <div class="kanban-cards">
+          ${items.map(item => renderKanbanCard(item)).join('')}
+        </div>
+        ${canEdit ? `<div class="kanban-add"><button class="kanban-add-btn" onclick="addItemToStatus('${opt.id}')">＋ Aggiungi elemento</button></div>` : ''}
+      </div>
+    `;
+  }
+  html += `</div>`;
+  vc.innerHTML = html;
+}
+
+function renderKanbanCard(item) {
+  const dateCol = currentBoard.columns.find(c => c.type === 'date');
+  const prioCol = currentBoard.columns.find(c => c.type === 'priority' || (c.type === 'dropdown'));
+  const personCol = currentBoard.columns.find(c => c.type === 'person');
+  const today = new Date().toISOString().slice(0,10);
+  const due = dateCol ? item.values?.[dateCol.id] : null;
+  const prio = prioCol ? (prioCol.options||[]).find(o => o.id === item.values?.[prioCol.id]) : null;
+  const personIds = personCol ? (Array.isArray(item.values?.[personCol.id]) ? item.values[personCol.id] : []) : [];
+
+  return `
+    <div class="kanban-card" onclick="openItemModal('${item._groupId}','${item.id}')">
+      <div class="kanban-card-title">${esc(item.title)}</div>
+      <div class="kanban-card-meta">
+        ${prio ? `<span class="status-pill" style="background:${prio.color}20;color:${prio.color};font-size:10px;padding:2px 6px">${esc(prio.label)}</span>` : ''}
+        ${due ? `<span class="kanban-card-date ${due<today?'overdue':''}" style="${due<today?'color:var(--red)':''}">${formatDate(due)}</span>` : ''}
+        <div class="person-avatars" style="margin-left:auto">
+          ${personIds.slice(0,3).map(uid => {
+            const u = allUsers.find(x => x.id === uid);
+            return u?.picture
+              ? `<div class="person-avatar" style="width:18px;height:18px;font-size:8px"><img src="${u.picture}"/></div>`
+              : `<div class="person-avatar" style="width:18px;height:18px;font-size:8px">${(u?.name||'?')[0].toUpperCase()}</div>`;
+          }).join('')}
+        </div>
+      </div>
+      ${item.subitems?.length ? `<div style="margin-top:6px;font-size:10px;color:var(--t2)">◻ ${item.subitems.filter(s=>s.done).length}/${item.subitems.length} sottoelementi</div>` : ''}
+    </div>
+  `;
+}
+
+// ── GANTT VIEW ─────────────────────────────────────────────────────────────────
+function renderGanttView() {
+  const vc = document.getElementById('view-container');
+  const timelineCol = currentBoard.columns.find(c => c.type === 'timeline');
+  const dateCol = currentBoard.columns.find(c => c.type === 'date');
+
+  // Compute date range
+  let minDate = null, maxDate = null;
+  const today = new Date();
+  currentBoard.groups.forEach(g => g.items.forEach(item => {
+    const tl = timelineCol ? item.values?.[timelineCol.id] : null;
+    const d = dateCol ? item.values?.[dateCol.id] : null;
+    const start = tl?.start || d;
+    const end = tl?.end || d;
+    if (start) { if (!minDate || start < minDate) minDate = start; }
+    if (end) { if (!maxDate || end > maxDate) maxDate = end; }
+  }));
+
+  // Default range: current month ± 1 month
+  const rangeStart = ganttRange?.start || new Date(today.getFullYear(), today.getMonth() - 1, 1).toISOString().slice(0,10);
+  const rangeEnd   = ganttRange?.end   || new Date(today.getFullYear(), today.getMonth() + 3, 0).toISOString().slice(0,10);
+  const rsDate = new Date(rangeStart), reDate = new Date(rangeEnd);
+  const totalDays = Math.max(1, (reDate - rsDate) / 86400000);
+
+  // Build month headers
+  const months = [];
+  let cur = new Date(rsDate);
+  while (cur <= reDate) {
+    const mStart = new Date(cur.getFullYear(), cur.getMonth(), 1);
+    const mEnd   = new Date(cur.getFullYear(), cur.getMonth() + 1, 0);
+    const visible_start = Math.max(mStart, rsDate);
+    const visible_end   = Math.min(mEnd, reDate);
+    const days_in_range = (visible_end - visible_start) / 86400000 + 1;
+    months.push({ label: cur.toLocaleDateString('it', {month:'long', year:'numeric'}), pct: (days_in_range / totalDays) * 100 });
+    cur = new Date(cur.getFullYear(), cur.getMonth() + 1, 1);
+  }
+
+  const todayPct = ((today - rsDate) / (reDate - rsDate)) * 100;
+
+  let html = `
+    <div class="gantt-wrap" style="padding:0 24px 24px">
+      <div style="display:flex;align-items:center;gap:8px;padding:8px 0 12px">
+        <button class="btn ghost sm" onclick="shiftGantt(-1)">◀ Prec.</button>
+        <button class="btn ghost sm" onclick="shiftGantt(1)">Succ. ▶</button>
+        <button class="btn ghost sm" onclick="ganttRange=null;renderGanttView()">Oggi</button>
+        <span style="font-size:11px;color:var(--t2)">${rangeStart} — ${rangeEnd}</span>
+      </div>
+      <div class="gantt-header">
+        <div class="gantt-left-header">Attività</div>
+        <div class="gantt-timeline-header">
+          ${months.map(m => `<div class="gantt-month-label" style="flex:0 0 ${m.pct}%">${m.label}</div>`).join('')}
+        </div>
+      </div>
+      <div class="gantt-body">
+  `;
+
+  for (const group of currentBoard.groups) {
+    html += `<div class="gantt-group-label"><div class="group-color-bar" style="background:${group.color}"></div>${esc(group.title)}</div>`;
+    for (const item of group.items) {
+      const tl = timelineCol ? item.values?.[timelineCol.id] : null;
+      const d = dateCol ? item.values?.[dateCol.id] : null;
+      const start = tl?.start || d;
+      const end = tl?.end || tl?.start || d;
+      let barHtml = '';
+      if (start && end) {
+        const sDate = new Date(start), eDate = new Date(end);
+        if (eDate >= rsDate && sDate <= reDate) {
+          const clampedStart = Math.max(sDate, rsDate);
+          const clampedEnd   = Math.min(eDate, reDate);
+          const leftPct   = ((clampedStart - rsDate) / (reDate - rsDate)) * 100;
+          const widthPct  = Math.max(0.5, ((clampedEnd - clampedStart) / (reDate - rsDate)) * 100);
+          const statusCol = currentBoard.columns.find(c => c.type === 'status');
+          const statusOpt = statusCol ? (statusCol.options||[]).find(o => o.id === item.values?.[statusCol.id]) : null;
+          const barColor  = statusOpt?.color || group.color || '#579bfc';
+          barHtml = `<div class="gantt-bar" style="left:${leftPct}%;width:${widthPct}%;background:${barColor}" onclick="openItemModal('${group.id}','${item.id}')" title="${esc(item.title)}">${esc(item.title)}</div>`;
+        }
+      }
+      html += `
+        <div class="gantt-row">
+          <div class="gantt-row-label" onclick="openItemModal('${group.id}','${item.id}')" style="cursor:pointer" title="${esc(item.title)}">${esc(item.title)}</div>
+          <div class="gantt-row-timeline">
+            ${todayPct >= 0 && todayPct <= 100 ? `<div class="gantt-today-line" style="left:${todayPct}%"></div>` : ''}
+            ${barHtml}
+          </div>
+        </div>
+      `;
+    }
+  }
+  html += `</div></div>`;
+  vc.innerHTML = html;
+}
+
+function shiftGantt(dir) {
+  const rangeStart = ganttRange?.start || new Date(new Date().getFullYear(), new Date().getMonth() - 1, 1).toISOString().slice(0,10);
+  const rangeEnd   = ganttRange?.end   || new Date(new Date().getFullYear(), new Date().getMonth() + 3, 0).toISOString().slice(0,10);
+  const rs = new Date(rangeStart), re = new Date(rangeEnd);
+  const months = 2 * dir;
+  const ns = new Date(rs.getFullYear(), rs.getMonth() + months, 1);
+  const ne = new Date(re.getFullYear(), re.getMonth() + months, 0);
+  ganttRange = { start: ns.toISOString().slice(0,10), end: ne.toISOString().slice(0,10) };
+  renderGanttView();
+}
+
+// ── CALENDAR VIEW ──────────────────────────────────────────────────────────────
+let calYear = new Date().getFullYear(), calMonth = new Date().getMonth();
+
+function renderCalendarView() {
+  const vc = document.getElementById('view-container');
+  const dateCol = currentBoard.columns.find(c => c.type === 'date');
+  if (!dateCol) {
+    vc.innerHTML = `<div class="empty-state"><div class="empty-state-icon">📅</div><div class="empty-state-title">Aggiungi una colonna Data</div><div class="empty-state-desc">La vista Calendario richiede almeno una colonna di tipo "Data".</div></div>`;
+    return;
+  }
+
+  const today = new Date();
+  const firstDay = new Date(calYear, calMonth, 1);
+  const lastDay  = new Date(calYear, calMonth + 1, 0);
+  const startDow = (firstDay.getDay() + 6) % 7; // Monday-first
+  const daysInMonth = lastDay.getDate();
+
+  // Build item map
+  const itemMap = {};
+  currentBoard.groups.forEach(g => g.items.forEach(item => {
+    const d = item.values?.[dateCol.id];
+    if (d && d.startsWith(`${calYear}-${String(calMonth+1).padStart(2,'0')}`)) {
+      if (!itemMap[d]) itemMap[d] = [];
+      itemMap[d].push({ ...item, _groupId: g.id, _groupColor: g.color });
+    }
+  }));
+
+  const statusCol = currentBoard.columns.find(c => c.type === 'status');
+  const monthName = firstDay.toLocaleDateString('it', { month: 'long', year: 'numeric' });
+
+  let html = `
+    <div class="calendar-wrap" style="padding:12px 24px 24px">
+      <div class="calendar-nav">
+        <button class="cal-nav-btn" onclick="shiftCal(-1)">◀</button>
+        <span class="cal-month-label">${monthName}</span>
+        <button class="cal-nav-btn" onclick="shiftCal(1)">▶</button>
+        <button class="cal-nav-btn" onclick="calYear=${today.getFullYear()};calMonth=${today.getMonth()};renderCalendarView()">Oggi</button>
+      </div>
+      <div class="calendar-grid">
+        ${['Lun','Mar','Mer','Gio','Ven','Sab','Dom'].map(d => `<div class="cal-day-header">${d}</div>`).join('')}
+  `;
+
+  // Blank cells before first day
+  for (let i = 0; i < startDow; i++) html += `<div class="cal-day other-month"></div>`;
+
+  for (let d = 1; d <= daysInMonth; d++) {
+    const dateStr = `${calYear}-${String(calMonth+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+    const isToday = today.getFullYear()===calYear && today.getMonth()===calMonth && today.getDate()===d;
+    const dayItems = itemMap[dateStr] || [];
+    html += `
+      <div class="cal-day ${isToday?'today':''}">
+        <div class="cal-day-num">${d}</div>
+        ${dayItems.slice(0,3).map(item => {
+          const sOpt = statusCol ? (statusCol.options||[]).find(o => o.id === item.values?.[statusCol.id]) : null;
+          const color = sOpt?.color || item._groupColor || '#579bfc';
+          return `<div class="cal-item" style="background:${color}25;color:${color}" onclick="openItemModal('${item._groupId}','${item.id}')" title="${esc(item.title)}">${esc(item.title)}</div>`;
+        }).join('')}
+        ${dayItems.length > 3 ? `<div style="font-size:9px;color:var(--t2)">+${dayItems.length-3} altri</div>` : ''}
+      </div>
+    `;
+  }
+
+  // Trailing blank cells
+  const totalCells = startDow + daysInMonth;
+  const trailing = (7 - (totalCells % 7)) % 7;
+  for (let i = 0; i < trailing; i++) html += `<div class="cal-day other-month"></div>`;
+  html += `</div></div>`;
+  vc.innerHTML = html;
+}
+
+function shiftCal(dir) {
+  calMonth += dir;
+  if (calMonth < 0) { calMonth = 11; calYear--; }
+  if (calMonth > 11) { calMonth = 0; calYear++; }
+  renderCalendarView();
+}
+
+// ── ITEM ACTIONS ───────────────────────────────────────────────────────────────
+async function addItem(groupId) {
+  if (!currentBoard) return;
+  const item = await api(`/api/boards/${currentBoard.id}/groups/${groupId}/items`, 'POST', { title: 'Nuovo elemento' });
+  const g = currentBoard.groups.find(g => g.id === groupId);
+  if (g) g.items.push(item);
+  renderView();
+}
+
+async function addItemToStatus(statusOptId) {
+  if (!currentBoard) return;
+  const firstGroup = currentBoard.groups[0];
+  if (!firstGroup) return;
+  const statusCol = currentBoard.columns.find(c => c.type === 'status');
+  const values = {};
+  if (statusCol && statusOptId !== '__none') values[statusCol.id] = statusOptId;
+  const item = await api(`/api/boards/${currentBoard.id}/groups/${firstGroup.id}/items`, 'POST', { title: 'Nuovo elemento', values });
+  firstGroup.items.push(item);
+  renderView();
+}
+
+async function updateItemTitle(groupId, itemId, title) {
+  if (!currentBoard) return;
+  const g = currentBoard.groups.find(g => g.id === groupId);
+  const item = g?.items.find(i => i.id === itemId);
+  if (!item || item.title === title) return;
+  item.title = title;
+  await api(`/api/boards/${currentBoard.id}/groups/${groupId}/items/${itemId}`, 'PUT', { title });
+}
+
+async function setCellValue(groupId, itemId, colId, value) {
+  if (!currentBoard) return;
+  const g = currentBoard.groups.find(g => g.id === groupId);
+  const item = g?.items.find(i => i.id === itemId);
+  if (!item) return;
+  if (!item.values) item.values = {};
+  item.values[colId] = value;
+  await api(`/api/boards/${currentBoard.id}/groups/${groupId}/items/${itemId}`, 'PUT', { values: { [colId]: value } });
+}
+
+async function setStatus(groupId, itemId, colId, optId) {
+  closeAllDropdowns();
+  await setCellValue(groupId, itemId, colId, optId);
+  renderView();
+}
+
+async function togglePerson(groupId, itemId, colId, userId) {
+  closeAllDropdowns();
+  const g = currentBoard.groups.find(g => g.id === groupId);
+  const item = g?.items.find(i => i.id === itemId);
+  if (!item) return;
+  const current = Array.isArray(item.values?.[colId]) ? item.values[colId] : [];
+  const next = current.includes(userId) ? current.filter(id => id !== userId) : [...current, userId];
+  await setCellValue(groupId, itemId, colId, next);
+  renderView();
+}
+
+async function setTimeline(groupId, itemId, colId, key, value) {
+  const g = currentBoard.groups.find(g => g.id === groupId);
+  const item = g?.items.find(i => i.id === itemId);
+  if (!item) return;
+  const current = item.values?.[colId] || {};
+  const next = { ...current, [key]: value };
+  await setCellValue(groupId, itemId, colId, next);
+}
+
+// ── ITEM MODAL ─────────────────────────────────────────────────────────────────
+function openItemModal(groupId, itemId) {
+  const g = currentBoard.groups.find(g => g.id === groupId);
+  const item = g?.items.find(i => i.id === itemId);
+  if (!item) return;
+  editingItem = { groupId, itemId };
+
+  document.getElementById('modal-item-title').value = item.title;
+  document.getElementById('modal-meta').textContent = item.createdAt ? `Creato il ${formatDate(item.createdAt.slice(0,10))}` : '';
+
+  // Fields
+  const canEdit = currentBoard._permission !== 'viewer';
+  const fieldsEl = document.getElementById('modal-fields');
+  fieldsEl.innerHTML = currentBoard.columns.filter(c => !c.fixed).map(col => {
+    const v = item.values?.[col.id];
+    const icon = COL_TYPES.find(t => t.id === col.type)?.icon || '𝐓';
+    let valueHtml = renderCell(groupId, item, col, canEdit);
+    return `<div class="modal-field">
+      <div class="modal-field-label">${icon} ${esc(col.title)}</div>
+      <div class="modal-field-value" style="padding:6px 8px;background:var(--s3);border:1px solid var(--line);border-radius:6px">${valueHtml}</div>
+    </div>`;
+  }).join('');
+
+  // Subitems
+  renderModalSubitems(item);
+
+  document.getElementById('item-modal').classList.remove('hidden');
+}
+
+function renderModalSubitems(item) {
+  const el = document.getElementById('modal-subitems');
+  const canEdit = currentBoard._permission !== 'viewer';
+  el.innerHTML = (item.subitems || []).map((sub, idx) => `
+    <div class="subitem-row">
+      <input type="checkbox" ${sub.done?'checked':''} onchange="toggleSubitem(${idx},this.checked)"/>
+      <span class="subitem-title" style="${sub.done?'text-decoration:line-through;opacity:.5':''}">
+        ${esc(sub.title)}
+      </span>
+      ${canEdit ? `<button style="background:none;border:none;color:var(--t2);cursor:pointer;font-size:12px" onclick="removeSubitem(${idx})">✕</button>` : ''}
+    </div>
+  `).join('');
+}
+
+async function toggleSubitem(idx, done) {
+  if (!editingItem) return;
+  const { groupId, itemId } = editingItem;
+  const g = currentBoard.groups.find(g => g.id === groupId);
+  const item = g?.items.find(i => i.id === itemId);
+  if (!item || !item.subitems) return;
+  item.subitems[idx].done = done;
+  await api(`/api/boards/${currentBoard.id}/groups/${groupId}/items/${itemId}`, 'PUT', { subitems: item.subitems });
+  renderModalSubitems(item);
+}
+
+async function removeSubitem(idx) {
+  if (!editingItem) return;
+  const { groupId, itemId } = editingItem;
+  const g = currentBoard.groups.find(g => g.id === groupId);
+  const item = g?.items.find(i => i.id === itemId);
+  if (!item || !item.subitems) return;
+  item.subitems.splice(idx, 1);
+  await api(`/api/boards/${currentBoard.id}/groups/${groupId}/items/${itemId}`, 'PUT', { subitems: item.subitems });
+  renderModalSubitems(item);
+}
+
+async function addSubitem() {
+  if (!editingItem) return;
+  const input = document.getElementById('subitem-input');
+  const title = input.value.trim();
+  if (!title) return;
+  const { groupId, itemId } = editingItem;
+  const g = currentBoard.groups.find(g => g.id === groupId);
+  const item = g?.items.find(i => i.id === itemId);
+  if (!item) return;
+  if (!item.subitems) item.subitems = [];
+  item.subitems.push({ id: Date.now().toString(), title, done: false });
+  await api(`/api/boards/${currentBoard.id}/groups/${groupId}/items/${itemId}`, 'PUT', { subitems: item.subitems });
+  input.value = '';
+  renderModalSubitems(item);
+}
+
+async function saveItemModal() {
+  if (!editingItem) return;
+  const { groupId, itemId } = editingItem;
+  const title = document.getElementById('modal-item-title').value;
+  const g = currentBoard.groups.find(g => g.id === groupId);
+  const item = g?.items.find(i => i.id === itemId);
+  if (item && item.title !== title) {
+    item.title = title;
+    await api(`/api/boards/${currentBoard.id}/groups/${groupId}/items/${itemId}`, 'PUT', { title });
+  }
+  closeItemModal();
+  renderView();
+  toast('Salvato');
+}
+
+async function deleteCurrentItem() {
+  if (!editingItem) return;
+  const { groupId, itemId } = editingItem;
+  if (!confirm('Eliminare questo elemento?')) return;
+  await api(`/api/boards/${currentBoard.id}/groups/${groupId}/items/${itemId}`, 'DELETE');
+  const g = currentBoard.groups.find(g => g.id === groupId);
+  if (g) g.items = g.items.filter(i => i.id !== itemId);
+  closeItemModal();
+  renderView();
+  toast('Elemento eliminato');
+}
+
+function closeItemModal() {
+  document.getElementById('item-modal').classList.add('hidden');
+  editingItem = null;
+}
+
+// ── GROUP ACTIONS ──────────────────────────────────────────────────────────────
+async function addGroup() {
+  if (!currentBoard) return;
+  const group = await api(`/api/boards/${currentBoard.id}/groups`, 'POST', { title: 'Nuovo gruppo', color: BOARD_COLORS[Math.floor(Math.random() * BOARD_COLORS.length)] });
+  currentBoard.groups.push(group);
+  renderView();
+}
+
+async function toggleGroupCollapse(groupId) {
+  const g = currentBoard.groups.find(g => g.id === groupId);
+  if (!g) return;
+  g.collapsed = !g.collapsed;
+  await api(`/api/boards/${currentBoard.id}/groups/${groupId}`, 'PUT', { collapsed: g.collapsed });
+  renderView();
+}
+
+function openGroupMenu(groupId, event) {
+  const g = currentBoard.groups.find(gr => gr.id === groupId);
+  if (!g) return;
+  const canEdit = currentBoard._permission !== 'viewer';
+  showDropdown(event, [
+    { label: '✎ Rinomina gruppo', action: () => renameGroup(groupId) },
+    { label: '🎨 Cambia colore', action: () => changeGroupColor(groupId, event) },
+    ...(canEdit ? [
+      { type: 'divider' },
+      { label: '🗑 Elimina gruppo', danger: true, action: () => deleteGroup(groupId) }
+    ] : [])
+  ]);
+}
+
+async function renameGroup(groupId) {
+  const g = currentBoard.groups.find(gr => gr.id === groupId);
+  if (!g) return;
+  const name = prompt('Nuovo nome gruppo:', g.title);
+  if (!name || name === g.title) return;
+  g.title = name;
+  await api(`/api/boards/${currentBoard.id}/groups/${groupId}`, 'PUT', { title: name });
+  renderView();
+}
+
+async function changeGroupColor(groupId, event) {
+  const g = currentBoard.groups.find(gr => gr.id === groupId);
+  if (!g) return;
+  showColorPicker(event, async (color) => {
+    g.color = color;
+    await api(`/api/boards/${currentBoard.id}/groups/${groupId}`, 'PUT', { color });
+    renderView();
+  });
+}
+
+async function deleteGroup(groupId) {
+  if (!confirm('Eliminare questo gruppo e tutti i suoi elementi?')) return;
+  await api(`/api/boards/${currentBoard.id}/groups/${groupId}`, 'DELETE');
+  currentBoard.groups = currentBoard.groups.filter(g => g.id !== groupId);
+  renderView();
+  toast('Gruppo eliminato');
+}
+
+// ── COLUMN ACTIONS ─────────────────────────────────────────────────────────────
+function openAddColumnModal() {
+  editingColumn = null;
+  document.getElementById('col-modal-title').textContent = 'Aggiungi colonna';
+  document.getElementById('col-modal-name').value = '';
+  document.getElementById('col-modal-delete').style.display = 'none';
+  renderColTypeGrid('text');
+  updateColOptionsSection('text', []);
+  document.getElementById('col-modal').classList.remove('hidden');
+}
+
+function openColumnModal(colId, event) {
+  event.stopPropagation();
+  const col = currentBoard.columns.find(c => c.id === colId);
+  if (!col) return;
+  editingColumn = colId;
+  document.getElementById('col-modal-title').textContent = 'Modifica colonna';
+  document.getElementById('col-modal-name').value = col.title;
+  document.getElementById('col-modal-delete').style.display = '';
+  renderColTypeGrid(col.type);
+  updateColOptionsSection(col.type, col.options || []);
+  document.getElementById('col-modal').classList.remove('hidden');
+}
+
+function renderColTypeGrid(selectedType) {
+  const grid = document.getElementById('col-type-grid');
+  grid.innerHTML = COL_TYPES.map(t => `
+    <div class="col-type-btn ${t.id === selectedType ? 'selected' : ''}" onclick="selectColType('${t.id}')">
+      ${t.icon} ${t.label}
+    </div>
+  `).join('');
+}
+
+function selectColType(type) {
+  renderColTypeGrid(type);
+  updateColOptionsSection(type, []);
+}
+
+function getSelectedColType() {
+  const selected = document.querySelector('.col-type-btn.selected');
+  return selected ? COL_TYPES.find(t => selected.textContent.trim().endsWith(t.label))?.id || 'text' : 'text';
+}
+
+function updateColOptionsSection(type, options) {
+  const section = document.getElementById('col-options-section');
+  if (!['status', 'priority', 'dropdown'].includes(type)) { section.style.display = 'none'; return; }
+  section.style.display = '';
+  const list = document.getElementById('col-options-list');
+  list.innerHTML = (options.length ? options : [{ id: 'opt-new', label: 'Nuova opzione', color: '#579bfc' }]).map((opt, i) => `
+    <div class="option-row" id="opt-row-${i}">
+      <div class="option-color-dot" style="background:${opt.color}" onclick="changeOptionColor(${i})"></div>
+      <input class="option-label-input" data-opt-id="${opt.id}" value="${esc(opt.label)}" placeholder="Label…"/>
+      <button class="option-remove" onclick="document.getElementById('opt-row-${i}').remove()">✕</button>
+    </div>
+  `).join('');
+}
+
+function addColOption() {
+  const list = document.getElementById('col-options-list');
+  const idx = list.children.length;
+  const div = document.createElement('div');
+  div.className = 'option-row';
+  div.id = `opt-row-${idx}`;
+  div.innerHTML = `
+    <div class="option-color-dot" style="background:#579bfc" onclick="changeOptionColor(${idx})"></div>
+    <input class="option-label-input" data-opt-id="${Date.now()}" value="" placeholder="Nuova opzione…"/>
+    <button class="option-remove" onclick="this.closest('.option-row').remove()">✕</button>
+  `;
+  list.appendChild(div);
+}
+
+async function changeOptionColor(idx) {
+  const dot = document.querySelector(`#opt-row-${idx} .option-color-dot`);
+  if (!dot) return;
+  // Simple color cycle
+  const colors = ['#579bfc','#fdab3d','#e2445c','#00c875','#7c6ef5','#ff7575','#9aadbd','#66ccff'];
+  const cur = dot.style.background;
+  const i = colors.findIndex(c => c === cur);
+  dot.style.background = colors[(i + 1) % colors.length];
+}
+
+async function saveColumnModal() {
+  const name = document.getElementById('col-modal-name').value.trim();
+  if (!name) return;
+  const type = document.querySelector('.col-type-btn.selected')?.textContent.trim();
+  const typeId = COL_TYPES.find(t => type?.endsWith(t.label))?.id || 'text';
+
+  const options = [...document.querySelectorAll('#col-options-list .option-row')].map(row => {
+    const dot = row.querySelector('.option-color-dot');
+    const input = row.querySelector('.option-label-input');
+    return { id: input.dataset.optId || Date.now().toString(), label: input.value || 'Opzione', color: dot.style.background };
+  });
+
+  if (editingColumn) {
+    const col = currentBoard.columns.find(c => c.id === editingColumn);
+    if (col) {
+      col.title = name;
+      col.type = typeId;
+      if (options.length) col.options = options;
+      await api(`/api/boards/${currentBoard.id}/columns/${editingColumn}`, 'PUT', { title: name, type: typeId, ...(options.length ? { options } : {}) });
+    }
+  } else {
+    const col = await api(`/api/boards/${currentBoard.id}/columns`, 'POST', { title: name, type: typeId, ...(options.length ? { options } : {}) });
+    currentBoard.columns.push(col);
+  }
+
+  document.getElementById('col-modal').classList.add('hidden');
+  renderBoardView();
+  toast('Colonna salvata');
+}
+
+async function deleteCurrentColumn() {
+  if (!editingColumn) return;
+  const col = currentBoard.columns.find(c => c.id === editingColumn);
+  if (!col) return;
+  if (!confirm(`Eliminare la colonna "${col.title}"?`)) return;
+  await api(`/api/boards/${currentBoard.id}/columns/${editingColumn}`, 'DELETE');
+  currentBoard.columns = currentBoard.columns.filter(c => c.id !== editingColumn);
+  document.getElementById('col-modal').classList.add('hidden');
+  renderBoardView();
+  toast('Colonna eliminata');
+}
+
+// ── BOARD ACTIONS ──────────────────────────────────────────────────────────────
+function showNewBoardForm() {
+  document.getElementById('new-board-form').style.display = '';
+  document.getElementById('new-board-name').focus();
+}
+function hideNewBoardForm() {
+  document.getElementById('new-board-form').style.display = 'none';
+  document.getElementById('new-board-name').value = '';
+}
+
+async function createBoard() {
+  const name = document.getElementById('new-board-name').value.trim();
+  if (!name) return;
+  const board = await api('/api/boards', 'POST', { name });
+  boards.push(board);
+  hideNewBoardForm();
+  await selectBoard(board.id);
+}
+
+async function deleteBoard() {
+  if (!currentBoard) return;
+  if (!confirm(`Eliminare la board "${currentBoard.name}"?`)) return;
+  await api(`/api/boards/${currentBoard.id}`, 'DELETE');
+  boards = boards.filter(b => b.id !== currentBoard.id);
+  currentBoard = null;
+  document.getElementById('board-view').style.display = 'none';
+  document.getElementById('empty-state').style.display = '';
+  document.getElementById('btn-share').style.display = 'none';
+  document.getElementById('btn-automations').style.display = 'none';
+  location.hash = '';
+  renderSidebar();
+  toast('Board eliminata');
+}
+
+function openRenameModal() {
+  if (!currentBoard) return;
+  document.getElementById('rename-input').value = currentBoard.name;
+  document.getElementById('rename-desc').value = currentBoard.description || '';
+  document.getElementById('rename-modal').classList.remove('hidden');
+  setTimeout(() => document.getElementById('rename-input').focus(), 50);
+}
+
+async function saveBoardRename() {
+  const name = document.getElementById('rename-input').value.trim();
+  const description = document.getElementById('rename-desc').value.trim();
+  if (!name) return;
+  await api(`/api/boards/${currentBoard.id}`, 'PUT', { name, description });
+  currentBoard.name = name;
+  currentBoard.description = description;
+  boards = boards.map(b => b.id === currentBoard.id ? { ...b, name, description } : b);
+  document.getElementById('rename-modal').classList.add('hidden');
+  renderSidebar();
+  renderBoardView();
+  toast('Rinominata');
+}
+
+// ── AUTOMATIONS ────────────────────────────────────────────────────────────────
+function toggleAutoPanel() {
+  document.getElementById('auto-panel').classList.toggle('open');
+}
+
+function renderAutoList() {
+  const list = document.getElementById('auto-list');
+  if (!currentBoard) return;
+  if (!currentBoard.automations?.length) {
+    list.innerHTML = `<div style="padding:16px;color:var(--t2);font-size:12px;text-align:center">Nessuna automazione. Creane una!</div>`;
+    return;
+  }
+  list.innerHTML = currentBoard.automations.map(auto => {
+    const triggerLabels = {
+      status_change: 'Stato cambia',
+      item_created: 'Elemento creato',
+      date_arrives: 'Data arriva'
+    };
+    const actionLabels = {
+      notify: 'Invia notifica',
+      move_to_group: 'Sposta nel gruppo',
+      assign_person: 'Assegna persona'
+    };
+    const tLabel = triggerLabels[auto.trigger?.type] || auto.trigger?.type;
+    const aLabel = actionLabels[auto.action?.type] || auto.action?.type;
+    return `
+      <div class="auto-item">
+        <div class="auto-trigger">⚡ Quando: ${tLabel}</div>
+        <div class="auto-desc">→ ${aLabel}</div>
+        ${auto.action?.message ? `<div style="font-size:11px;color:var(--t2);margin-top:3px">"${esc(auto.action.message)}"</div>` : ''}
+        <div class="auto-actions">
+          <button class="btn ghost sm" onclick="toggleAutomation('${auto.id}',${!auto.enabled})">${auto.enabled ? '⏸ Disabilita' : '▶ Abilita'}</button>
+          <button class="btn danger sm" onclick="deleteAutomation('${auto.id}')">🗑</button>
+        </div>
+      </div>
+    `;
+  }).join('');
+}
+
+function openNewAutoModal() {
+  updateAutoForm();
+  document.getElementById('auto-modal').classList.remove('hidden');
+}
+
+function updateAutoForm() {
+  const triggerType = document.getElementById('auto-trigger-type').value;
+  const actionType  = document.getElementById('auto-action-type').value;
+  const cols = currentBoard?.columns || [];
+  const statusCols = cols.filter(c => c.type === 'status');
+  const groups = currentBoard?.groups || [];
+  const users = allUsers;
+
+  // Trigger extras
+  const textra = document.getElementById('auto-trigger-extra');
+  if (triggerType === 'status_change') {
+    const colOpts = statusCols.map(c => `<option value="${c.id}">${esc(c.title)}</option>`).join('');
+    const firstCol = statusCols[0];
+    const valOpts = firstCol ? (firstCol.options||[]).map(o => `<option value="${o.id}">${esc(o.label)}</option>`).join('') : '';
+    textra.innerHTML = `
+      <select class="col-input" id="auto-status-col" style="margin-bottom:6px" onchange="updateStatusValOpts()">
+        ${colOpts}
+      </select>
+      <select class="col-input" id="auto-status-val">${valOpts}</select>
+    `;
+  } else if (triggerType === 'date_arrives') {
+    const dateCols = cols.filter(c => c.type === 'date');
+    textra.innerHTML = `<select class="col-input" id="auto-date-col">${dateCols.map(c => `<option value="${c.id}">${esc(c.title)}</option>`).join('')}</select>`;
+  } else {
+    textra.innerHTML = '';
+  }
+
+  // Action extras
+  const aextra = document.getElementById('auto-action-extra');
+  if (actionType === 'notify') {
+    aextra.innerHTML = `<input class="col-input" id="auto-notify-msg" placeholder="Messaggio notifica…"/>`;
+  } else if (actionType === 'move_to_group') {
+    aextra.innerHTML = `<select class="col-input" id="auto-action-group">${groups.map(g => `<option value="${g.id}">${esc(g.title)}</option>`).join('')}</select>`;
+  } else if (actionType === 'assign_person') {
+    aextra.innerHTML = `<select class="col-input" id="auto-action-user">${users.map(u => `<option value="${u.id}">${esc(u.name||u.email)}</option>`).join('')}</select>`;
+  } else {
+    aextra.innerHTML = '';
+  }
+}
+
+function updateStatusValOpts() {
+  const colId = document.getElementById('auto-status-col')?.value;
+  const col = currentBoard?.columns.find(c => c.id === colId);
+  const sel = document.getElementById('auto-status-val');
+  if (sel && col) sel.innerHTML = (col.options||[]).map(o => `<option value="${o.id}">${esc(o.label)}</option>`).join('');
+}
+
+async function saveAutomation() {
+  if (!currentBoard) return;
+  const triggerType = document.getElementById('auto-trigger-type').value;
+  const actionType  = document.getElementById('auto-action-type').value;
+
+  const trigger = { type: triggerType };
+  if (triggerType === 'status_change') {
+    trigger.columnId = document.getElementById('auto-status-col')?.value;
+    trigger.value    = document.getElementById('auto-status-val')?.value;
+  } else if (triggerType === 'date_arrives') {
+    trigger.columnId = document.getElementById('auto-date-col')?.value;
+  }
+
+  const action = { type: actionType };
+  if (actionType === 'notify')       action.message  = document.getElementById('auto-notify-msg')?.value || 'Notifica automazione';
+  if (actionType === 'move_to_group') action.groupId  = document.getElementById('auto-action-group')?.value;
+  if (actionType === 'assign_person') action.userId   = document.getElementById('auto-action-user')?.value;
+
+  const auto = await api(`/api/boards/${currentBoard.id}/automations`, 'POST', { trigger, action });
+  currentBoard.automations.push(auto);
+  document.getElementById('auto-modal').classList.add('hidden');
+  renderAutoList();
+  toast('Automazione creata');
+}
+
+async function toggleAutomation(autoId, enabled) {
+  if (!currentBoard) return;
+  await api(`/api/boards/${currentBoard.id}/automations/${autoId}`, 'PUT', { enabled });
+  const auto = currentBoard.automations.find(a => a.id === autoId);
+  if (auto) auto.enabled = enabled;
+  renderAutoList();
+}
+
+async function deleteAutomation(autoId) {
+  if (!confirm('Eliminare questa automazione?')) return;
+  await api(`/api/boards/${currentBoard.id}/automations/${autoId}`, 'DELETE');
+  currentBoard.automations = currentBoard.automations.filter(a => a.id !== autoId);
+  renderAutoList();
+  toast('Automazione eliminata');
+}
+
+// ── SHARING ────────────────────────────────────────────────────────────────────
+async function openShareModal() {
+  if (!currentBoard) return;
+  const sel = document.getElementById('share-user-select');
+  const sharedIds = (currentBoard.sharedWith || []).map(s => s.userId);
+  sel.innerHTML = allUsers
+    .filter(u => u.id !== currentMe?.uid && !sharedIds.includes(u.id))
+    .map(u => `<option value="${u.id}">${esc(u.name || u.email)}</option>`)
+    .join('');
+  renderShareList();
+  document.getElementById('share-modal').classList.remove('hidden');
+}
+
+function renderShareList() {
+  const list = document.getElementById('share-list');
+  const sw = currentBoard?.sharedWith || [];
+  if (!sw.length) {
+    list.innerHTML = `<div style="color:var(--t2);font-size:12px;text-align:center;padding:16px">Nessuna condivisione attiva</div>`;
+    return;
+  }
+  list.innerHTML = sw.map(s => {
+    const u = allUsers.find(x => x.id === s.userId);
+    const name = u?.name || u?.email || s.userId;
+    const pic  = u?.picture;
+    return `
+      <div class="share-user-row">
+        <div class="share-user-avatar">${pic ? `<img src="${pic}"/>` : name[0].toUpperCase()}</div>
+        <span style="font-size:12px;font-weight:500">${esc(name)}</span>
+        <select class="share-role-select" onchange="updateShareRole('${s.userId}',this.value)">
+          <option value="editor" ${s.role==='editor'?'selected':''}>Editor</option>
+          <option value="viewer" ${s.role==='viewer'?'selected':''}>Viewer</option>
+        </select>
+        <button class="btn danger sm" onclick="removeShare('${s.userId}')">✕</button>
+      </div>
+    `;
+  }).join('');
+}
+
+async function addShare() {
+  const userId = document.getElementById('share-user-select').value;
+  const role   = document.getElementById('share-role-select').value;
+  if (!userId) return;
+  await api(`/api/boards/${currentBoard.id}/share`, 'POST', { userId, role });
+  if (!currentBoard.sharedWith) currentBoard.sharedWith = [];
+  const existing = currentBoard.sharedWith.find(s => s.userId === userId);
+  if (existing) existing.role = role;
+  else currentBoard.sharedWith.push({ userId, role });
+  openShareModal();
+  toast('Condiviso!');
+}
+
+async function removeShare(userId) {
+  await api(`/api/boards/${currentBoard.id}/share/${userId}`, 'DELETE');
+  currentBoard.sharedWith = (currentBoard.sharedWith || []).filter(s => s.userId !== userId);
+  renderShareList();
+  toast('Condivisione rimossa');
+}
+
+async function updateShareRole(userId, role) {
+  await api(`/api/boards/${currentBoard.id}/share`, 'POST', { userId, role });
+  const s = (currentBoard.sharedWith || []).find(x => x.userId === userId);
+  if (s) s.role = role;
+}
+
+// ── SEARCH ─────────────────────────────────────────────────────────────────────
+function applySearch() { renderView(); }
+
+// ── DROPDOWN / COLOR HELPERS ───────────────────────────────────────────────────
+function toggleDropdown(id, event) {
+  event.stopPropagation();
+  const el = document.getElementById(id);
+  if (!el) return;
+  const wasHidden = el.classList.contains('hidden');
+  closeAllDropdowns();
+  if (wasHidden) {
+    el.classList.remove('hidden');
+    const rect = el.parentElement.getBoundingClientRect();
+    el.style.top = (rect.bottom + 4) + 'px';
+    el.style.left = rect.left + 'px';
+    el.style.position = 'fixed';
+  }
+}
+
+function showDropdown(event, items) {
+  closeAllDropdowns();
+  const dd = document.getElementById('global-dropdown');
+  dd.innerHTML = items.map(item => {
+    if (item.type === 'divider') return `<div class="dropdown-divider"></div>`;
+    return `<div class="dropdown-item ${item.danger?'danger':''}" onclick="(${item.action.toString()})();closeAllDropdowns()">${item.label}</div>`;
+  }).join('');
+  dd.classList.remove('hidden');
+  dd.style.position = 'fixed';
+  dd.style.top = (event.clientY + 4) + 'px';
+  dd.style.left = event.clientX + 'px';
+}
+
+function showColorPicker(event, callback) {
+  closeAllDropdowns();
+  const dd = document.getElementById('global-dropdown');
+  dd.innerHTML = `<div class="color-grid">${BOARD_COLORS.map(c => `<div class="color-swatch" style="background:${c}" onclick="(${callback.toString()})('${c}');closeAllDropdowns()"></div>`).join('')}</div>`;
+  dd.classList.remove('hidden');
+  dd.style.position = 'fixed';
+  dd.style.top = (event.clientY + 4) + 'px';
+  dd.style.left = event.clientX + 'px';
+}
+
+function closeAllDropdowns() {
+  document.getElementById('global-dropdown').classList.add('hidden');
+  document.querySelectorAll('.dropdown-menu').forEach(el => el.classList.add('hidden'));
+}
+
+document.addEventListener('click', closeAllDropdowns);
+
+// ── UTILS ─────────────────────────────────────────────────────────────────────
+function esc(str) {
+  if (str === null || str === undefined) return '';
+  return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+function formatDate(d) {
+  if (!d) return '';
+  const [y,m,day] = d.split('-');
+  return `${day}/${m}/${y.slice(2)}`;
+}
+
+function toast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2200);
+}
+
+async function api(url, method = 'GET', body = null) {
+  const opts = { method, headers: {} };
+  if (body) { opts.headers['Content-Type'] = 'application/json'; opts.body = JSON.stringify(body); }
+  const r = await fetch(url, opts);
+  if (!r.ok) {
+    const err = await r.json().catch(() => ({}));
+    throw new Error(err.error || `HTTP ${r.status}`);
+  }
+  return r.json();
+}
+
+// ── GMAIL PANEL ────────────────────────────────────────────────────────────────
+let gmailEmails = [];
+let gmailSearchTimer = null;
+let expandedEmailId = null;
+let gmailMessageCache = {};
+
+function toggleGmailPanel() {
+  const panel = document.getElementById('gmail-panel');
+  const isOpen = panel.classList.toggle('open');
+  if (isOpen && !gmailEmails.length) loadGmailInbox();
+}
+
+function debounceGmailSearch() {
+  clearTimeout(gmailSearchTimer);
+  gmailSearchTimer = setTimeout(() => loadGmailInbox(), 450);
+}
+
+async function loadGmailInbox() {
+  const listEl = document.getElementById('gmail-list');
+  const q = document.getElementById('gmail-search-input')?.value.trim() || '';
+  listEl.innerHTML = `<div style="padding:24px;text-align:center;color:var(--t2);font-size:12px">Caricamento…</div>`;
+  try {
+    const query = q || 'in:inbox';
+    gmailEmails = await api(`/api/gmail/inbox?q=${encodeURIComponent(query)}&max=30`);
+    renderGmailList();
+  } catch (e) {
+    listEl.innerHTML = `<div style="padding:24px;text-align:center;color:var(--red);font-size:12px">
+      ${e.message.includes('Google non connesso') ? '⚠️ Connetti Google nelle Impostazioni per accedere alle email.' : `Errore: ${esc(e.message)}`}
+    </div>`;
+  }
+}
+
+function renderGmailList() {
+  const listEl = document.getElementById('gmail-list');
+  if (!gmailEmails.length) {
+    listEl.innerHTML = `<div style="padding:24px;text-align:center;color:var(--t2);font-size:12px">Nessuna email trovata.</div>`;
+    return;
+  }
+  listEl.innerHTML = gmailEmails.map(email => `
+    <div class="gmail-item ${expandedEmailId === email.id ? 'expanded' : ''}" id="gitem-${email.id}" onclick="toggleEmailExpand('${email.id}')">
+      <div class="gmail-item-subject">${esc(email.subject)}</div>
+      <div class="gmail-item-from">${esc(formatGmailFrom(email.from))}</div>
+      <div class="gmail-item-snippet">${esc(email.snippet)}</div>
+      <div class="gmail-item-date">${formatGmailDate(email.date)}</div>
+    </div>
+    <div class="gmail-preview ${expandedEmailId === email.id ? 'show' : ''}" id="gpreview-${email.id}">
+      <div class="gmail-preview-body" id="gbody-${email.id}">
+        ${gmailMessageCache[email.id] ? esc(gmailMessageCache[email.id].body.slice(0, 600)) : '<span style="color:var(--t2)">Caricamento anteprima…</span>'}
+      </div>
+      <div style="display:flex;gap:6px;align-items:center">
+        <a href="https://mail.google.com/mail/u/0/#inbox/${email.id}" target="_blank" class="btn ghost sm">↗ Apri</a>
+        <button class="btn sm" onclick="event.stopPropagation();openCreateFromEmail('${email.id}')">＋ Crea task</button>
+      </div>
+    </div>
+    <div class="gmail-create-form ${expandedEmailId === email.id && gmailCreateFormOpen === email.id ? 'show' : ''}" id="gcreate-${email.id}"></div>
+  `).join('');
+}
+
+let gmailCreateFormOpen = null;
+
+async function toggleEmailExpand(emailId) {
+  if (expandedEmailId === emailId) {
+    expandedEmailId = null;
+    gmailCreateFormOpen = null;
+  } else {
+    expandedEmailId = emailId;
+    gmailCreateFormOpen = null;
+    // Load full message if not cached
+    if (!gmailMessageCache[emailId]) {
+      try {
+        gmailMessageCache[emailId] = await api(`/api/gmail/message/${emailId}`);
+      } catch (e) {
+        gmailMessageCache[emailId] = { body: '(impossibile caricare il testo)', subject: '', from: '' };
+      }
+    }
+  }
+  renderGmailList();
+}
+
+function openCreateFromEmail(emailId) {
+  event.stopPropagation();
+  gmailCreateFormOpen = emailId;
+  const email = gmailEmails.find(e => e.id === emailId);
+  const cached = gmailMessageCache[emailId];
+  const subject = cached?.subject || email?.subject || '';
+  const from    = cached?.from    || email?.from    || '';
+  const snippet = cached?.body?.slice(0, 300) || email?.snippet || '';
+  const gmailLink = `https://mail.google.com/mail/u/0/#inbox/${emailId}`;
+
+  const groups = currentBoard?.groups || [];
+  const groupOpts = groups.map(g => `<option value="${g.id}">${esc(g.title)}</option>`).join('');
+  const statusCol = currentBoard?.columns.find(c => c.type === 'status');
+  const statusOpts = statusCol
+    ? `<label>Stato</label>
+       <select class="gmail-select" id="gcf-status-${emailId}">
+         <option value="">— nessuno —</option>
+         ${(statusCol.options||[]).map(o => `<option value="${o.id}">${esc(o.label)}</option>`).join('')}
+       </select>`
+    : '';
+
+  const formHtml = `
+    <label>Titolo task</label>
+    <input class="gmail-input" id="gcf-title-${emailId}" value="${esc(subject)}" placeholder="Titolo…"/>
+    <label>Gruppo</label>
+    <select class="gmail-select" id="gcf-group-${emailId}">${groupOpts}</select>
+    ${statusOpts}
+    <label>Note (opzionale)</label>
+    <textarea class="gmail-input" id="gcf-notes-${emailId}" rows="2" placeholder="Aggiungi note…" style="resize:vertical">${esc('Da: ' + from + '\n' + snippet.slice(0, 200))}</textarea>
+    <div style="display:flex;gap:6px;margin-top:10px">
+      <button class="btn ghost sm" onclick="event.stopPropagation();gmailCreateFormOpen=null;renderGmailList()">Annulla</button>
+      <button class="btn sm" onclick="event.stopPropagation();createTaskFromEmail('${emailId}','${esc(gmailLink)}')">✓ Crea task</button>
+    </div>
+  `;
+
+  const formEl = document.getElementById(`gcreate-${emailId}`);
+  if (formEl) { formEl.innerHTML = formHtml; formEl.classList.add('show'); }
+}
+
+async function createTaskFromEmail(emailId, gmailLink) {
+  if (!currentBoard) return;
+  const title   = document.getElementById(`gcf-title-${emailId}`)?.value.trim();
+  const groupId = document.getElementById(`gcf-group-${emailId}`)?.value;
+  const notes   = document.getElementById(`gcf-notes-${emailId}`)?.value.trim();
+  const statusColEl = document.getElementById(`gcf-status-${emailId}`);
+  const statusVal = statusColEl?.value || null;
+
+  if (!title) { toast('Inserisci un titolo'); return; }
+  if (!groupId) { toast('Seleziona un gruppo'); return; }
+
+  const statusCol = currentBoard.columns.find(c => c.type === 'status');
+  const notesCol  = currentBoard.columns.find(c => c.type === 'text' && !c.fixed);
+  const urlCol    = currentBoard.columns.find(c => c.type === 'url');
+
+  const values = {};
+  if (statusCol && statusVal)  values[statusCol.id] = statusVal;
+  if (notesCol  && notes)      values[notesCol.id]  = notes;
+  if (urlCol)                  values[urlCol.id]    = gmailLink;
+
+  const item = await api(`/api/boards/${currentBoard.id}/groups/${groupId}/items`, 'POST', { title, values });
+  const g = currentBoard.groups.find(g => g.id === groupId);
+  if (g) g.items.push(item);
+
+  // Close form & collapse email
+  expandedEmailId = null;
+  gmailCreateFormOpen = null;
+  renderGmailList();
+  renderView();
+  toast(`✓ Task creato: "${title}"`);
+}
+
+function formatGmailFrom(from) {
+  if (!from) return '';
+  const m = from.match(/^"?([^"<]+)"?\s*<?/);
+  return m ? m[1].trim() : from.split('@')[0];
+}
+
+function formatGmailDate(dateStr) {
+  if (!dateStr) return '';
+  try {
+    const d = new Date(dateStr);
+    const today = new Date();
+    const isToday = d.toDateString() === today.toDateString();
+    if (isToday) return d.toLocaleTimeString('it', { hour: '2-digit', minute: '2-digit' });
+    return d.toLocaleDateString('it', { day: '2-digit', month: 'short' });
+  } catch { return dateStr; }
+}
+
+init();
+</script>
+</body>
+</html>
