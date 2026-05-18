@@ -53,15 +53,21 @@ function makeAIClient({ anthropicApiKey, geminiApiKey, groqApiKey }) {
               const data = await resp.json();
               if (data.error) {
                 lastErr = new Error(`Gemini/${model}: ${data.error.status} — ${data.error.message}`);
-                if (['RESOURCE_EXHAUSTED','NOT_FOUND','PERMISSION_DENIED'].includes(data.error.status)) continue;
+                if (['RESOURCE_EXHAUSTED','NOT_FOUND','PERMISSION_DENIED','UNAVAILABLE','SERVICE_UNAVAILABLE'].includes(data.error.status)) continue;
+                if (data.error.code === 503 || data.error.code === 429) continue;
                 throw lastErr;
               }
               const text = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
               return { content: [{ type: 'text', text }] };
             } catch(e) {
               lastErr = e;
-              // Fallback su quota, modello non trovato, errore di rete, o timeout
-              if (e.message?.includes('RESOURCE_EXHAUSTED') || e.message?.includes('NOT_FOUND') || e.name === 'TypeError' || e.name === 'AbortError' || e.name === 'TimeoutError') continue;
+              // Fallback su quota, modello non trovato, errore di rete, timeout, 503
+              if (
+                e.message?.includes('RESOURCE_EXHAUSTED') || e.message?.includes('NOT_FOUND') ||
+                e.message?.includes('UNAVAILABLE') || e.message?.includes('unavailable') ||
+                e.message?.includes('503') || e.message?.includes('high demand') ||
+                e.name === 'TypeError' || e.name === 'AbortError' || e.name === 'TimeoutError'
+              ) continue;
               throw e;
             }
           }
@@ -125,31 +131,68 @@ async function aiCall({ geminiApiKey, groqApiKey, anthropicApiKey }, prompt, max
         );
         const d = await r.json();
         if (d.error) {
-          if (['RESOURCE_EXHAUSTED','NOT_FOUND','PERMISSION_DENIED'].includes(d.error.status)) continue;
+          // Tutti questi stati sono retriabili con il modello successivo / fallback Groq
+          if (['RESOURCE_EXHAUSTED','NOT_FOUND','PERMISSION_DENIED','UNAVAILABLE','SERVICE_UNAVAILABLE'].includes(d.error.status)) continue;
+          if (d.error.code === 503 || d.error.code === 429) continue;
           throw new Error(`Gemini/${model}: ${d.error.status} — ${d.error.message}`);
         }
         return d.candidates?.[0]?.content?.parts?.[0]?.text || '';
       } catch(e) {
-        // Fallback su quota, modello non trovato, errore di rete, o timeout
-        if (e.message?.includes('RESOURCE_EXHAUSTED') || e.message?.includes('NOT_FOUND') || e.name === 'TypeError' || e.name === 'AbortError' || e.name === 'TimeoutError') continue;
+        // Fallback su quota, modello non trovato, errore di rete, timeout, 503
+        if (
+          e.message?.includes('RESOURCE_EXHAUSTED') || e.message?.includes('NOT_FOUND') ||
+          e.message?.includes('UNAVAILABLE') || e.message?.includes('unavailable') ||
+          e.message?.includes('503') || e.message?.includes('high demand') ||
+          e.name === 'TypeError' || e.name === 'AbortError' || e.name === 'TimeoutError'
+        ) continue;
         throw e;
       }
     }
   }
   if (groqApiKey) {
-    // Timeout 120s per call grandi (analisi email batch), 60s per call piccole
     const groqTimeout = maxTokens > 4096 ? 120000 : 60000;
-    // Groq llama-3.3-70b ha max 32768 output tokens — cap per evitare errori
-    const groqMaxTokens = Math.min(maxTokens, 32768);
-    const r = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+    // Prova prima llama-3.3-70b (qualità), poi llama-3.1-8b-instant (30k TPM, più veloce) come fallback rate-limit
+    const GROQ_MODELS = ['llama-3.3-70b-versatile', 'llama-3.1-8b-instant'];
+    for (const groqModel of GROQ_MODELS) {
+      const groqMaxTokens = Math.min(maxTokens, groqModel === 'llama-3.1-8b-instant' ? 8192 : 32768);
+      const r = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${groqApiKey}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ model: groqModel, messages: [{ role: 'user', content: prompt }], max_tokens: groqMaxTokens, temperature: 0.3 }),
+        signal: AbortSignal.timeout(groqTimeout)
+      });
+      const d = await r.json();
+      if (d.error) {
+        const isRateLimit = d.error.message?.includes('Rate limit') || d.error.message?.includes('rate_limit') || d.error.message?.includes('tokens per minute') || d.error.code === 429;
+        if (isRateLimit) continue; // prova il modello successivo
+        throw new Error(`Groq: ${d.error.message}`);
+      }
+      return d.choices?.[0]?.message?.content || '';
+    }
+    // Tutti i modelli Groq a rate limit → cade su Anthropic
+    {
+  }
+  } // fine blocco Groq
+  // ── Anthropic Claude come fallback finale ──────────────────────────────────
+  if (anthropicApiKey) {
+    const anthrMaxTokens = Math.min(maxTokens, 8192);
+    const r = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
-      headers: { 'Authorization': `Bearer ${groqApiKey}`, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ model: 'llama-3.3-70b-versatile', messages: [{ role: 'user', content: prompt }], max_tokens: groqMaxTokens, temperature: 0.3 }),
-      signal: AbortSignal.timeout(groqTimeout)
+      headers: {
+        'x-api-key': anthropicApiKey,
+        'anthropic-version': '2023-06-01',
+        'content-type': 'application/json'
+      },
+      body: JSON.stringify({
+        model: 'claude-haiku-4-5',
+        max_tokens: anthrMaxTokens,
+        messages: [{ role: 'user', content: prompt }]
+      }),
+      signal: AbortSignal.timeout(60000)
     });
     const d = await r.json();
-    if (d.error) throw new Error(`Groq: ${d.error.message}`);
-    return d.choices?.[0]?.message?.content || '';
+    if (d.error) throw new Error(`Anthropic: ${d.error.message}`);
+    return d.content?.[0]?.text || '';
   }
   throw new Error('Nessuna API AI configurata');
 }
@@ -700,70 +743,55 @@ EMAIL:\n${emailList}`, 32768);
     const sortedGrowth = [...growthHeaders].sort((a, b) =>
       GROWTH_ORDER.indexOf(a.category) - GROWTH_ORDER.indexOf(b.category)
     );
-    const toStudy = sortedGrowth.slice(0, 50);
+    // Limita a 24 email e processa in 2 batch da 12 per rispettare Groq TPM
+    const toStudy = sortedGrowth.slice(0, 24);
     emit(`  ↳ Scarico corpo di ${toStudy.length} email per Crescita...`);
 
     const studyWithBody = [];
     for (const e of toStudy) {
       try {
         const full = await gmailGetMessage(token, e.id);
-        studyWithBody.push({ ...e, body: gmailBody(full, 200) });
+        studyWithBody.push({ ...e, body: gmailBody(full, 100) });
       } catch { studyWithBody.push({ ...e, body: '' }); }
     }
 
+    const interests = (settings.interests || ['business', 'AI', 'leadership', 'startup', 'tecnologia']).join(', ');
+    const marcoCtxStudy = `Marco è founder di Glint (AI executive tracker, B2C launch) e Sellrapido/Domopay (fintech startup). Interessi: AI business, fintech legal, startup growth, brand protection, wellness.`;
+    const studyPromptFn = (emailList) =>
+      `Content curator di ${settings.userName||'Marco'}. ${marcoCtxStudy} Interessi: ${interests}.
+Per OGNI email: {"id":"ID","title":"titolo editoriale","summary":"1-2 frasi rilevanza per Marco","source":"mittente","category":"AI|business|fintech|legal|growth|tool|social|news|wellness|altro","priority":"high|medium|low","suggestedTime":"HH:MM","duration":15}
+HIGH=rilevante per Glint/Sellrapido/franchise/AI. MEDIUM=crescita professionale. LOW=spam/promo.
+SOLO JSON array.\n\nEMAIL:\n${emailList}`;
+
+    // Batch 1
     try {
-      const interests = (settings.interests || ['business', 'AI', 'leadership', 'startup', 'tecnologia']).join(', ');
-      const emailList = studyWithBody.map((e, i) =>
-        `EMAIL_${i+1} [id:${e.id}] [${e.category}]\nDa: ${e.from}\nOggetto: ${e.subject}\n${e.body}`
-      ).join('\n\n---\n\n');
-
-      const marcoCtxStudy = `Marco è founder di Glint (AI executive tracker, B2C launch) e Sellrapido/Domopay (fintech startup, protezione marchio, integrazioni pagamenti). Sta anche negoziando un accordo franchise. Interessi chiave: AI applicata al business, fintech legal, startup growth, VC ecosystem, brand protection, product strategy B2C, wellness/biohacking.`;
-
-      const studyText = await aiCall(aiKeys,
-        `Sei il content curator personale di ${settings.userName||'Marco'}.
-${marcoCtxStudy}
-Interessi generali: ${interests}.
-Data oggi: ${date}.
-
-Analizza TUTTE queste email da Aggiornamenti, Social e Promozioni.
-Per OGNI email crea un record JSON con questi campi ESATTI:
-{"id":"SOLO_IL_CODICE_ID","title":"titolo editoriale (non l'oggetto email grezzo, ma un titolo che cattura il valore del contenuto)","summary":"sintesi 2-3 frasi del contenuto con focus su perché è rilevante per Marco","source":"nome newsletter o mittente","recommendation":"leggi|acquista|ignora|salva|iscriviti","category":"AI|business|fintech|legal|growth|tool|promo|social|news|evento|marketing|finanza|wellness|altro","priority":"high|medium|low","gmailCategory":"categoria Gmail originale","suggestedTime":"HH:MM (slot ideale, es 08:00 per lettura mattutina, 14:30 pomeridiana, 21:00 serale)","duration":15}
-
-PRIORITÀ:
-HIGH = direttamente rilevante per Glint, Sellrapido, franchise, AI business, fintech legal, brand protection
-MEDIUM = interessante per crescita professionale o wellness
-LOW = spam, promozioni banali, notifiche automatiche irrilevanti
-
-Includi TUTTE le email nell'array JSON. Rispondi SOLO con array JSON.
-
-EMAIL:\n${emailList}`, 32768);
-
-      emit(`  ↳ Gemini Crescita risposta (prime 200 car): ${studyText.slice(0, 200)}`);
-      const parsed = safeJsonParse(studyText, []);
-      for (const s of parsed) {
+      const batch1 = studyWithBody.slice(0, 12);
+      const list1 = batch1.map((e, i) => `EMAIL_${i+1} [id:${e.id}] [${e.category}]\nDa: ${e.from}\nOgg: ${e.subject}\n${e.body}`).join('\n---\n');
+      const text1 = await aiCall(aiKeys, studyPromptFn(list1), 4096);
+      const parsed1 = safeJsonParse(text1, []);
+      for (const s of parsed1) {
         if (!s.id) continue;
-        studyItems.push({
-          id: s.id,
-          title: s.title || s.from || 'Aggiornamento',
-          summary: s.summary || '',
-          source: s.source || s.from || '',
-          recommendation: s.recommendation || '',
-          category: s.category || 'altro',
-          gmailCategory: s.gmailCategory || '',
-          priority: s.priority || 'medium',
-          suggestedTime: s.suggestedTime || '',
-          duration: s.duration || null,
-          link: `https://mail.google.com/mail/u/0/#inbox/${s.id}`,
-          done: false
-        });
+        studyItems.push({ id:s.id, title:s.title||'Aggiornamento', summary:s.summary||'', source:s.source||'', recommendation:s.recommendation||'leggi', category:s.category||'altro', gmailCategory:s.gmailCategory||'', priority:s.priority||'medium', suggestedTime:s.suggestedTime||'', duration:s.duration||15, link:`https://mail.google.com/mail/u/0/#inbox/${s.id}`, done:false });
       }
-      // Ordina: high → medium → low
-      studyItems.sort((a, b) => {
-        const P = { high: 0, medium: 1, low: 2 };
-        return (P[a.priority] ?? 1) - (P[b.priority] ?? 1);
-      });
-      emit(`  ↳ ✅ ${studyItems.length} item per Crescita (${studyItems.filter(s=>s.priority==='high').length} high · ${studyItems.filter(s=>s.priority==='medium').length} medium · ${studyItems.filter(s=>s.priority==='low').length} low)`);
-    } catch(e) { emit(`  ↳ Errore 3b: ${e.message?.slice(0, 300)}`); }
+      emit(`  ↳ Batch 1: ${parsed1.length} item`);
+    } catch(e) { emit(`  ↳ Errore batch 1: ${e.message?.slice(0,80)}`); }
+
+    // Batch 2
+    try {
+      const batch2 = studyWithBody.slice(12, 24);
+      const list2 = batch2.map((e, i) => `EMAIL_${i+1} [id:${e.id}] [${e.category}]\nDa: ${e.from}\nOgg: ${e.subject}\n${e.body}`).join('\n---\n');
+      const text2 = await aiCall(aiKeys, studyPromptFn(list2), 4096);
+      const parsed2 = safeJsonParse(text2, []);
+      for (const s of parsed2) {
+        if (!s.id) continue;
+        studyItems.push({ id:s.id, title:s.title||'Aggiornamento', summary:s.summary||'', source:s.source||'', recommendation:s.recommendation||'leggi', category:s.category||'altro', gmailCategory:s.gmailCategory||'', priority:s.priority||'medium', suggestedTime:s.suggestedTime||'', duration:s.duration||15, link:`https://mail.google.com/mail/u/0/#inbox/${s.id}`, done:false });
+      }
+      emit(`  ↳ Batch 2: ${parsed2.length} item`);
+    } catch(e) { emit(`  ↳ Errore batch 2: ${e.message?.slice(0,80)}`); }
+
+    // Ordina: high → medium → low
+    studyItems.sort((a, b) => ({ high:0, medium:1, low:2 }[a.priority] ?? 1) - ({ high:0, medium:1, low:2 }[b.priority] ?? 1));
+    emit(`  ↳ ✅ ${studyItems.length} item per Crescita (${studyItems.filter(s=>s.priority==='high').length} high · ${studyItems.filter(s=>s.priority==='medium').length} medium · ${studyItems.filter(s=>s.priority==='low').length} low)`);
   } else {
     emit('  ↳ Nessuna email non-Principale trovata per Crescita');
   }
@@ -926,11 +954,13 @@ Return ONLY a valid JSON array. No text before or after.`;
         }
       );
       const d = await r.json();
+      let needsGroqFallback = false;
       if (d.error) {
         const code = d.error.code || '';
         const msg  = d.error.message || '';
         if (code === 429 || msg.includes('quota') || msg.includes('Quota')) {
-          emit(`  ↳ ⚠️ Gemini quota esaurita (429) — abilita billing su https://ai.dev o usa una nuova API key`);
+          emit(`  ↳ ⚠️ Gemini quota esaurita — uso Groq come fallback`);
+          needsGroqFallback = true;
         } else {
           emit(`  ↳ ⚠️ Gemini errore ${code}: ${msg.slice(0, 200)}`);
         }
@@ -941,14 +971,42 @@ Return ONLY a valid JSON array. No text before or after.`;
           networkEvents.push(...parsed.slice(0, 5));
           emit(`  ↳ ✅ ${networkEvents.length} eventi trovati in ${detectedCity}`);
         } else {
-          emit(`  ↳ Nessun evento strutturato trovato (risposta: ${text.slice(0,120)})`);
+          emit(`  ↳ Nessun evento strutturato trovato — uso Groq come fallback`);
+          needsGroqFallback = true;
         }
+      }
+      if (needsGroqFallback) {
+        try {
+          const weekFwd2 = new Date(date + 'T12:00:00Z'); weekFwd2.setDate(weekFwd2.getDate() + 7);
+          const evText2 = await aiCall(aiKeys,
+            `Suggerisci 4 eventi networking tipici per founder/entrepreneur a ${detectedCity} nella settimana del ${date}.
+Formato JSON array: [{"title":"nome evento","date":"dd Month yyyy","time":"HH:MM","description":"1 frase","link":"https://eventbrite.com","location":"quartiere","tags":["startup","tech"]}]
+SOLO JSON array.`, 800);
+          const evParsed2 = safeJsonParse(evText2, []);
+          if (Array.isArray(evParsed2) && evParsed2.length > 0) {
+            networkEvents.push(...evParsed2.map(e => ({ ...e, _aiGenerated: true })).slice(0, 4));
+            emit(`  ↳ ✅ ${networkEvents.length} eventi networking (Groq fallback)`);
+          }
+        } catch(ef) { emit(`  ↳ Errore Groq fallback networking: ${ef.message?.slice(0,80)}`); }
       }
     } catch(e) { emit(`  ↳ Errore networking: ${e.message}`); }
   } else if (!detectedCity) {
     emit('  ↳ Posizione non rilevata (aggiungi homeCity in Impostazioni o voli nel Calendar)');
   } else {
-    emit('  ↳ Gemini API key non configurata');
+    // Fallback Groq: eventi basati su conoscenza del modello (no Gemini key)
+    emit('  ↳ Gemini non disponibile — uso Groq per eventi networking (dati non real-time)');
+    try {
+      const weekFwd = new Date(date + 'T12:00:00Z'); weekFwd.setDate(weekFwd.getDate() + 7);
+      const evText = await aiCall(aiKeys,
+        `Suggerisci 4 eventi networking tipici per founder/entrepreneur a ${detectedCity} nella settimana del ${date}.
+Formato JSON array: [{"title":"nome evento","date":"dd Month yyyy","time":"HH:MM","description":"1 frase","link":"https://eventbrite.com","location":"quartiere","tags":["startup","tech"]}]
+SOLO JSON array.`, 800);
+      const evParsed = safeJsonParse(evText, []);
+      if (Array.isArray(evParsed) && evParsed.length > 0) {
+        networkEvents.push(...evParsed.map(e => ({ ...e, _aiGenerated: true })).slice(0, 4));
+        emit(`  ↳ ✅ ${networkEvents.length} eventi networking (AI-generated)`);
+      }
+    } catch(e2) { emit(`  ↳ Errore fallback networking: ${e2.message?.slice(0,80)}`); }
   }
 
   // ── STEP 6c: Local activities via Gemini + Google Search Grounding ────────────
@@ -974,13 +1032,46 @@ Return ONLY a valid JSON array. No text before or after.`;
       if (localActivities.length > 0) {
         emit(`  ↳ ✅ ${localActivities.length} attività totali trovate in ${detectedCity}`);
       } else {
-        emit(`  ↳ Nessuna attività trovata`);
+        emit(`  ↳ Nessuna attività da Gemini — uso Groq come fallback`);
+        throw new Error('no_results');
       }
-    } catch(e) { emit(`  ↳ Errore attività locali: ${e.message?.slice(0,100)}`); }
+    } catch(e) {
+      if (e.message !== 'no_results') emit(`  ↳ Errore attività locali Gemini: ${e.message?.slice(0,100)}`);
+      // Fallback Groq quando Gemini quota esaurita o nessun risultato
+      try {
+        const spouseFb = (settings.familyMembers || []).find(f => f.role === 'spouse')?.name || 'Alessandra';
+        const childFb = (settings.familyMembers || []).find(f => f.role === 'child');
+        const actFbText = await aiCall(aiKeys,
+          `Suggerisci 6 attività da fare a ${detectedCity}: 2 solo/coppia (con ${spouseFb}), 2 in famiglia (con ${childFb?.name||'Tommaso'} ${childFb?.age||8} anni), 2 ristoranti/aperitivi.
+Formato JSON array: [{"type":"solo|couple|family|restaurant","title":"nome attività","description":"1-2 frasi","category":"art|culture|food|nature|sport","location":"quartiere specifico","price":"€|€€|€€€","why":"perché è consigliato ora"}]
+SOLO JSON array.`, 900);
+        const actFbParsed = safeJsonParse(actFbText, []);
+        if (Array.isArray(actFbParsed) && actFbParsed.length > 0) {
+          localActivities.push(...actFbParsed.map(a => ({ ...a, _aiGenerated: true })));
+          emit(`  ↳ ✅ ${localActivities.length} attività locali (Groq fallback)`);
+        }
+      } catch(ef) { emit(`  ↳ Errore Groq fallback attività: ${ef.message?.slice(0,80)}`); }
+    }
   } else if (!detectedCity) {
     emit('  ↳ Posizione non rilevata — configura homeCity in Impostazioni');
   } else {
-    emit('  ↳ Gemini API key non configurata');
+    // Fallback Groq: attività basate su conoscenza del modello (non real-time)
+    emit('  ↳ Gemini non disponibile — uso Groq per attività locali (dati non real-time)');
+    try {
+      const spouseName = (settings.familyMembers || []).find(f => f.role === 'spouse')?.name || 'Alessandra';
+      const childMember = (settings.familyMembers || []).find(f => f.role === 'child');
+      const childName = childMember?.name || 'Tommaso';
+      const childAge = childMember?.age || 8;
+      const actText = await aiCall(aiKeys,
+        `Suggerisci 6 attività da fare a ${detectedCity}: 2 solo/coppia (con ${spouseName}), 2 in famiglia (con ${childName} ${childAge} anni), 2 ristoranti/aperitivi.
+Formato JSON array: [{"type":"solo|couple|family|restaurant","title":"nome attività","description":"1-2 frasi","category":"art|culture|food|nature|sport","location":"quartiere specifico","price":"€|€€|€€€","why":"perché è consigliato ora"}]
+SOLO JSON array.`, 900);
+      const actParsed = safeJsonParse(actText, []);
+      if (Array.isArray(actParsed) && actParsed.length > 0) {
+        localActivities.push(...actParsed.map(a => ({ ...a, _aiGenerated: true })));
+        emit(`  ↳ ✅ ${localActivities.length} attività locali (AI-generated)`);
+      }
+    } catch(e2) { emit(`  ↳ Errore fallback attività: ${e2.message?.slice(0,80)}`); }
   }
 
   // ── STEP 6d: Momento familiare ────────────────────────────────────────────────
@@ -1093,7 +1184,14 @@ CONTEXTUAL_INTELLIGENCE: [testo]`;
     const intelMatch = raw.match(/CONTEXTUAL_INTELLIGENCE:\s*([\s\S]+)/);
     intelligenceFeed = feedMatch ? feedMatch[1].trim() : '';
     contextualIntelligence = intelMatch ? intelMatch[1].trim().replace(/INTELLIGENCE_FEED:.*/s,'').trim() : '';
-    growthBrief = contextualIntelligence; // backwards compat
+    // Fallback: se Groq non ha rispettato il formato, usa l'intera risposta come brief
+    if (!contextualIntelligence && raw.length > 20) {
+      contextualIntelligence = raw.replace(/INTELLIGENCE_FEED:[^\n]*/,'').trim() || raw.trim();
+    }
+    if (!intelligenceFeed && contextualIntelligence) {
+      intelligenceFeed = contextualIntelligence.split('.')[0].trim().slice(0, 130);
+    }
+    growthBrief = contextualIntelligence;
     emit(`  ↳ Intelligence Feed: ${intelligenceFeed.slice(0,80)}`);
   } catch(e) {
     growthBrief = `Oggi è una ${dayType} day. Buona giornata, ${settings.userName || 'Marco'}!`;
@@ -1206,7 +1304,25 @@ SOLO JSON array.`;
       if (!Array.isArray(energySchedule)) energySchedule = [];
       emit(`  ↳ ✅ ${energySchedule.length} slot piano energia generati`);
     } else {
-      emit('[6g] Piano energia: dati Oura non disponibili, skip');
+      // Fallback senza Oura: genera piano basato su dayType e tasks
+      emit('[6g] Oura non disponibile — piano energia basato su tipo giornata...');
+      const taskListFb = result.tasks.filter(t => !saveDb.days[date]?.items?.[t.id]?.done)
+        .slice(0, 8).map(t => `"${t.title}" (${t.priority || t.quadrant})`).join(', ');
+      const meetingListFb = calendarEvents.map(e => `${e.time} ${e.title}`).join(', ') || 'nessuno';
+      const schedFbPrompt = `Sei il performance coach di ${settings.userName||'Marco'}.
+Tipo giornata: ${dayType.toUpperCase()} · Data: ${date} · Location: ${detectedCity}
+(Dati Oura non disponibili — usa pattern standard per tipo giornata)
+TASK: ${taskListFb || 'nessuno'}
+RIUNIONI: ${meetingListFb}
+Genera 5 slot orari ottimali. Regole: ${dayType==='manager'?'Manager day: raggruppa meeting, proteggi mattina presto per deep work':dayType==='maker'?'Maker day: blocchi lunghi per deep work, no interruzioni':' Focus day: tutta la mattina per il task più importante'}
+Formato JSON array: [{"time":"09:00","duration":90,"energyLevel":"peak|high|medium|low|recovery","label":"emoji + Titolo Slot","color":"#7c6ef5","tasks":["task1"],"reason":"perché questo slot","ouraInsight":"standard circadiano (no Oura)"}]
+SOLO JSON array.`;
+      try {
+        const schedFbText = await aiCall(aiKeys, schedFbPrompt, 1500);
+        energySchedule = safeJsonParse(schedFbText, []);
+        if (!Array.isArray(energySchedule)) energySchedule = [];
+        emit(`  ↳ ✅ ${energySchedule.length} slot piano energia (senza Oura)`);
+      } catch(ef) { emit(`  ↳ Piano energia fallback skip: ${ef.message?.slice(0,60)}`); }
     }
   } catch(e) { emit(`  ↳ Piano energia skip: ${e.message?.slice(0,80)}`); }
 
@@ -1223,7 +1339,7 @@ SOLO JSON array.`, 500);
     spotifyPlaylists = safeJsonParse(sp, []);
     if (!Array.isArray(spotifyPlaylists)) spotifyPlaylists = [];
     emit(`  ↳ ✅ ${spotifyPlaylists.length} playlist Spotify suggerite`);
-  } catch(e) { spotifyPlaylists = []; }
+  } catch(e) { emit(`  ↳ Spotify skip: ${e.message?.slice(0,80)}`); spotifyPlaylists = []; }
 
   const syncedAt = new Date().toISOString();
   saveDb.days[date].insights        = { dayType, growthBrief, contextualIntelligence, intelligenceFeed, driveFiles, studyItems, proactiveActions, spotifyPlaylists, energySchedule };
