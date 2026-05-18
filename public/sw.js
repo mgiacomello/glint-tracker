@@ -1,7 +1,7 @@
-/* Glint Service Worker — v2 */
+/* Glint Service Worker — v3 */
 'use strict';
 
-const CACHE   = 'glint-v2';
+const CACHE   = 'glint-v3';
 const SHELL   = [
   '/app.html',
   '/settings.html',
