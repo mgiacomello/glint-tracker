@@ -621,13 +621,10 @@
   </a>
   <div class="tab-nav">
     <button class="tnav on" onclick="nav('all',this)">Oggi</button>
-    <button class="tnav" onclick="nav('growth',this)">Crescita <span id="tnav-growth" style="display:none"></span></button>
-    <button class="tnav" onclick="nav('activities',this)">Vita locale</button>
-    <button class="tnav" onclick="nav('network',this)">Network</button>
-    <button class="tnav" onclick="nav('family',this)">Famiglia</button>
-    <button class="tnav" onclick="nav('month',this)">Mese</button>
-    <button class="tnav" onclick="nav('projects',this)">Progetti</button>
     <a href="/boards.html" class="tnav">Board</a>
+    <button class="tnav" onclick="nav('vita',this)">Vita</button>
+    <button class="tnav" onclick="nav('pianifica',this)">Pianifica</button>
+    <button class="tnav" onclick="nav('growth',this)">Crescita <span id="tnav-growth" style="display:none"></span></button>
   </div>
   <div class="tb-context" id="tb-context"></div>
   <div class="tb-right">
@@ -669,35 +666,23 @@
     <span class="bn-icon">🏠</span>
     <span class="bn-label">Oggi</span>
   </button>
+  <a href="/boards.html" class="bn-item">
+    <span class="bn-icon">📋</span>
+    <span class="bn-label">Board</span>
+  </a>
+  <button class="bn-item" id="bn-vita" onclick="nav('vita',this)" data-sec="vita">
+    <span class="bn-icon">🌍</span>
+    <span class="bn-label">Vita</span>
+  </button>
+  <button class="bn-item" id="bn-pianifica" onclick="nav('pianifica',this)" data-sec="pianifica">
+    <span class="bn-icon">📊</span>
+    <span class="bn-label">Pianifica</span>
+  </button>
   <button class="bn-item" id="bn-growth" onclick="nav('growth',this)" data-sec="growth">
     <span class="bn-icon">📚</span>
     <span class="bn-label">Crescita</span>
     <span class="bn-badge" id="bn-badge-growth" style="display:none"></span>
   </button>
-  <button class="bn-item" id="bn-activities" onclick="nav('activities',this)" data-sec="activities">
-    <span class="bn-icon">🗺️</span>
-    <span class="bn-label">Vita</span>
-  </button>
-  <button class="bn-item" id="bn-network" onclick="nav('network',this)" data-sec="network">
-    <span class="bn-icon">🌐</span>
-    <span class="bn-label">Network</span>
-  </button>
-  <button class="bn-item" id="bn-family" onclick="nav('family',this)" data-sec="family">
-    <span class="bn-icon">👨‍👩‍👦</span>
-    <span class="bn-label">Famiglia</span>
-  </button>
-  <button class="bn-item" id="bn-month" onclick="nav('month',this)" data-sec="month">
-    <span class="bn-icon">📊</span>
-    <span class="bn-label">Mese</span>
-  </button>
-  <button class="bn-item" id="bn-projects" onclick="nav('projects',this)" data-sec="projects">
-    <span class="bn-icon">🗂️</span>
-    <span class="bn-label">Progetti</span>
-  </button>
-  <a href="/boards.html" class="bn-item">
-    <span class="bn-icon">📋</span>
-    <span class="bn-label">Board</span>
-  </a>
 </nav>
 
 <!-- Evening reflection button -->
@@ -845,72 +830,83 @@ function render() {
 
   // update tab active state
   document.querySelectorAll('.tnav').forEach(b=>b.classList.remove('on'));
-  const tabMap = {'all':0,'growth':1,'activities':2,'network':3,'family':4,'month':5,'projects':6};
+  const tabMap = {'all':0,'vita':2,'pianifica':3,'growth':4};
   const tabIdx = tabMap[section]??0;
   document.querySelectorAll('.tnav')[tabIdx]?.classList.add('on');
 
   const page = document.getElementById('page');
 
-  // ── SECTION: MESE ──
-  if (section==='month') {
-    const ym = TODAY.slice(0,7);
-    const md = monthData || {kpis:[],objectives:[],completedItems:0,totalItems:0};
-    const mPct = md.totalItems>0 ? Math.round(md.completedItems/md.totalItems*100) : 0;
-    const monthName = new Date(ym+'-01').toLocaleDateString('it-IT',{month:'long',year:'numeric'});
-    page.innerHTML = `
-      <div class="fw-section">
-        <div class="fw-head"><span class="fw-title">📊 ${esc(monthName.charAt(0).toUpperCase()+monthName.slice(1))}</span></div>
-        <div style="display:flex;gap:14px;flex-wrap:wrap">
-          <div class="month-stat" style="flex:1">
-            <div><div class="month-stat-n">${mPct}%</div><div class="month-stat-l">Completamento mese</div></div>
-            <div style="flex:1"><div class="kpi-pb-wrap" style="height:6px"><div class="kpi-pb-fill" style="width:${mPct}%"></div></div><div style="font-size:11px;color:var(--t2);margin-top:4px;font-family:monospace">${md.completedItems}/${md.totalItems} task</div></div>
-          </div>
-        </div>
-        <div class="month-grid">
-          <div class="card">
-            <div class="bc-head"><span class="bc-title">📈 KPI</span><span class="bc-badge">${md.kpis.length}</span></div>
-            ${md.kpis.map((k,i)=>`
-              <div class="kpi-list-row">
-                <div style="flex:1">
-                  <div class="kpi-list-name">${esc(k.name)}</div>
-                  <div class="kpi-pb-wrap"><div class="kpi-pb-fill" style="width:${k.target>0?Math.min(100,Math.round(k.current/k.target*100)):0}%"></div></div>
-                  <div class="kpi-list-val">${k.current}/${k.target} ${esc(k.unit||'')}</div>
-                </div>
-                <button class="kpi-stepbtn" onclick="kpiStep('${esc(k.id)}',-1)">−</button>
-                <button class="kpi-stepbtn" onclick="kpiStep('${esc(k.id)}',1)">+</button>
-                <button class="btn-del" onclick="deleteKpi('${esc(k.id)}')">🗑</button>
-              </div>`).join('')}
-            ${!md.kpis.length ? `<div class="empty-sm">Nessun KPI per questo mese.</div>` : ''}
-            <div class="inline-form">
-              <input id="kpi-name" placeholder="Nome KPI" style="flex:2"/>
-              <input id="kpi-target" placeholder="Target" type="number" style="flex:1;min-width:60px"/>
-              <input id="kpi-unit" placeholder="Unità" style="flex:1;min-width:50px"/>
-              <button class="btn-add" onclick="addKpi()">+</button>
-            </div>
-          </div>
-          <div class="card">
-            <div class="bc-head"><span class="bc-title">🎯 Obiettivi</span><span class="bc-badge">${md.objectives.length}</span></div>
-            ${md.objectives.map(o=>`
-              <div class="obj-row">
-                <div class="obj-dot ${esc(o.status||'todo')}" onclick="cycleObjStatus('${esc(o.id)}')" title="Clicca per cambiare stato"></div>
-                <div class="obj-name">${esc(o.name)}</div>
-                <div class="obj-status">${{'todo':'Da fare','in-progress':'In corso','done':'Fatto'}[o.status||'todo']||''}</div>
-                <button class="btn-del" onclick="deleteObjective('${esc(o.id)}')">🗑</button>
-              </div>`).join('')}
-            ${!md.objectives.length ? `<div class="empty-sm">Nessun obiettivo per questo mese.</div>` : ''}
-            <div class="inline-form">
-              <input id="obj-name" placeholder="Obiettivo del mese"/>
-              <button class="btn-add" onclick="addObjective()">+</button>
-            </div>
-          </div>
-        </div>
-      </div>`;
-    _syncReflectBtn();
-    return;
-  }
+  // ── SECTION: PIANIFICA (mese / progetti) ──
+  if (section==='pianifica' || section==='month' || section==='projects') {
+    const piTab = section==='month' ? 'mese' : section==='projects' ? 'progetti' : (window._pianificaTab || 'mese');
+    window._pianificaTab = piTab;
+    const piSubTabs = [
+      {key:'mese',icon:'📊',label:'Mese',color:'#7c6ef5'},
+      {key:'progetti',icon:'🗂️',label:'Progetti',color:'#3b82f6'},
+    ];
+    const tabBar = `<div style="display:flex;gap:6px;padding:0 0 12px;border-bottom:1px solid var(--line2)">
+      ${piSubTabs.map(t=>`<button class="act-tab ${piTab===t.key?'on':''}" onclick="setPianificaTab('${t.key}')" style="font-size:12px${piTab===t.key?`;background:${t.color}22;border-color:${t.color};color:${t.color}`:''}"> ${t.icon} ${t.label}</button>`).join('')}
+    </div>`;
 
-  // ── SECTION: PROGETTI ──
-  if (section==='projects') {
+    if (piTab === 'mese') {
+      const ym = TODAY.slice(0,7);
+      const md = monthData || {kpis:[],objectives:[],completedItems:0,totalItems:0};
+      const mPct = md.totalItems>0 ? Math.round(md.completedItems/md.totalItems*100) : 0;
+      const monthName = new Date(ym+'-01').toLocaleDateString('it-IT',{month:'long',year:'numeric'});
+      page.innerHTML = `
+        <div class="fw-section">
+          <div class="fw-head"><span class="fw-title">📊 ${esc(monthName.charAt(0).toUpperCase()+monthName.slice(1))}</span></div>
+          ${tabBar}
+          <div style="display:flex;gap:14px;flex-wrap:wrap">
+            <div class="month-stat" style="flex:1">
+              <div><div class="month-stat-n">${mPct}%</div><div class="month-stat-l">Completamento mese</div></div>
+              <div style="flex:1"><div class="kpi-pb-wrap" style="height:6px"><div class="kpi-pb-fill" style="width:${mPct}%"></div></div><div style="font-size:11px;color:var(--t2);margin-top:4px;font-family:monospace">${md.completedItems}/${md.totalItems} task</div></div>
+            </div>
+          </div>
+          <div class="month-grid">
+            <div class="card">
+              <div class="bc-head"><span class="bc-title">📈 KPI</span><span class="bc-badge">${md.kpis.length}</span></div>
+              ${md.kpis.map((k,i)=>`
+                <div class="kpi-list-row">
+                  <div style="flex:1">
+                    <div class="kpi-list-name">${esc(k.name)}</div>
+                    <div class="kpi-pb-wrap"><div class="kpi-pb-fill" style="width:${k.target>0?Math.min(100,Math.round(k.current/k.target*100)):0}%"></div></div>
+                    <div class="kpi-list-val">${k.current}/${k.target} ${esc(k.unit||'')}</div>
+                  </div>
+                  <button class="kpi-stepbtn" onclick="kpiStep('${esc(k.id)}',-1)">−</button>
+                  <button class="kpi-stepbtn" onclick="kpiStep('${esc(k.id)}',1)">+</button>
+                  <button class="btn-del" onclick="deleteKpi('${esc(k.id)}')">🗑</button>
+                </div>`).join('')}
+              ${!md.kpis.length ? `<div class="empty-sm">Nessun KPI per questo mese.</div>` : ''}
+              <div class="inline-form">
+                <input id="kpi-name" placeholder="Nome KPI" style="flex:2"/>
+                <input id="kpi-target" placeholder="Target" type="number" style="flex:1;min-width:60px"/>
+                <input id="kpi-unit" placeholder="Unità" style="flex:1;min-width:50px"/>
+                <button class="btn-add" onclick="addKpi()">+</button>
+              </div>
+            </div>
+            <div class="card">
+              <div class="bc-head"><span class="bc-title">🎯 Obiettivi</span><span class="bc-badge">${md.objectives.length}</span></div>
+              ${md.objectives.map(o=>`
+                <div class="obj-row">
+                  <div class="obj-dot ${esc(o.status||'todo')}" onclick="cycleObjStatus('${esc(o.id)}')" title="Clicca per cambiare stato"></div>
+                  <div class="obj-name">${esc(o.name)}</div>
+                  <div class="obj-status">${{'todo':'Da fare','in-progress':'In corso','done':'Fatto'}[o.status||'todo']||''}</div>
+                  <button class="btn-del" onclick="deleteObjective('${esc(o.id)}')">🗑</button>
+                </div>`).join('')}
+              ${!md.objectives.length ? `<div class="empty-sm">Nessun obiettivo per questo mese.</div>` : ''}
+              <div class="inline-form">
+                <input id="obj-name" placeholder="Obiettivo del mese"/>
+                <button class="btn-add" onclick="addObjective()">+</button>
+              </div>
+            </div>
+          </div>
+        </div>`;
+      _syncReflectBtn();
+      return;
+    }
+
+    if (piTab === 'progetti') {
     const pd = projectsData || [];
     const PRESET_COLORS = ['#7c6ef5','#3b82f6','#00d084','#ffb800','#ff4444'];
     const projCard = (p) => `
@@ -947,6 +943,7 @@ function render() {
           ${pd.length?`<span class="fw-count">${pd.length}</span>`:''}
           <button onclick="toggleAddProject()" style="margin-left:auto;padding:6px 14px;border-radius:8px;border:1px solid var(--line);background:transparent;color:var(--t1);cursor:pointer;font-size:12px">+ Nuovo progetto</button>
         </div>
+        ${tabBar}
         <div id="add-project-form" style="display:none" class="card">
           <div style="padding:16px 18px;display:flex;flex-direction:column;gap:10px">
             <div style="display:flex;gap:10px;flex-wrap:wrap">
@@ -965,9 +962,12 @@ function render() {
         </div>
         ${pd.length ? `<div class="proj-grid">${pd.map(projCard).join('')}</div>` : `<div class="card"><div class="empty"><div class="ei">🗂️</div>Nessun progetto ancora.<br/>Clicca <strong>+ Nuovo progetto</strong> per iniziare.</div></div>`}
       </div>`;
+      _syncReflectBtn();
+      return;
+    } // end if (piTab === 'progetti')
     _syncReflectBtn();
     return;
-  }
+  } // end if (section === 'pianifica')
 
   // ── SECTION: CRESCITA (full width) ──
   if (section==='growth') {
@@ -1006,128 +1006,83 @@ function render() {
     return;
   }
 
-  // ── SECTION: NETWORK (full width) ──
-  if (section==='network') {
-    const city=net.city||'';
-    const refreshedAt=net._refreshedAt ? new Date(net._refreshedAt).toLocaleDateString('it-IT',{day:'2-digit',month:'2-digit'}) : null;
-    page.innerHTML = `
-      ${_panelHtml()}
-      <div class="fw-section">
-        <div class="fw-head">
-          <div><span class="fw-title">🌐 Network</span>${city?`<div style="font-size:12px;color:var(--t2);margin-top:1px">${esc(city)}</div>`:''}</div>
-          ${netEvts.length?`<span class="fw-count">${netEvts.length}</span>`:''}
-          ${refreshedAt?`<span style="font-size:11px;color:var(--t2);margin-left:auto">aggiornato ${refreshedAt}</span>`:''}
-          <button onclick="refreshLocal()" style="margin-left:${refreshedAt?'8px':'auto'};padding:4px 12px;border-radius:6px;border:1px solid var(--line);background:transparent;color:var(--t1);cursor:pointer;font-size:12px">⟳ Aggiorna</button>
-        </div>
-        <div id="local-refresh-log" style="display:none;padding:10px 16px;font-size:12px;color:var(--t1);font-family:monospace;white-space:pre-wrap;border-bottom:1px solid var(--line)"></div>
-        <div class="card">
-          ${netEvts.length ? netEvts.map(e=>netRow(e)).join('') : `<div class="empty"><div class="ei">🌐</div>Nessun evento trovato${city?' a '+esc(city):''}.<br/><button onclick="refreshLocal()" style="margin-top:8px;padding:6px 16px;border-radius:8px;border:none;background:var(--accent);color:#fff;cursor:pointer;font-size:12px">⟳ Cerca eventi ora</button></div>`}
-        </div>
-      </div>`;
-    _restorePanel();
-    return;
-  }
-
-  // ── SECTION: VITA LOCALE (full width) ──
-  if (section==='activities') {
-    const act   = d.localActivities||{};
-    const items = act.items||[];
-    const city  = act.city||net.city||'';
-    const refreshedAt=act._refreshedAt ? new Date(act._refreshedAt).toLocaleDateString('it-IT',{day:'2-digit',month:'2-digit'}) : null;
-    const members=dayData?.userSettings?.familyMembers||[];
-    const spouseName = members.find(f=>f.role==='spouse')?.name||'Partner';
-    const childName  = members.find(f=>f.role==='child')?.name||'Figlio';
-    const childAge   = members.find(f=>f.role==='child')?.age||8;
-
-    const tabs = [
-      { key:'solo',       icon:'🚶', label:'Per me',              color:'#3b82f6' },
-      { key:'couple',     icon:'💑', label:`Con ${spouseName}`,   color:'#ff6482' },
-      { key:'family',     icon:'👨‍👩‍👦', label:`Con ${childName}`,   color:'#00d084' },
-      { key:'restaurant', icon:'🍽️', label:'Ristoranti',          color:'#ffb800' },
+  // ── SECTION: VITA (locale / network / famiglia) ──
+  if (section==='vita') {
+    const vitaTab = window._vitaTab || 'locale';
+    const act = d.localActivities||{};
+    const actItems = act.items||[];
+    const city = act.city||net.city||'';
+    const actRA = act._refreshedAt ? new Date(act._refreshedAt).toLocaleDateString('it-IT',{day:'2-digit',month:'2-digit'}) : null;
+    const netRA = net._refreshedAt ? new Date(net._refreshedAt).toLocaleDateString('it-IT',{day:'2-digit',month:'2-digit'}) : null;
+    const members = dayData?.userSettings?.familyMembers||[];
+    const spN = members.find(f=>f.role==='spouse')?.name||'Partner';
+    const chN = members.find(f=>f.role==='child')?.name||'Figli';
+    const alV = family.alessandraEvents||[], tmV = family.tommasoAlerts||[];
+    const momento = family.momentoFamiglia||null;
+    const hasMembers = members.length>0;
+    const activeActTab = window._actTab || 'solo';
+    const actTabs = [
+      {key:'solo',icon:'🚶',label:'Per me',color:'#3b82f6'},
+      {key:'couple',icon:'💑',label:`Con ${spN}`,color:'#ff6482'},
+      {key:'family',icon:'👨‍👩‍👦',label:`Con ${chN}`,color:'#00d084'},
+      {key:'restaurant',icon:'🍽️',label:'Ristoranti',color:'#ffb800'},
     ];
-
+    const vitaSubTabs = [
+      {key:'locale',icon:'🗺️',label:'Locale',color:'#3b82f6'},
+      {key:'network',icon:'🌐',label:'Network',color:'#7c6ef5'},
+      {key:'famiglia',icon:'👨‍👩‍👦',label:'Famiglia',color:'#ff6482'},
+    ];
     const actCard = a => `<div class="act-card ${esc(a.type||'')}">
-      <div class="act-card-top">
-        <div class="act-price">${esc(a.price||'')}</div>
-        <div class="act-title">${esc(a.title||'')}</div>
-      </div>
+      <div class="act-card-top"><div class="act-price">${esc(a.price||'')}</div><div class="act-title">${esc(a.title||'')}</div></div>
       ${a.location?`<div class="act-location">📍 ${esc(a.location)}</div>`:''}
       <div class="act-desc">${esc(a.description||'')}</div>
       ${a.why?`<div class="act-why">💡 ${esc(a.why)}</div>`:''}
-      <div class="act-footer">
-        ${a.category?`<span class="act-cat">${esc(a.category)}</span>`:''}
-        ${a.link?`<a href="${esc(a.link)}" target="_blank" class="act-link">↗ Info</a>`:''}
-      </div>
+      <div class="act-footer">${a.category?`<span class="act-cat">${esc(a.category)}</span>`:''}${a.link?`<a href="${esc(a.link)}" target="_blank" class="act-link">↗ Info</a>`:''}</div>
     </div>`;
 
-    const activeTab = window._actTab || 'solo';
+    let tabContent = '';
+    if (vitaTab === 'locale') {
+      tabContent = actItems.length ? `
+        <div class="act-tab-bar" style="padding:12px 18px 0;border-bottom:1px solid var(--line2)">
+          ${actTabs.map(t=>`<button class="act-tab ${activeActTab===t.key?'on':''}" onclick="setActTab('${t.key}')" style="${activeActTab===t.key?`background:${t.color}22;border-color:${t.color};color:${t.color}`:''}"> ${t.icon} ${t.label}</button>`).join('')}
+        </div>
+        <div class="act-grid-full">
+          ${(()=>{ const vis=actItems.filter(a=>a.type===activeActTab); return vis.length?vis.map(actCard).join(''):`<div class="empty"><div class="ei">${actTabs.find(t=>t.key===activeActTab)?.icon||'🗺️'}</div>Nessuna attività trovata.<br/>Clicca ⟳ Aggiorna per cercare.</div>`; })()}
+        </div>` : `<div class="empty"><div class="ei">🗺️</div>Nessuna attività trovata${city?' per '+esc(city):''}.<br/><button onclick="refreshLocal()" style="margin-top:8px;padding:6px 16px;border-radius:8px;border:none;background:var(--accent);color:#fff;cursor:pointer;font-size:12px">⟳ Cerca attività ora</button></div>`;
+    } else if (vitaTab === 'network') {
+      tabContent = netEvts.length ? netEvts.map(e=>netRow(e)).join('') : `<div class="empty"><div class="ei">🌐</div>Nessun evento trovato${city?' a '+esc(city):''}.<br/><button onclick="refreshLocal()" style="margin-top:8px;padding:6px 16px;border-radius:8px;border:none;background:var(--accent);color:#fff;cursor:pointer;font-size:12px">⟳ Cerca eventi ora</button></div>`;
+    } else if (vitaTab === 'famiglia') {
+      tabContent = !hasMembers
+        ? `<div class="empty"><div class="ei">👨‍👩‍👦</div>Configura i tuoi familiari in <a href="/settings.html" style="color:var(--accent)">Impostazioni → Famiglia</a>,<br/>poi clicca <strong>☀️ Briefing</strong> per rilevare i loro impegni dal Calendar.</div>`
+        : `${momento?`<div class="momento-card"><span class="momento-icon">${esc(momento.icon||'❤️')}</span><div class="momento-body"><div class="momento-title">${esc(momento.title)}</div><div class="momento-desc">${esc(momento.description||'')}</div><div class="momento-meta">${esc(momento.person||'')}${momento.location?' · 📍'+esc(momento.location):''}</div></div></div>`:''}
+          <div class="fam-cols">
+            <div class="fam-col"><div class="fam-label">${esc(spN)}</div><div class="fam-body">${alV.length?alV.map(e=>`${e.time?esc(e.time)+' · ':''}${esc(e.title)}${e.isAway?`<div class="fam-alert">⚠️ Non sarà a casa</div>`:''}`).join('<br/>'):`<span style="color:var(--t2)">Nessun impegno rilevato oggi</span>`}</div></div>
+            <div class="fam-col"><div class="fam-label">${esc(chN)} · Scuola</div><div class="fam-body">${tmV.length?tmV.map(t=>`<a href="${esc(t.link)}" target="_blank" style="color:#60a5fa;text-decoration:none">${esc(t.title)}</a>${t.priority==='high'?' 🔴':''}`).join('<br/>'):`<span style="color:var(--t2)">Nessuna comunicazione recente</span>`}</div></div>
+          </div>
+          ${!alV.length&&!tmV.length?`<div style="padding:6px 18px 14px;font-size:12px;color:var(--t2)">Nessun evento rilevato oggi. Clicca <strong>☀️ Briefing</strong> per aggiornare.</div>`:''}`;
+    }
+
+    const refreshedAt = vitaTab==='network' ? netRA : actRA;
+    const titleMap = {locale:'🗺️ Locale',network:'🌐 Network',famiglia:'👨‍👩‍👦 Famiglia'};
 
     page.innerHTML = `
       ${_panelHtml()}
       <div class="fw-section">
         <div class="fw-head">
-          <div><span class="fw-title">🗺️ Vita locale</span>${city?`<div style="font-size:12px;color:var(--t2);margin-top:1px">${esc(city)}</div>`:''}</div>
-          ${refreshedAt?`<span style="font-size:11px;color:var(--t2);margin-left:auto">aggiornato ${refreshedAt}</span>`:''}
-          <button onclick="refreshLocal()" style="margin-left:${refreshedAt?'8px':'auto'};padding:4px 12px;border-radius:6px;border:1px solid var(--line);background:transparent;color:var(--t1);cursor:pointer;font-size:12px">⟳ Aggiorna</button>
+          <div>
+            <span class="fw-title">${titleMap[vitaTab]}</span>
+            ${(vitaTab!=='famiglia'&&city)?`<div style="font-size:12px;color:var(--t2);margin-top:1px">${esc(city)}</div>`:''}
+          </div>
+          ${vitaTab!=='famiglia'&&refreshedAt?`<span style="font-size:11px;color:var(--t2);margin-left:auto">aggiornato ${refreshedAt}</span>`:''}
+          ${vitaTab!=='famiglia'?`<button onclick="refreshLocal()" style="margin-left:${refreshedAt?'8px':'auto'};padding:4px 12px;border-radius:6px;border:1px solid var(--line);background:transparent;color:var(--t1);cursor:pointer;font-size:12px">⟳ Aggiorna</button>`:''}
+        </div>
+        <div style="display:flex;gap:6px;padding:0 0 12px;border-bottom:1px solid var(--line2)">
+          ${vitaSubTabs.map(t=>`<button class="act-tab ${vitaTab===t.key?'on':''}" onclick="setVitaTab('${t.key}')" style="font-size:12px${vitaTab===t.key?`;background:${t.color}22;border-color:${t.color};color:${t.color}`:''}"> ${t.icon} ${t.label}</button>`).join('')}
         </div>
         <div id="local-refresh-log" style="display:none;padding:10px 16px;font-size:12px;color:var(--t1);font-family:monospace;white-space:pre-wrap;border-bottom:1px solid var(--line)"></div>
-        ${items.length ? `
-        <div class="act-tab-bar">
-          ${tabs.map(t=>`
-            <button class="act-tab ${activeTab===t.key?'on':''}" onclick="setActTab('${t.key}')"
-              style="${activeTab===t.key?`background:${t.color}22;border-color:${t.color};color:${t.color}`:''}">
-              ${t.icon} ${t.label}
-            </button>`).join('')}
-        </div>
-        <div class="act-grid-full">
-          ${(()=>{
-            const visible = items.filter(a=>a.type===activeTab);
-            if(!visible.length) return `<div class="empty"><div class="ei">${tabs.find(t=>t.key===activeTab)?.icon||'🗺️'}</div>Nessuna attività trovata.<br/>Clicca ⟳ Aggiorna per cercare.</div>`;
-            return visible.map(actCard).join('');
-          })()}
-        </div>`
-        : `<div class="card"><div class="empty"><div class="ei">🗺️</div>Nessuna attività trovata${city?' per '+esc(city):''}.<br/><button onclick="refreshLocal()" style="margin-top:8px;padding:6px 16px;border-radius:8px;border:none;background:var(--accent);color:#fff;cursor:pointer;font-size:12px">⟳ Cerca attività ora</button></div></div>`}
+        <div class="card">${tabContent}</div>
       </div>`;
-    _restorePanel();
-    return;
-  }
-
-  // ── SECTION: FAMIGLIA (full width) ──
-  if (section==='family') {
-    const al=family.alessandraEvents||[], tm=family.tommasoAlerts||[];
-    const momento=family.momentoFamiglia||null;
-    const members=dayData?.userSettings?.familyMembers||[];
-    const sp=members.find(f=>f.role==='spouse')?.name||'Partner';
-    const ch=members.find(f=>f.role==='child')?.name||'Figli';
-    const hasMembers=members.length>0;
-    page.innerHTML = `
-      ${_panelHtml()}
-      <div class="fw-section">
-        <div class="fw-head"><span class="fw-title">👨‍👩‍👦 Famiglia</span></div>
-        ${!hasMembers ? `<div class="card"><div class="empty"><div class="ei">👨‍👩‍👦</div>Configura i tuoi familiari in <a href="/settings.html" style="color:var(--accent)">Impostazioni → Famiglia</a>,<br/>poi clicca <strong>☀️ Briefing</strong> per rilevare i loro impegni dal Calendar.</div></div>`
-        : `<div class="card">
-          ${momento?`<div class="momento-card">
-            <span class="momento-icon">${esc(momento.icon||'❤️')}</span>
-            <div class="momento-body">
-              <div class="momento-title">${esc(momento.title)}</div>
-              <div class="momento-desc">${esc(momento.description||'')}</div>
-              <div class="momento-meta">${esc(momento.person||'')}${momento.location?' · 📍'+esc(momento.location):''}</div>
-            </div>
-          </div>`:''}
-          <div class="fam-cols">
-            <div class="fam-col">
-              <div class="fam-label">${esc(sp)}</div>
-              <div class="fam-body">${al.length?al.map(e=>`${e.time?esc(e.time)+' · ':''}${esc(e.title)}${e.isAway?`<div class="fam-alert">⚠️ Non sarà a casa</div>`:''}`).join('<br/>'):`<span style="color:var(--t2)">Nessun impegno rilevato oggi</span>`}</div>
-            </div>
-            <div class="fam-col">
-              <div class="fam-label">${esc(ch)} · Scuola</div>
-              <div class="fam-body">${tm.length?tm.map(t=>`<a href="${esc(t.link)}" target="_blank" style="color:#60a5fa;text-decoration:none">${esc(t.title)}</a>${t.priority==='high'?' 🔴':''}`).join('<br/>'):`<span style="color:var(--t2)">Nessuna comunicazione recente</span>`}</div>
-            </div>
-          </div>
-          ${!al.length&&!tm.length?`<div style="padding:6px 18px 14px;font-size:12px;color:var(--t2)">Nessun evento rilevato oggi. Clicca <strong>☀️ Briefing</strong> per aggiornare.</div>`:''}
-        </div>`}
-      </div>`;
-    _restorePanel();
+    _restorePanel(); _syncReflectBtn();
     return;
   }
 
@@ -1312,45 +1267,6 @@ function render() {
         </div>`;
       })()}
 
-      ${(()=>{
-        const sp = ins.spotifyPlaylists||[];
-        if (!sp.length) return '';
-        return `<div class="bc">
-          <div class="bc-head">
-            <span class="bc-title">🎵 Spotify</span>
-            <span class="bc-badge pur">${sp.length}</span>
-          </div>
-          ${sp.map(p=>`
-            <div class="sp-row">
-              <span class="sp-emoji">${esc(p.emoji||'🎵')}</span>
-              <div class="sp-body">
-                <div class="sp-name">${esc(p.name)}</div>
-                <div class="sp-mood">${esc(p.mood||'')}</div>
-              </div>
-              <a href="https://open.spotify.com/search/${encodeURIComponent(p.spotifyQuery||p.name)}" target="_blank" class="sp-play">▶</a>
-            </div>`).join('')}
-        </div>`;
-      })()}
-
-      ${(()=>{
-        const fam = dayData?.family || {};
-        const mf = fam.momentoFamiglia || null;
-        if (!mf) return '';
-        return `<div class="bc">
-          <div class="bc-head">
-            <span class="bc-title">❤️ Momento ${esc(mf.person||'Famiglia')}</span>
-            <button onclick="nav('family', document.querySelector('.tnav:nth-child(5)'))" style="margin-left:auto;padding:3px 10px;border-radius:6px;border:1px solid var(--line);background:transparent;color:var(--t2);font-size:11px;cursor:pointer">Apri →</button>
-          </div>
-          <div class="momento-card" style="border-bottom:none">
-            <span class="momento-icon">${esc(mf.icon||'❤️')}</span>
-            <div class="momento-body">
-              <div class="momento-title">${esc(mf.title)}</div>
-              <div class="momento-desc">${esc(mf.description||'')}</div>
-              ${mf.location?`<div class="momento-meta">📍 ${esc(mf.location)}</div>`:''}
-            </div>
-          </div>
-        </div>`;
-      })()}
 
       ${(()=>{
         const slots = ins?.energySchedule || [];
@@ -1567,8 +1483,11 @@ function _restorePanel() {
 // ── Navigation ─────────────────────────────────────────────────────────────
 function nav(s, _el) {
   section = s;
-  if (s === 'month' && !monthData) { loadMonth(); return; }
-  if (s === 'projects' && !projectsData) { loadProjects(); return; }
+  if (s === 'pianifica') {
+    const pt = window._pianificaTab || 'mese';
+    if (pt === 'mese' && !monthData) { loadMonth(); return; }
+    if (pt === 'progetti' && !projectsData) { loadProjects(); return; }
+  }
   render();
   // Sync bottom nav
   document.querySelectorAll('.bn-item').forEach(b => b.classList.toggle('on', b.dataset.sec === s));
@@ -1678,6 +1597,13 @@ function closeMenu(){document.getElementById('user-menu').classList.remove('open
 async function logout(){if(!confirm('Uscire da Glint?'))return;await fetch('/api/logout',{method:'POST',credentials:'include'});location.href='/login.html';}
 
 function setActTab(key){ window._actTab=key; render(); }
+function setVitaTab(key){ window._vitaTab=key; section='vita'; render(); document.querySelectorAll('.bn-item').forEach(b=>b.classList.toggle('on',b.dataset.sec==='vita')); }
+function setPianificaTab(key){
+  window._pianificaTab=key; section='pianifica';
+  if (key==='mese' && !monthData){ loadMonth(); return; }
+  if (key==='progetti' && !projectsData){ loadProjects(); return; }
+  render(); document.querySelectorAll('.bn-item').forEach(b=>b.classList.toggle('on',b.dataset.sec==='pianifica'));
+}
 
 async function refreshLocal(){
   const logEl = document.getElementById('local-refresh-log');
@@ -1814,7 +1740,8 @@ async function loadMonth() {
     monthData = { kpis: d.kpis||[], objectives: d.objectives||[], completedItems: d.completedItems||0, totalItems: d.totalItems||0 };
   } catch { monthData = {kpis:[],objectives:[],completedItems:0,totalItems:0}; }
   render();
-  document.querySelectorAll('.bn-item').forEach(b => b.classList.toggle('on', b.dataset.sec === 'month'));
+  section = 'pianifica';
+  document.querySelectorAll('.bn-item').forEach(b => b.classList.toggle('on', b.dataset.sec === 'pianifica'));
 }
 async function addKpi() {
   const name = document.getElementById('kpi-name')?.value?.trim();
@@ -1874,7 +1801,8 @@ async function loadProjects() {
     projectsData = Array.isArray(d) ? d : (d.projects || []);
   } catch { projectsData = []; }
   render();
-  document.querySelectorAll('.bn-item').forEach(b => b.classList.toggle('on', b.dataset.sec === 'projects'));
+  section = 'pianifica';
+  document.querySelectorAll('.bn-item').forEach(b => b.classList.toggle('on', b.dataset.sec === 'pianifica'));
 }
 function toggleAddProject() {
   const f = document.getElementById('add-project-form');
