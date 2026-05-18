@@ -738,60 +738,78 @@ EMAIL:\n${emailList}`, 32768);
   emit(`  ↳ ${growthHeaders.length} email totali (Aggiornamenti: ${(allRawByCategory['Aggiornamenti']||[]).length} · Social: ${(allRawByCategory['Social']||[]).length} · Promozioni: ${(allRawByCategory['Promozioni']||[]).length} · Forum: ${(allRawByCategory['Forum']||[]).length})`);
 
   if (growthHeaders.length > 0) {
-    // Priorità: prima Aggiornamenti, poi Social, poi Promozioni, poi Forum
+    // Processa TUTTE le email Aggiornamenti + Social + Promozioni + Forum
+    // Strategia: header-only (soggetto + mittente) per stare nei limiti Groq TPM
+    // Batch da 15 email → ~3000 token input → entro 12000 TPM
     const GROWTH_ORDER = ['Aggiornamenti', 'Social', 'Promozioni', 'Forum'];
     const sortedGrowth = [...growthHeaders].sort((a, b) =>
       GROWTH_ORDER.indexOf(a.category) - GROWTH_ORDER.indexOf(b.category)
     );
-    // Limita a 24 email e processa in 2 batch da 12 per rispettare Groq TPM
-    const toStudy = sortedGrowth.slice(0, 24);
-    emit(`  ↳ Scarico corpo di ${toStudy.length} email per Crescita...`);
-
-    const studyWithBody = [];
-    for (const e of toStudy) {
-      try {
-        const full = await gmailGetMessage(token, e.id);
-        studyWithBody.push({ ...e, body: gmailBody(full, 100) });
-      } catch { studyWithBody.push({ ...e, body: '' }); }
-    }
+    const toStudy = sortedGrowth; // TUTTE le email, nessun limite
+    emit(`  ↳ Analisi di TUTTE le ${toStudy.length} email (batch da 15, header-only)...`);
 
     const interests = (settings.interests || ['business', 'AI', 'leadership', 'startup', 'tecnologia']).join(', ');
-    const marcoCtxStudy = `Marco è founder di Glint (AI executive tracker, B2C launch) e Sellrapido/Domopay (fintech startup). Interessi: AI business, fintech legal, startup growth, brand protection, wellness.`;
+    const marcoCtxStudy = `Marco: founder Glint (AI tracker B2C) e Sellrapido/Domopay (fintech). Interessi: AI, fintech, startup, brand protection, wellness.`;
     const studyPromptFn = (emailList) =>
       `Content curator di ${settings.userName||'Marco'}. ${marcoCtxStudy} Interessi: ${interests}.
-Per OGNI email: {"id":"ID","title":"titolo editoriale","summary":"1-2 frasi rilevanza per Marco","source":"mittente","category":"AI|business|fintech|legal|growth|tool|social|news|wellness|altro","priority":"high|medium|low","suggestedTime":"HH:MM","duration":15}
-HIGH=rilevante per Glint/Sellrapido/franchise/AI. MEDIUM=crescita professionale. LOW=spam/promo.
+Per OGNI email crea: {"id":"ID_ESATTO","title":"titolo editoriale breve","summary":"1 frase perché è rilevante","source":"mittente","category":"AI|business|fintech|legal|growth|tool|social|news|wellness|promo|altro","priority":"high|medium|low","suggestedTime":"08:00|14:30|21:00","duration":10}
+HIGH=Glint/Sellrapido/AI/fintech/legal. MEDIUM=crescita/wellness. LOW=spam/promo banali.
 SOLO JSON array.\n\nEMAIL:\n${emailList}`;
 
-    // Batch 1
-    try {
-      const batch1 = studyWithBody.slice(0, 12);
-      const list1 = batch1.map((e, i) => `EMAIL_${i+1} [id:${e.id}] [${e.category}]\nDa: ${e.from}\nOgg: ${e.subject}\n${e.body}`).join('\n---\n');
-      const text1 = await aiCall(aiKeys, studyPromptFn(list1), 4096);
-      const parsed1 = safeJsonParse(text1, []);
-      for (const s of parsed1) {
-        if (!s.id) continue;
-        studyItems.push({ id:s.id, title:s.title||'Aggiornamento', summary:s.summary||'', source:s.source||'', recommendation:s.recommendation||'leggi', category:s.category||'altro', gmailCategory:s.gmailCategory||'', priority:s.priority||'medium', suggestedTime:s.suggestedTime||'', duration:s.duration||15, link:`https://mail.google.com/mail/u/0/#inbox/${s.id}`, done:false });
+    const BATCH_SIZE = 15;
+    for (let bi = 0; bi < toStudy.length; bi += BATCH_SIZE) {
+      const batch = toStudy.slice(bi, bi + BATCH_SIZE);
+      try {
+        // Header-only: subject + from + category (no body download)
+        const emailList = batch.map((e, i) =>
+          `${bi+i+1}. [id:${e.id}] [${e.category}] Da: ${e.from?.split('<')[0].trim().slice(0,40)} | Ogg: ${e.subject?.slice(0,80)}`
+        ).join('\n');
+        const batchText = await aiCall(aiKeys, studyPromptFn(emailList), 4096);
+        const batchParsed = safeJsonParse(batchText, []);
+        for (const s of batchParsed) {
+          if (!s.id) continue;
+          const orig = batch.find(e => e.id === s.id);
+          studyItems.push({
+            id: s.id,
+            title: s.title || orig?.subject || 'Aggiornamento',
+            summary: s.summary || '',
+            source: s.source || orig?.from || '',
+            recommendation: s.recommendation || 'leggi',
+            category: s.category || 'altro',
+            gmailCategory: orig?.category || '',
+            priority: s.priority || 'medium',
+            suggestedTime: s.suggestedTime || '',
+            duration: s.duration || 10,
+            link: `https://mail.google.com/mail/u/0/#inbox/${s.id}`,
+            done: false
+          });
+        }
+        emit(`  ↳ Batch ${Math.floor(bi/BATCH_SIZE)+1}: ${batchParsed.length} item (tot: ${studyItems.length})`);
+      } catch(e) {
+        // Fallback: aggiungi le email del batch come item raw (senza AI)
+        emit(`  ↳ Batch ${Math.floor(bi/BATCH_SIZE)+1} errore AI (${e.message?.slice(0,50)}) — aggiungo come raw`);
+        for (const e2 of batch) {
+          studyItems.push({
+            id: e2.id,
+            title: e2.subject?.slice(0,80) || 'Email',
+            summary: '',
+            source: e2.from?.split('<')[0].trim().slice(0,40) || '',
+            recommendation: 'leggi',
+            category: 'altro',
+            gmailCategory: e2.category || '',
+            priority: 'low',
+            suggestedTime: '21:00',
+            duration: 10,
+            link: `https://mail.google.com/mail/u/0/#inbox/${e2.id}`,
+            done: false
+          });
+        }
       }
-      emit(`  ↳ Batch 1: ${parsed1.length} item`);
-    } catch(e) { emit(`  ↳ Errore batch 1: ${e.message?.slice(0,80)}`); }
-
-    // Batch 2
-    try {
-      const batch2 = studyWithBody.slice(12, 24);
-      const list2 = batch2.map((e, i) => `EMAIL_${i+1} [id:${e.id}] [${e.category}]\nDa: ${e.from}\nOgg: ${e.subject}\n${e.body}`).join('\n---\n');
-      const text2 = await aiCall(aiKeys, studyPromptFn(list2), 4096);
-      const parsed2 = safeJsonParse(text2, []);
-      for (const s of parsed2) {
-        if (!s.id) continue;
-        studyItems.push({ id:s.id, title:s.title||'Aggiornamento', summary:s.summary||'', source:s.source||'', recommendation:s.recommendation||'leggi', category:s.category||'altro', gmailCategory:s.gmailCategory||'', priority:s.priority||'medium', suggestedTime:s.suggestedTime||'', duration:s.duration||15, link:`https://mail.google.com/mail/u/0/#inbox/${s.id}`, done:false });
-      }
-      emit(`  ↳ Batch 2: ${parsed2.length} item`);
-    } catch(e) { emit(`  ↳ Errore batch 2: ${e.message?.slice(0,80)}`); }
+    }
 
     // Ordina: high → medium → low
     studyItems.sort((a, b) => ({ high:0, medium:1, low:2 }[a.priority] ?? 1) - ({ high:0, medium:1, low:2 }[b.priority] ?? 1));
-    emit(`  ↳ ✅ ${studyItems.length} item per Crescita (${studyItems.filter(s=>s.priority==='high').length} high · ${studyItems.filter(s=>s.priority==='medium').length} medium · ${studyItems.filter(s=>s.priority==='low').length} low)`);
+    emit(`  ↳ ✅ ${studyItems.length} item totali (${studyItems.filter(s=>s.priority==='high').length} high · ${studyItems.filter(s=>s.priority==='medium').length} medium · ${studyItems.filter(s=>s.priority==='low').length} low)`);
   } else {
     emit('  ↳ Nessuna email non-Principale trovata per Crescita');
   }
