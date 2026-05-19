@@ -624,6 +624,20 @@
     .triage-new-board input:focus { border-color:var(--accent); }
     .triage-new-board input::placeholder { color:var(--t2); }
     .triage-confirm-btn { padding:7px 14px;border-radius:8px;border:none;background:var(--accent);color:#fff;font-size:12px;font-weight:600;cursor:pointer;white-space:nowrap; }
+    .triage-task-panel { margin-top:12px;padding:14px;background:rgba(255,255,255,.03);border:1px solid var(--line);border-radius:10px;display:none; }
+    .triage-task-panel.open { display:block; }
+    .triage-task-label { font-size:11px;font-weight:700;color:var(--t2);text-transform:uppercase;letter-spacing:.07em;margin-bottom:8px; }
+    .triage-list-btns { display:flex;gap:6px; }
+    .triage-list-btn { flex:1;padding:10px 6px;border-radius:9px;border:1px solid var(--line);background:transparent;cursor:pointer;font-size:12px;font-weight:600;color:var(--t1);transition:all .14s;display:flex;flex-direction:column;align-items:center;gap:4px; }
+    .triage-list-btn:hover { color:var(--t0);background:rgba(255,255,255,.04); }
+    .triage-list-btn.family { border-color:rgba(255,184,0,.3);color:var(--amber);background:rgba(255,184,0,.06); }
+    .triage-list-btn.family:hover { background:rgba(255,184,0,.14); }
+    .triage-list-btn.network { border-color:rgba(59,130,246,.3);color:var(--blue);background:rgba(59,130,246,.06); }
+    .triage-list-btn.network:hover { background:rgba(59,130,246,.14); }
+    .triage-list-btn.growth { border-color:rgba(0,208,132,.3);color:var(--green);background:rgba(0,208,132,.06); }
+    .triage-list-btn.growth:hover { background:rgba(0,208,132,.14); }
+    .triage-list-btn span.icon { font-size:18px; }
+    .triage-list-btn span.lbl { font-size:11px; }
 
     /* ── HOME BENTO — board preview ── */
     .board-preview-row { display:flex;align-items:center;gap:10px;padding:10px 16px;border-bottom:1px solid var(--line2);transition:background .1s;text-decoration:none; }
@@ -745,8 +759,16 @@
       <div class="triage-snippet" id="triage-snippet">—</div>
       <div class="triage-actions">
         <button class="triage-btn ignore" onclick="triageAction('ignore')">🗑 Ignora</button>
-        <button class="triage-btn task"   onclick="triageAction('task')">✅ Task</button>
+        <button class="triage-btn task"   onclick="triageToggleTaskPanel()">✅ Task →</button>
         <button class="triage-btn board"  onclick="triageToggleBoardPanel()">📋 Board →</button>
+      </div>
+      <div class="triage-task-panel" id="triage-task-panel">
+        <div class="triage-task-label">Aggiungi a lista</div>
+        <div class="triage-list-btns">
+          <button class="triage-list-btn family"  onclick="triageAction('task','family')"><span class="icon">👨‍👩‍👦</span><span class="lbl">Famiglia</span></button>
+          <button class="triage-list-btn network" onclick="triageAction('task','network')"><span class="icon">🌐</span><span class="lbl">Network</span></button>
+          <button class="triage-list-btn growth"  onclick="triageAction('task','growth')"><span class="icon">📈</span><span class="lbl">Crescita</span></button>
+        </div>
       </div>
       <div class="triage-board-panel" id="triage-board-panel">
         <div class="triage-board-list" id="triage-board-list"></div>
@@ -2039,10 +2061,21 @@ function showTriageEmail(email, idx, total) {
   if (snipEl) snipEl.textContent = email.snippet || '';
 }
 
+function triageToggleTaskPanel() {
+  const tp = document.getElementById('triage-task-panel');
+  const bp = document.getElementById('triage-board-panel');
+  if (!tp) return;
+  const opening = !tp.classList.contains('open');
+  tp.classList.toggle('open', opening);
+  if (opening && bp) bp.classList.remove('open');
+}
+
 function triageToggleBoardPanel() {
   const bp = document.getElementById('triage-board-panel');
+  const tp = document.getElementById('triage-task-panel');
   if (!bp) return;
   const isOpen = bp.classList.toggle('open');
+  if (isOpen && tp) tp.classList.remove('open');
   if (isOpen) {
     const list = document.getElementById('triage-board-list');
     if (list) {
@@ -2070,11 +2103,24 @@ function triageSelectBoard(boardId, el) {
   triageAction('board');
 }
 
-async function triageAction(action) {
+async function triageAction(action, taskList) {
   const email = _triageEmails[_triageIdx];
   if (!email) return;
 
-  const body = { emailId: email.id, action };
+  const body = {
+    emailId: email.id,
+    action,
+    subject: email.subject,
+    fromName: email.from,
+    snippet: email.snippet,
+    category: email.category
+  };
+
+  if (action === 'task') {
+    if (!taskList) { triageToggleTaskPanel(); return; }
+    body.taskList = taskList;
+  }
+
   if (action === 'board') {
     const newName = document.getElementById('triage-new-board-name')?.value?.trim();
     if (_triageSelectedBoardId) {
@@ -2082,7 +2128,6 @@ async function triageAction(action) {
     } else if (newName) {
       body.newBoardName = newName;
     } else {
-      // Board panel open but nothing selected — just show it
       triageToggleBoardPanel();
       return;
     }
@@ -2095,7 +2140,6 @@ async function triageAction(action) {
       headers: {'Content-Type':'application/json'},
       body: JSON.stringify(body)
     });
-    // Reload boards if a new board was created
     if (action === 'board') loadBoards();
   } catch {}
 
@@ -2103,8 +2147,8 @@ async function triageAction(action) {
   _triageSelectedBoardId = null;
   _inboxCount = _triageEmails.length - _triageIdx;
 
-  const bp = document.getElementById('triage-board-panel');
-  if (bp) bp.classList.remove('open');
+  document.getElementById('triage-board-panel')?.classList.remove('open');
+  document.getElementById('triage-task-panel')?.classList.remove('open');
   const inp = document.getElementById('triage-new-board-name');
   if (inp) inp.value = '';
 

@@ -4936,23 +4936,27 @@ app.post('/api/inbox/triage', (req, res) => {
       result.itemId   = item.id;
     }
   } else if (action === 'task') {
+    const { taskList } = req.body; // 'family' | 'network' | 'growth'
     if (!db.days) db.days = {};
     if (!db.days[TODAY]) db.days[TODAY] = { events: [], tasks: [], items: {}, reflection: '', briefing: '' };
     const taskId = `mail-${emailId}`;
     if (!db.days[TODAY].tasks.find(t => t.id === taskId)) {
+      const quadrantMap = { family: 'Q2', network: 'Q2', growth: 'Q2' };
       db.days[TODAY].tasks.push({
         id: taskId,
         title: subject || '(no subject)',
         due: 'Oggi',
-        quadrant: 'Q2',
+        quadrant: quadrantMap[taskList] || 'Q2',
+        taskList: taskList || null,
         brief: snippet ? snippet.slice(0, 200) : '',
         link: `https://mail.google.com/mail/u/0/#inbox/${emailId}`,
         source: fromName || '',
         category: category || ''
       });
-      db.days[TODAY].items[taskId] = { done: false, comment: '', quadrant: 'Q2', type: 'task', actionPoints: [] };
+      db.days[TODAY].items[taskId] = { done: false, comment: '', quadrant: quadrantMap[taskList] || 'Q2', type: 'task', taskList: taskList || null, actionPoints: [] };
     }
     result.taskId = taskId;
+    result.taskList = taskList || null;
   }
   // action === 'ignore': just mark processed
 
