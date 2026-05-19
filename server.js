@@ -4808,6 +4808,175 @@ app.delete('/api/boards/:id/share/:userId', (req, res) => {
   res.json({ ok: true });
 });
 
+// ── INBOX TRIAGE ─────────────────────────────────────────────────────────────
+
+// GET /api/inbox/pending
+app.get('/api/inbox/pending', (req, res) => {
+  const db = readDB();
+  const pending = db.pendingTriage || [];
+  res.json({ pending, count: pending.length });
+});
+
+// POST /api/inbox/sync — fetch new Gmail headers → populate pendingTriage
+app.post('/api/inbox/sync', async (req, res) => {
+  const uid = getCurrentUid();
+  if (!uid) return res.status(401).json({ error: 'Not authenticated' });
+  const token = await getGoogleAccessToken();
+  if (!token) return res.status(400).json({ error: 'Google non connesso. Vai in Impostazioni e connetti Google.' });
+
+  const db = readDB();
+  const processedIds = new Set(db.processedEmailIds || []);
+  const pendingIds   = new Set((db.pendingTriage || []).map(e => e.id));
+
+  const CATEGORIES = [
+    { label: 'Principale',    q: 'in:inbox category:primary',    max: 50 },
+    { label: 'Aggiornamenti', q: 'in:inbox category:updates',    max: 50 },
+    { label: 'Social',        q: 'in:inbox category:social',     max: 30 },
+    { label: 'Promozioni',    q: 'in:inbox category:promotions', max: 30 },
+    { label: 'Forum',         q: 'in:inbox category:forums',     max: 20 },
+  ];
+
+  // Fetch message lists in parallel
+  const allMsgs = {};
+  await Promise.all(CATEGORIES.map(async cat => {
+    try {
+      const r = await fetch(
+        `https://gmail.googleapis.com/gmail/v1/users/me/messages?${new URLSearchParams({ q: cat.q, maxResults: String(cat.max) })}`,
+        { headers: { Authorization: `Bearer ${token}` }, signal: AbortSignal.timeout(15000) }
+      );
+      const d = await r.json();
+      allMsgs[cat.label] = d.messages || [];
+    } catch { allMsgs[cat.label] = []; }
+  }));
+
+  // Fetch metadata for new messages only (parallel batches of 10)
+  const toFetch = [];
+  const seenIds = new Set();
+  for (const [cat, msgs] of Object.entries(allMsgs)) {
+    for (const msg of msgs) {
+      if (seenIds.has(msg.id) || processedIds.has(msg.id) || pendingIds.has(msg.id)) continue;
+      seenIds.add(msg.id);
+      toFetch.push({ id: msg.id, category: cat });
+    }
+  }
+
+  const newEmails = [];
+  const BATCH = 12;
+  for (let i = 0; i < toFetch.length; i += BATCH) {
+    const chunk = toFetch.slice(i, i + BATCH);
+    const results = await Promise.allSettled(chunk.map(async ({ id, category }) => {
+      const r = await fetch(
+        `https://gmail.googleapis.com/gmail/v1/users/me/messages/${id}?format=metadata&metadataHeaders=Subject&metadataHeaders=From&metadataHeaders=Date`,
+        { headers: { Authorization: `Bearer ${token}` }, signal: AbortSignal.timeout(6000) }
+      );
+      const m = await r.json();
+      if (m.error) return null;
+      const hdrs = m.payload?.headers || [];
+      const from    = hdrs.find(h => h.name === 'From')?.value  || '';
+      const subject = hdrs.find(h => h.name === 'Subject')?.value || '(no subject)';
+      const date    = hdrs.find(h => h.name === 'Date')?.value   || '';
+      const snippet = (m.snippet || '').slice(0, 160);
+      const fromName = from.replace(/<[^>]+>/, '').trim().replace(/^"|"$/g, '') || from.split('@')[0];
+      return { id, category, from, fromName, subject, date, snippet };
+    }));
+    for (const r of results) {
+      if (r.status === 'fulfilled' && r.value) newEmails.push(r.value);
+    }
+  }
+
+  // Persist
+  const freshDb = readDBForUid(uid);
+  if (!freshDb.pendingTriage) freshDb.pendingTriage = [];
+  freshDb.pendingTriage.push(...newEmails);
+  freshDb.lastInboxSync = new Date().toISOString();
+  writeDBForUid(uid, freshDb);
+
+  res.json({ added: newEmails.length, total: freshDb.pendingTriage.length });
+});
+
+// POST /api/inbox/triage — handle one email decision
+app.post('/api/inbox/triage', (req, res) => {
+  const uid = getCurrentUid();
+  if (!uid) return res.status(401).json({ error: 'Not authenticated' });
+
+  const { emailId, action, boardId, newBoardName, subject, fromName, snippet, category } = req.body;
+  if (!emailId || !action) return res.status(400).json({ error: 'Missing emailId or action' });
+
+  const db = readDBForUid(uid);
+  const TODAY = new Date().toISOString().slice(0, 10);
+  const result = { ok: true, action };
+
+  if (action === 'board') {
+    let board = (db.boards || []).find(b => b.id === boardId);
+    if (!board && newBoardName) {
+      if (!db.boards) db.boards = [];
+      board = makeBoardDefaults(newBoardName.trim(), uid);
+      db.boards.push(board);
+      result.newBoard = { id: board.id, name: board.name };
+    }
+    if (board) {
+      const group = board.groups[0]; // "Da fare"
+      const item = {
+        id: uuidv4(),
+        title: subject || '(no subject)',
+        values: {},
+        subitems: [],
+        emailId,
+        source: 'email',
+        fromName: fromName || '',
+        emailCategory: category || '',
+        createdBy: uid,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
+      };
+      group.items.push(item);
+      board.updatedAt = new Date().toISOString();
+      result.boardId  = board.id;
+      result.boardName = board.name;
+      result.itemId   = item.id;
+    }
+  } else if (action === 'task') {
+    if (!db.days) db.days = {};
+    if (!db.days[TODAY]) db.days[TODAY] = { events: [], tasks: [], items: {}, reflection: '', briefing: '' };
+    const taskId = `mail-${emailId}`;
+    if (!db.days[TODAY].tasks.find(t => t.id === taskId)) {
+      db.days[TODAY].tasks.push({
+        id: taskId,
+        title: subject || '(no subject)',
+        due: 'Oggi',
+        quadrant: 'Q2',
+        brief: snippet ? snippet.slice(0, 200) : '',
+        link: `https://mail.google.com/mail/u/0/#inbox/${emailId}`,
+        source: fromName || '',
+        category: category || ''
+      });
+      db.days[TODAY].items[taskId] = { done: false, comment: '', quadrant: 'Q2', type: 'task', actionPoints: [] };
+    }
+    result.taskId = taskId;
+  }
+  // action === 'ignore': just mark processed
+
+  // Remove from pending + mark processed
+  db.pendingTriage = (db.pendingTriage || []).filter(e => e.id !== emailId);
+  if (!db.processedEmailIds) db.processedEmailIds = [];
+  if (!db.processedEmailIds.includes(emailId)) db.processedEmailIds.push(emailId);
+
+  writeDBForUid(uid, db);
+  res.json(result);
+});
+
+// POST /api/inbox/skip-all — dismiss all pending without action
+app.post('/api/inbox/skip-all', (req, res) => {
+  const uid = getCurrentUid();
+  if (!uid) return res.status(401).json({ error: 'Not authenticated' });
+  const db = readDBForUid(uid);
+  const ids = (db.pendingTriage || []).map(e => e.id);
+  db.processedEmailIds = [...new Set([...(db.processedEmailIds || []), ...ids])];
+  db.pendingTriage = [];
+  writeDBForUid(uid, db);
+  res.json({ skipped: ids.length });
+});
+
 // ── START ─────────────────────────────────────────────────────────────────────
 
 app.listen(PORT, () => {

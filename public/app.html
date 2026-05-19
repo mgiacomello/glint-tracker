@@ -591,6 +591,51 @@
     .btn-save { width: 100%; padding: 11px; border-radius: 10px; border: none; background: var(--accent); color: #fff; font-size: 14px; font-weight: 600; cursor: pointer; transition: filter .15s; }
     .btn-save:hover { filter: brightness(1.1); }
 
+    /* ── INBOX TRIAGE MODAL ── */
+    .triage-overlay { position:fixed;inset:0;z-index:500;background:rgba(0,0,0,.75);backdrop-filter:blur(8px);display:flex;align-items:center;justify-content:center;padding:20px; }
+    .triage-box { background:var(--s2);border:1px solid var(--line);border-radius:18px;width:100%;max-width:480px;overflow:hidden;box-shadow:0 24px 64px rgba(0,0,0,.6); }
+    .triage-top { padding:16px 20px 14px;border-bottom:1px solid var(--line);display:flex;align-items:center;gap:10px; }
+    .triage-progress { font-size:11px;font-weight:700;color:var(--t2);font-family:'JetBrains Mono',monospace;flex-shrink:0; }
+    .triage-progress-bar { flex:1;height:3px;background:var(--line);border-radius:3px;overflow:hidden; }
+    .triage-progress-fill { height:100%;background:var(--accent);border-radius:3px;transition:width .3s; }
+    .triage-skip-all { background:none;border:none;color:var(--t2);font-size:12px;cursor:pointer;padding:3px 8px;border-radius:6px;transition:color .12s; }
+    .triage-skip-all:hover { color:var(--t1); }
+    .triage-body { padding:20px; }
+    .triage-cat { font-size:10px;font-weight:700;color:var(--t2);text-transform:uppercase;letter-spacing:.08em;margin-bottom:8px;display:flex;align-items:center;gap:6px; }
+    .triage-cat-badge { padding:1px 8px;border-radius:10px;background:rgba(124,110,245,.12);color:#a78bfa;font-size:10px;font-weight:700; }
+    .triage-from { font-size:13px;font-weight:600;color:var(--t1);margin-bottom:4px;display:flex;align-items:center;gap:6px; }
+    .triage-subject { font-size:16px;font-weight:700;color:var(--t0);line-height:1.3;margin-bottom:10px; }
+    .triage-snippet { font-size:12px;color:var(--t2);line-height:1.6;background:rgba(255,255,255,.03);border:1px solid var(--line);border-radius:8px;padding:10px 12px;margin-bottom:16px; }
+    .triage-actions { display:flex;gap:8px;flex-wrap:wrap; }
+    .triage-btn { flex:1;min-width:0;padding:11px 8px;border-radius:10px;border:1px solid var(--line);background:transparent;cursor:pointer;font-size:13px;font-weight:600;transition:all .15s;display:flex;align-items:center;justify-content:center;gap:6px;color:var(--t1); }
+    .triage-btn:hover { border-color:var(--t1);color:var(--t0);background:rgba(255,255,255,.04); }
+    .triage-btn.ignore:hover { border-color:var(--t2);color:var(--t2); }
+    .triage-btn.task { border-color:rgba(0,208,132,.3);color:var(--green);background:rgba(0,208,132,.07); }
+    .triage-btn.task:hover { background:rgba(0,208,132,.14); }
+    .triage-btn.board { border-color:rgba(124,110,245,.3);color:#a78bfa;background:rgba(124,110,245,.07); }
+    .triage-btn.board:hover { background:rgba(124,110,245,.14); }
+    .triage-board-panel { margin-top:12px;padding:14px;background:rgba(255,255,255,.03);border:1px solid var(--line);border-radius:10px;display:none; }
+    .triage-board-panel.open { display:block; }
+    .triage-board-list { display:flex;flex-direction:column;gap:4px;max-height:180px;overflow-y:auto;margin-bottom:10px; }
+    .triage-board-item { padding:8px 12px;border-radius:8px;border:1px solid var(--line);background:transparent;cursor:pointer;font-size:13px;text-align:left;color:var(--t1);transition:all .12s;display:flex;align-items:center;gap:8px; }
+    .triage-board-item:hover,.triage-board-item.sel { background:rgba(124,110,245,.12);border-color:rgba(124,110,245,.3);color:#a78bfa; }
+    .triage-new-board { display:flex;gap:6px;margin-top:4px; }
+    .triage-new-board input { flex:1;background:var(--s3);border:1px solid var(--line);border-radius:8px;color:var(--t0);padding:7px 10px;font-size:12px;outline:none; }
+    .triage-new-board input:focus { border-color:var(--accent); }
+    .triage-new-board input::placeholder { color:var(--t2); }
+    .triage-confirm-btn { padding:7px 14px;border-radius:8px;border:none;background:var(--accent);color:#fff;font-size:12px;font-weight:600;cursor:pointer;white-space:nowrap; }
+
+    /* ── HOME BENTO — board preview ── */
+    .board-preview-row { display:flex;align-items:center;gap:10px;padding:10px 16px;border-bottom:1px solid var(--line2);transition:background .1s;text-decoration:none; }
+    .board-preview-row:last-child { border-bottom:none; }
+    .board-preview-row:hover { background:rgba(255,255,255,.02); }
+    .board-preview-dot { width:8px;height:8px;border-radius:50%;flex-shrink:0; }
+    .board-preview-name { flex:1;font-size:13px;font-weight:600;color:var(--t0); }
+    .board-preview-count { font-size:11px;font-weight:700;padding:2px 8px;border-radius:10px;background:rgba(255,255,255,.06);color:var(--t2); }
+    .board-preview-count.has { background:rgba(124,110,245,.12);color:#a78bfa; }
+    .inbox-badge { display:inline-flex;align-items:center;gap:4px;padding:4px 12px;border-radius:20px;background:rgba(255,184,0,.1);border:1px solid rgba(255,184,0,.25);color:var(--amber);font-size:12px;font-weight:700;cursor:pointer;transition:background .12s; }
+    .inbox-badge:hover { background:rgba(255,184,0,.18); }
+
     /* ── FOCUS TIMER ── */
     .focus-bar {
       position: fixed; bottom: 70px; left: 50%; transform: translateX(-50%);
@@ -685,6 +730,35 @@
   </button>
 </nav>
 
+<!-- Inbox triage modal -->
+<div class="triage-overlay" id="triage-modal" style="display:none">
+  <div class="triage-box">
+    <div class="triage-top">
+      <div class="triage-progress-bar"><div class="triage-progress-fill" id="triage-pb" style="width:0%"></div></div>
+      <span class="triage-progress" id="triage-progress-txt">1 di 1</span>
+      <button class="triage-skip-all" onclick="triageSkipAll()">Salta tutte</button>
+    </div>
+    <div class="triage-body">
+      <div class="triage-cat"><span id="triage-cat-badge" class="triage-cat-badge">—</span></div>
+      <div class="triage-from" id="triage-from">—</div>
+      <div class="triage-subject" id="triage-subject">—</div>
+      <div class="triage-snippet" id="triage-snippet">—</div>
+      <div class="triage-actions">
+        <button class="triage-btn ignore" onclick="triageAction('ignore')">🗑 Ignora</button>
+        <button class="triage-btn task"   onclick="triageAction('task')">✅ Task</button>
+        <button class="triage-btn board"  onclick="triageToggleBoardPanel()">📋 Board →</button>
+      </div>
+      <div class="triage-board-panel" id="triage-board-panel">
+        <div class="triage-board-list" id="triage-board-list"></div>
+        <div class="triage-new-board">
+          <input id="triage-new-board-name" placeholder="+ Nuova board…" onkeydown="if(event.key==='Enter')triageAction('board')"/>
+          <button class="triage-confirm-btn" onclick="triageAction('board')">Crea →</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
 <!-- Evening reflection button -->
 <button class="reflect-btn" id="reflect-btn" onclick="openReflection()" title="Riflessione serale">🌙</button>
 
@@ -749,6 +823,9 @@ let monthData = null;
 let projectsData = null;
 let _focusTimer = null, _focusTask = null, _focusRemaining = 25*60, _focusPaused = false;
 let _reflectEnergy = 0;
+let boardsData = null;
+let _inboxCount = 0;
+let _triageEmails = [], _triageIdx = 0, _triageSelectedBoardId = null;
 
 // ── Mock mode (audit/demo only — ?mock=1) ─────────────────────────────────
 const _MOCK = new URLSearchParams(location.search).get('mock') === '1';
@@ -799,6 +876,9 @@ async function loadDay() {
     if (!syncedToday && !_agentRunning) {
       runAgent(false);
     }
+    // Load boards and check inbox in background
+    loadBoards();
+    checkInboxPending();
   } catch { renderEmpty(); }
 }
 
@@ -1122,66 +1202,90 @@ function render() {
       </div>
     </div>
 
-    ${!total&&!ins.growthBrief?`<div class="brief-card" style="text-align:center;padding:28px 24px;">
-      <div style="font-size:36px;margin-bottom:12px">${_agentRunning?'⏳':'☀️'}</div>
-      <div style="font-size:15px;font-weight:600;margin-bottom:6px">${_agentRunning?'Analisi in corso…':'Nessun dato per oggi'}</div>
-      <div style="font-size:13px;color:var(--t2);margin-bottom:${_agentRunning?'0':'20'}px;line-height:1.5">${_agentRunning?'Sto scaricando Gmail, Calendar, Network e Vita locale.':'Premo il briefing automaticamente — attendi un istante.'}</div>
-      ${_agentRunning?'':' <button onclick="runAgent()" style="padding:10px 24px;border-radius:10px;border:none;background:var(--accent);color:#fff;font-size:14px;font-weight:600;cursor:pointer">☀️ Avvia Briefing</button>'}
-    </div>`:''}
-
-    ${(ins.intelligenceFeed||ins.contextualIntelligence||ins.growthBrief)?`<div class="brief-card">
-      ${ins.intelligenceFeed?`<div class="intel-feed"><div class="intel-feed-label">✦ Intelligence Feed</div><div class="intel-feed-text">"${esc(ins.intelligenceFeed)}"</div></div>`:''}
-      ${(ins.contextualIntelligence||ins.growthBrief)?`<div class="brief-body" style="border-top:${ins.intelligenceFeed?'1px solid var(--line2)':'none'}"><div class="brief-text">${esc(ins.contextualIntelligence||ins.growthBrief).replace(/\n/g,'<br/>')}</div></div>`:''}
-    </div>`:''}
-
     <!-- Bento -->
     <div class="bento">
 
-      <!-- Riunioni span2 -->
-      <div class="bc s2">
-        <div class="bc-head">
-          <span class="bc-title">📅 Riunioni</span>
-          ${events.length?`<span class="bc-badge blue">${events.length}</span>`:''}
-        </div>
-        ${(()=>{
-          const activeEvts = events.filter(e=>!items[e.id]?.done);
-          const doneEvts   = events.filter(e=> items[e.id]?.done);
-          const evRow = e => {
-            const st=items[e.id]||{}, br=(st.brief||e.brief||'').slice(0,160);
-            return `<div class="ev-row" id="ei-${esc(e.id)}">
-              <div class="ev-time">${esc(e.time||'')}</div>
-              <div class="ev-body">
-                <div class="ev-title">${esc(e.title)}</div>
-                ${e.participants?`<div class="ev-meta">👥 ${esc(e.participants)}</div>`:''}
-                ${br?`<div class="ev-brief">${esc(br)}${(st.brief||e.brief||'').length>160?'…':''}</div>`:''}
-              </div>
-              <div class="ev-act">
-                ${e.meetLink?`<a href="${esc(e.meetLink)}" target="_blank" class="btn-join">Join ↗</a>`:''}
-                <button class="btn-circle ${st.done?'done':''}" onclick="toggleDone('${esc(e.id)}','event')">${st.done?'✓':''}</button>
-              </div>
-            </div>`;
-          };
-          const doneSec = doneEvts.length ? `
-            <div class="done-collapse">
-              <button class="done-toggle" onclick="toggleDoneSection(this)">
-                <span>✓ Completati</span><span class="dt-count">${doneEvts.length}</span><span style="margin-left:auto">↓</span>
-              </button>
-              <div class="done-section">
-                ${doneEvts.map(evRow).join('')}
-              </div>
-            </div>` : '';
-          if (!events.length) return `<div class="empty"><div class="ei">📅</div>Nessuna riunione oggi.</div>`;
-          return activeEvts.map(evRow).join('') + doneSec;
-        })()}
-      </div>
+      ${(()=>{
+        // ── Analisi giornata (span2) ─────────────────────────────────────────
+        const hasText = ins.intelligenceFeed||ins.contextualIntelligence||ins.growthBrief;
+        const inboxN = _inboxCount || 0;
+        return `<div class="bc s2">
+          <div class="bc-head">
+            <span class="bc-title">✦ La tua giornata</span>
+            ${badgeLabel?`<span class="bc-badge ${badgeClass}" style="border-radius:20px">${badgeLabel}</span>`:''}
+            ${inboxN>0?`<button class="inbox-badge" onclick="openTriageModal()" style="margin-left:auto" title="Mail in attesa di triage">📧 ${inboxN} nuove</button>`:''}
+          </div>
+          ${!hasText ? `<div class="empty" style="padding:28px 20px">${_agentRunning?'<div class="ei">⏳</div>Analisi in corso…':'<div class="ei">☀️</div>Clicca <strong>☀️ Briefing</strong> per analizzare la giornata.'}</div>`
+          : `${ins.intelligenceFeed?`<div class="intel-feed"><div class="intel-feed-label">✦ Intelligence Feed</div><div class="intel-feed-text">"${esc(ins.intelligenceFeed)}"</div></div>`:''}
+             ${(ins.contextualIntelligence||ins.growthBrief)?`<div class="brief-body" style="border-top:${ins.intelligenceFeed?'1px solid var(--line2)':'none'}"><div class="brief-text">${esc(ins.contextualIntelligence||ins.growthBrief).replace(/\n/g,'<br/>')}</div></div>`:''}`}
+        </div>`;
+      })()}
+
+      ${(()=>{
+        // ── Piano energia (span1) ────────────────────────────────────────────
+        const slots = ins?.energySchedule || [];
+        const energyColors = { peak:'#7c6ef5', high:'#00d084', medium:'#f59e0b', low:'#94a3b8', recovery:'#64748b' };
+        if (!slots.length) return `<div class="bc"><div class="bc-head"><span class="bc-title">⚡ Energia</span></div><div class="empty-sm" style="padding:20px 16px">Avvia il briefing per generare il piano energia.</div></div>`;
+        const slotsHtml = slots.map(s=>{
+          const color=s.color||energyColors[s.energyLevel]||'#7c6ef5';
+          return `<div class="es-slot" style="margin:0 12px 6px;border-radius:8px">
+            <div class="es-bar" style="background:${esc(color)}"></div>
+            <div class="es-meta">
+              <div class="es-header"><span class="es-time">${esc(s.time||'')}</span><span class="es-label" style="font-size:11px">${esc(s.label||'')}</span></div>
+              ${s.reason?`<div class="es-reason" style="font-size:10px">${esc(s.reason.slice(0,80))}</div>`:''}
+            </div>
+          </div>`;
+        }).join('');
+        return `<div class="bc"><div class="bc-head"><span class="bc-title">⚡ Piano Energia</span><span class="bc-badge">${slots.length}</span></div><div style="padding:8px 0 8px">${slotsHtml}</div></div>`;
+      })()}
+
+      ${(()=>{
+        // ── Riunioni (span1, compatte) ───────────────────────────────────────
+        const compactEvRow = e => {
+          const st=items[e.id]||{};
+          return `<div class="ev-row ${st.done?'done':''}" id="ei-${esc(e.id)}" style="padding:9px 14px">
+            <div class="ev-time" style="min-width:50px">${esc(e.time||'—')}</div>
+            <div class="ev-body"><div class="ev-title" style="font-size:12px">${esc(e.title)}</div></div>
+            <div class="ev-act" style="gap:4px">
+              ${e.meetLink?`<a href="${esc(e.meetLink)}" target="_blank" class="btn-join" style="font-size:10px;padding:3px 8px">Join</a>`:''}
+              <button class="btn-circle ${st.done?'done':''}" onclick="toggleDone('${esc(e.id)}','event')" style="width:18px;height:18px">${st.done?'✓':''}</button>
+            </div>
+          </div>`;
+        };
+        const evHtml = events.length ? events.map(compactEvRow).join('') : `<div class="empty-sm" style="padding:18px 16px">Nessuna riunione oggi.</div>`;
+        return `<div class="bc"><div class="bc-head"><span class="bc-title">📅 Riunioni</span>${events.length?`<span class="bc-badge blue">${events.length}</span>`:''}</div>${evHtml}</div>`;
+      })()}
+
+      ${(()=>{
+        // ── Board attive (span2) ─────────────────────────────────────────────
+        const boards = boardsData || [];
+        const activeTasks = tasks.filter(t=>!items[t.id]?.done);
+        const boardRows = boards.slice(0,6).map(b => {
+          const openCount = (b.groups||[]).reduce((n,g)=>n+(g.items||[]).filter(i=>!i.done).length, 0);
+          return `<a href="/boards.html#${b.id}" class="board-preview-row">
+            <div class="board-preview-dot" style="background:${esc(b.color||'#7c6ef5')}"></div>
+            <span class="board-preview-name">${esc(b.name)}</span>
+            <span class="board-preview-count ${openCount>0?'has':''}">${openCount} task</span>
+          </a>`;
+        }).join('');
+        return `<div class="bc s2">
+          <div class="bc-head">
+            <span class="bc-title">📋 Board</span>
+            ${boards.length?`<span class="bc-badge">${boards.length}</span>`:''}
+            <a href="/boards.html" style="margin-left:auto;font-size:11px;color:var(--t2);text-decoration:none;padding:3px 8px;border-radius:6px;border:1px solid var(--line)">Apri →</a>
+          </div>
+          ${boards.length ? boardRows : `<div class="empty-sm" style="padding:18px 16px">Nessuna board ancora.<br/><a href="/boards.html" style="color:var(--accent)">Crea la prima board →</a></div>`}
+          ${activeTasks.length?`<div style="padding:8px 14px;border-top:1px solid var(--line2);font-size:11px;color:var(--t2)">📧 ${activeTasks.length} task da email assegnati · <button onclick="nav('growth',null)" style="background:none;border:none;color:var(--accent);cursor:pointer;font-size:11px">Crescita →</button></div>`:''}
+        </div>`;
+      })()}
 
       <!-- Salute span1 -->
       <div class="bc">
-        <div class="bc-head"><span class="bc-title">🫀 Salute Oura</span></div>
+        <div class="bc-head"><span class="bc-title">🫀 Salute</span></div>
         ${health ? `
         <div class="h-grid">
           ${(()=>{
-            const s=health.sleepScore, hrv=health.hrv, rhr=health.restingHR, str=health.stressLevel;
+            const s=health.sleepScore, hrv=health.hrv, rhr=health.restingHR;
             const rd=health.readinessScore, steps=health.steps, sleepMin=health.totalSleepMin;
             const sc=s>=76?'#86efac':s>=60?'#fde68a':'#fca5a5';
             const rc=rd>=85?'#86efac':rd>=60?'#fde68a':'#fca5a5';
@@ -1196,105 +1300,16 @@ function render() {
           `})()}
         </div>
         ${health.recommendations?`<div class="h-rec">🏃 ${esc(health.recommendations.activity||'')}<br/>🧠 ${esc(health.recommendations.mindset||'')}</div>`:''}
-        ` : `<div class="empty"><div class="ei">🫀</div>Sincronizza Oura per vedere i dati.<br/><button onclick="syncOura()" style="margin-top:8px;padding:6px 14px;border-radius:8px;border:none;background:var(--accent);color:#fff;cursor:pointer;font-size:12px">⟳ Sincronizza ora</button></div>`}
-      </div>
-
-      <!-- Email span3 -->
-      <div class="bc s3">
-        <div class="bc-head">
-          <span class="bc-title">📧 Email${qFilter!=='Q1'?'':' urgenti'}</span>
-          ${q1Active>0?`<span class="bc-badge red">${q1Active} Q1</span>`:''}
-          ${qFilter!=='Q1'&&tasks.length?`<span class="bc-badge">${tasks.length} totali</span>`:''}
-        </div>
-        ${qFilter==='Q1' ? `
-          ${(()=>{
-            const q1Active2 = q1.filter(t=>!items[t.id]?.done);
-            const q1Done    = q1.filter(t=> items[t.id]?.done);
-            const doneSec = q1Done.length ? `
-              <div class="done-collapse">
-                <button class="done-toggle" onclick="toggleDoneSection(this)">
-                  <span>✓ Completati</span><span class="dt-count">${q1Done.length}</span><span style="margin-left:auto">↓</span>
-                </button>
-                <div class="done-section">
-                  ${q1Done.map(t=>tkRow(t,items[t.id]||{})).join('')}
-                </div>
-              </div>` : '';
-            if (q1Active2.length) return q1Active2.map(t=>tkRow(t,items[t.id]||{})).join('') + doneSec;
-            if (q1.length) return `<div style="color:var(--t2);padding:12px 16px;font-size:13px">✅ Nessuna email Q1 da gestire</div>` + doneSec;
-            return `<div class="empty"><div class="ei">📧</div>Nessuna email urgente.<br/>Clicca <strong>☀️ Briefing</strong> per analizzare la inbox.</div>`;
-          })()}
-          ${tasks.length > q1.length ? `<button onclick="setQ('all')" style="display:block;width:100%;padding:10px 16px;border:none;border-top:1px solid var(--line2);background:transparent;color:var(--t2);font-size:12px;cursor:pointer;text-align:left">Mostra tutte le email (${tasks.length}) →</button>` : ''}
-        ` : `
-          <div class="q-strip">
-            <button class="qb ${qFilter==='all'?'on':''}" onclick="setQ('all')">Tutti (${tasks.length})</button>
-            <button class="qb q1 ${qFilter==='Q1'?'on':''}" onclick="setQ('Q1')">🔴 Q1 (${q1.length})</button>
-            <button class="qb q2 ${qFilter==='Q2'?'on':''}" onclick="setQ('Q2')">🔵 Q2 (${q2.length})</button>
-            <button class="qb q3 ${qFilter==='Q3'?'on':''}" onclick="setQ('Q3')">🟠 Q3 (${q3.length})</button>
-            <button class="qb q4 ${qFilter==='Q4'?'on':''}" onclick="setQ('Q4')">⚫ Q4 (${q4.length})</button>
-          </div>
-          ${(()=>{
-            const activeTasks = filteredTasks.filter(t=>!items[t.id]?.done);
-            const doneTasks   = filteredTasks.filter(t=> items[t.id]?.done);
-            const doneSec = doneTasks.length ? `
-              <div class="done-collapse">
-                <button class="done-toggle" onclick="toggleDoneSection(this)">
-                  <span>✓ Completati</span><span class="dt-count">${doneTasks.length}</span><span style="margin-left:auto">↓</span>
-                </button>
-                <div class="done-section">
-                  ${doneTasks.map(t=>tkRow(t,items[t.id]||{})).join('')}
-                </div>
-              </div>` : '';
-            if (activeTasks.length) return activeTasks.map(t=>tkRow(t,items[t.id]||{})).join('') + doneSec;
-            if (tasks.length) return (doneTasks.length ? doneSec : `<div class="empty-sm">Nessun task in questa categoria.</div>`);
-            return `<div class="empty"><div class="ei">📧</div>Nessuna email da gestire.</div>`;
-          })()}
-          <button onclick="setQ('Q1')" style="display:block;width:100%;padding:10px 16px;border:none;border-top:1px solid var(--line2);background:transparent;color:var(--t2);font-size:12px;cursor:pointer;text-align:left">← Solo urgenti</button>
-        `}
+        ` : `<div class="empty"><div class="ei">🫀</div>Sincronizza Oura.<br/><button onclick="syncOura()" style="margin-top:8px;padding:6px 14px;border-radius:8px;border:none;background:var(--accent);color:#fff;cursor:pointer;font-size:12px">⟳ Sync</button></div>`}
       </div>
 
       ${(()=>{
-        const pa = ins.proactiveActions||[];
+        // ── Proactive AI (span2, max 3 card) ─────────────────────────────────
+        const pa=(ins.proactiveActions||[]).filter(p=>!p._dismissed).slice(0,3);
         if (!pa.length) return '';
-        return `<div class="bc s3">
-          <div class="bc-head">
-            <span class="bc-title">🧠 Proactive AI</span>
-            <span class="bc-badge pur">${pa.filter(p=>!p._dismissed).length}</span>
-            <button onclick="refreshProactiveAI()" style="margin-left:auto;padding:3px 10px;border-radius:6px;border:1px solid var(--line);background:transparent;color:var(--t2);font-size:11px;cursor:pointer">⟳ Check</button>
-          </div>
-          <div class="pa-grid">
-            ${pa.map((p,i)=>paCard(p,i)).join('')}
-          </div>
-        </div>`;
-      })()}
-
-
-      ${(()=>{
-        const slots = ins?.energySchedule || [];
-        if (!slots.length) return '';
-        const energyColors = { peak:'#7c6ef5', high:'#00d084', medium:'#f59e0b', low:'#94a3b8', recovery:'#64748b' };
-        const slotsHtml = slots.map(s => {
-          const color = s.color || energyColors[s.energyLevel] || '#7c6ef5';
-          const tasks = (s.tasks||[]).slice(0,3);
-          return `<div class="es-slot">
-            <div class="es-bar" style="background:${esc(color)}"></div>
-            <div class="es-meta">
-              <div class="es-header">
-                <span class="es-time">${esc(s.time||'')}</span>
-                ${s.duration?`<span class="es-dur">${esc(String(s.duration))}min</span>`:''}
-                <span class="es-label">${esc(s.label||'')}</span>
-              </div>
-              ${tasks.length?`<div class="es-tasks">${tasks.map(t=>`<span class="es-task">${esc(t)}</span>`).join('')}</div>`:''}
-              ${s.reason?`<div class="es-reason">${esc(s.reason)}</div>`:''}
-              ${s.ouraInsight?`<div class="es-insight">⚡ ${esc(s.ouraInsight)}</div>`:''}
-            </div>
-          </div>`;
-        }).join('');
-        return `<div class="bc es-card">
-          <div class="bc-head">
-            <span class="bc-title">⚡ Piano Energia del Giorno</span>
-            <span class="bc-badge">${slots.length} slot</span>
-          </div>
-          <div class="es-slots">${slotsHtml}</div>
+        return `<div class="bc s2">
+          <div class="bc-head"><span class="bc-title">🧠 Proactive AI</span><span class="bc-badge pur">${pa.length}</span><button onclick="refreshProactiveAI()" style="margin-left:auto;padding:3px 10px;border-radius:6px;border:1px solid var(--line);background:transparent;color:var(--t2);font-size:11px;cursor:pointer">⟳</button></div>
+          <div class="pa-grid">${pa.map((p,i)=>paCard(p,i)).join('')}</div>
         </div>`;
       })()}
 
@@ -1944,6 +1959,175 @@ function stopFocus() {
   if (_focusTimer) { clearInterval(_focusTimer); _focusTimer = null; }
   document.getElementById('focus-bar').style.display = 'none';
   _focusTask = null;
+}
+
+// ── Boards loader ──────────────────────────────────────────────────────────
+async function loadBoards() {
+  try {
+    const r = await fetch('/api/boards', {credentials:'include'});
+    if (!r.ok) return;
+    boardsData = await r.json();
+    // Re-render home bento if we're on the home section
+    if (section === 'all') render();
+  } catch {}
+}
+
+// ── Inbox triage ───────────────────────────────────────────────────────────
+async function checkInboxPending() {
+  try {
+    const r = await fetch('/api/inbox/pending', {credentials:'include'});
+    if (!r.ok) return;
+    const data = await r.json();
+    if (data.count > 0) {
+      _triageEmails = data.pending;
+      _inboxCount = data.count;
+      if (section === 'all') render();
+      openTriageModal();
+      return;
+    }
+    // No pending — sync from Gmail to find new emails
+    const s = await fetch('/api/inbox/sync', {method:'POST', credentials:'include'});
+    if (!s.ok) return;
+    const sd = await s.json();
+    if (sd.added > 0) {
+      // Fetch the newly populated pending list
+      const r2 = await fetch('/api/inbox/pending', {credentials:'include'});
+      if (!r2.ok) return;
+      const d2 = await r2.json();
+      _triageEmails = d2.pending;
+      _inboxCount = d2.count;
+      if (section === 'all') render();
+      if (_inboxCount > 0) openTriageModal();
+    }
+  } catch {}
+}
+
+function openTriageModal() {
+  if (!_triageEmails.length) return;
+  _triageIdx = 0;
+  _triageSelectedBoardId = null;
+  const modal = document.getElementById('triage-modal');
+  if (!modal) return;
+  modal.style.display = 'flex';
+  showTriageEmail(_triageEmails[0], 0, _triageEmails.length);
+  // Close board panel
+  const bp = document.getElementById('triage-board-panel');
+  if (bp) bp.classList.remove('open');
+}
+
+function showTriageEmail(email, idx, total) {
+  const pct = total > 0 ? Math.round((idx / total) * 100) : 0;
+  const pb = document.getElementById('triage-pb');
+  const ptxt = document.getElementById('triage-progress-txt');
+  const catBadge = document.getElementById('triage-cat-badge');
+  const fromEl = document.getElementById('triage-from');
+  const subjEl = document.getElementById('triage-subject');
+  const snipEl = document.getElementById('triage-snippet');
+  if (pb) pb.style.width = pct + '%';
+  if (ptxt) ptxt.textContent = `${idx + 1} di ${total}`;
+  const catMap = {
+    'CATEGORY_PERSONAL': 'Principale',
+    'CATEGORY_UPDATES': 'Aggiornamenti',
+    'CATEGORY_SOCIAL': 'Social',
+    'CATEGORY_PROMOTIONS': 'Promozioni',
+    'CATEGORY_FORUMS': 'Forum'
+  };
+  const cat = catMap[email.category] || email.category || '—';
+  if (catBadge) catBadge.textContent = cat;
+  if (fromEl) fromEl.textContent = email.from || '—';
+  if (subjEl) subjEl.textContent = email.subject || '(nessun oggetto)';
+  if (snipEl) snipEl.textContent = email.snippet || '';
+}
+
+function triageToggleBoardPanel() {
+  const bp = document.getElementById('triage-board-panel');
+  if (!bp) return;
+  const isOpen = bp.classList.toggle('open');
+  if (isOpen) {
+    const list = document.getElementById('triage-board-list');
+    if (list) {
+      const boards = boardsData || [];
+      if (boards.length === 0) {
+        list.innerHTML = '<div style="font-size:12px;color:var(--t2);padding:4px 0">Nessuna board ancora</div>';
+      } else {
+        list.innerHTML = boards.map(b => {
+          const openCount = (b.groups || []).reduce((n, g) => n + (g.items || []).filter(i => !i.done).length, 0);
+          return `<button class="triage-board-item${_triageSelectedBoardId===b.id?' sel':''}" onclick="triageSelectBoard('${b.id}',this)">
+            <span style="font-size:15px">${b.icon||'📋'}</span>
+            <span style="flex:1">${esc(b.name)}</span>
+            <span style="font-size:11px;color:var(--t2)">${openCount} task</span>
+          </button>`;
+        }).join('');
+      }
+    }
+  }
+}
+
+function triageSelectBoard(boardId, el) {
+  _triageSelectedBoardId = boardId;
+  document.querySelectorAll('.triage-board-item').forEach(b => b.classList.toggle('sel', b === el));
+  // Auto-confirm
+  triageAction('board');
+}
+
+async function triageAction(action) {
+  const email = _triageEmails[_triageIdx];
+  if (!email) return;
+
+  const body = { emailId: email.id, action };
+  if (action === 'board') {
+    const newName = document.getElementById('triage-new-board-name')?.value?.trim();
+    if (_triageSelectedBoardId) {
+      body.boardId = _triageSelectedBoardId;
+    } else if (newName) {
+      body.newBoardName = newName;
+    } else {
+      // Board panel open but nothing selected — just show it
+      triageToggleBoardPanel();
+      return;
+    }
+  }
+
+  try {
+    await fetch('/api/inbox/triage', {
+      method: 'POST',
+      credentials: 'include',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify(body)
+    });
+    // Reload boards if a new board was created
+    if (action === 'board') loadBoards();
+  } catch {}
+
+  _triageIdx++;
+  _triageSelectedBoardId = null;
+  _inboxCount = _triageEmails.length - _triageIdx;
+
+  const bp = document.getElementById('triage-board-panel');
+  if (bp) bp.classList.remove('open');
+  const inp = document.getElementById('triage-new-board-name');
+  if (inp) inp.value = '';
+
+  if (_triageIdx >= _triageEmails.length) {
+    document.getElementById('triage-modal').style.display = 'none';
+    _inboxCount = 0;
+    if (section === 'all') render();
+    return;
+  }
+
+  showTriageEmail(_triageEmails[_triageIdx], _triageIdx, _triageEmails.length);
+  if (section === 'all') render();
+}
+
+async function triageSkipAll() {
+  try {
+    await fetch('/api/inbox/skip-all', {method:'POST', credentials:'include'});
+  } catch {}
+  document.getElementById('triage-modal').style.display = 'none';
+  _triageEmails = [];
+  _triageIdx = 0;
+  _inboxCount = 0;
+  if (section === 'all') render();
 }
 </script>
 </body>
