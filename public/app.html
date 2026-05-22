@@ -761,6 +761,7 @@
   <div class="tb-right">
     <span id="ai-dot" class="ai-dot" title="Analisi in corso"></span>
     <button class="btn-icon" id="run-btn" onclick="runAgent(false)" title="Aggiorna briefing" style="font-size:16px;padding:4px 10px">⟳</button>
+    <a href="/wellness.html" class="btn-link" title="Wellness & Brain" style="padding:5px 10px;font-size:14px">🧠</a>
     <a href="/settings.html" class="btn-link" style="padding:5px 9px">⚙️</a>
     <div class="avatar" id="avatar-btn" onclick="toggleMenu()">?<img id="avatar-img" src="" style="display:none"/></div>
   </div>
@@ -2091,20 +2092,27 @@ async function checkInboxPending() {
       openTriageModal();
       return;
     }
-    // No pending — sync from Gmail to find new emails
-    const s = await fetch('/api/inbox/sync', {method:'POST', credentials:'include'});
-    if (!s.ok) return;
-    const sd = await s.json();
-    if (sd.added > 0) {
-      // Fetch the newly populated pending list
-      const r2 = await fetch('/api/inbox/pending', {credentials:'include'});
-      if (!r2.ok) return;
-      const d2 = await r2.json();
-      _triageEmails = d2.pending;
-      _inboxCount = d2.count;
-      if (section === 'all') render();
-      if (_inboxCount > 0) openTriageModal();
-    }
+    // Skip Gmail sync if already done today — avoids heavy concurrent load on startup
+    const today = new Date().toISOString().slice(0, 10);
+    if (data.lastSync && data.lastSync.slice(0, 10) === today) return;
+    // No pending and no sync today — fetch new Gmail headers in the background
+    // Use setTimeout so runAgent() (the briefing) can start first
+    setTimeout(async () => {
+      try {
+        const s = await fetch('/api/inbox/sync', {method:'POST', credentials:'include'});
+        if (!s.ok) return;
+        const sd = await s.json();
+        if (sd.added > 0) {
+          const r2 = await fetch('/api/inbox/pending', {credentials:'include'});
+          if (!r2.ok) return;
+          const d2 = await r2.json();
+          _triageEmails = d2.pending;
+          _inboxCount = d2.count;
+          if (section === 'all') render();
+          if (_inboxCount > 0) openTriageModal();
+        }
+      } catch {}
+    }, 8000); // wait 8 seconds so the briefing request fires first
   } catch {}
 }
 

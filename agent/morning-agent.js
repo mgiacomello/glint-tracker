@@ -577,7 +577,7 @@ async function runMorningAgent({
       healthRec = {
         activity: 'Camminata o yoga — mantieni movimento moderato',
         food: 'Pasto bilanciato, privilegia verdure e proteine magre',
-        mindset: "Buona giornata, gestisci le priorità con attenzione all'energia pomeridiana"
+        mindset: "Energia media: concentra il deep work entro le 13:00, lascia i task meccanici al pomeriggio"
       };
     } else {
       healthRec = {
@@ -1169,22 +1169,45 @@ SOLO JSON oggetto singolo.`, 400);
 - Draft Accordo Franchise: in bozza, milestone imminenti
 - Contesto: founder-level, investor relations attive, pendolante Milano↔London`;
 
+    const dayTypeGuide = {
+      focus: 'Focus Day (zero riunioni): tutta la mattina per il task più importante, blocchi ininterrotti da 90 min, no email fino alle 14.',
+      maker: 'Maker Day (1-2 riunioni): blocchi lunghi di deep work tra i meeting, posiziona le call a inizio o fine mattina per proteggere il flusso cognitivo.',
+      manager: 'Manager Day (3+ riunioni): lavoro frammentato, priorità alla gestione delle decisioni rapide, sfrutta gli slot tra meeting per avanzare sulle email critiche.'
+    }[dayType] || '';
+
+    const cognitiveGuide = health ? (() => {
+      const { readinessScore: r, hrv, stressLevel: s, sleepScore: sl } = health;
+      const peakWindow = r >= 85 ? 'picco cognitivo eccellente — mattina ideale per decisioni complesse e deep work'
+        : r >= 70 ? 'buona capacità cognitiva — mattina per deep work, pomeriggio per task meccanici'
+        : r >= 50 ? 'energia ridotta — evita decisioni critiche, focus solo sulle priorità assolute'
+        : 'corpo in recupero — giornata leggera, rimanda le decisioni importanti';
+      return `HRV ${hrv || '?'}ms · Readiness ${r || '?'}/100 · Stress ${s || '?'} → ${peakWindow}.`;
+    })() : '';
+
+    const nextKeyEvent = calendarEvents.find(e => e.summary?.toLowerCase().match(/investor|sequoia|client|board|ceo|cto|founder|partner|pitch|demo/));
+
     const contextPrompt = `Sei l'AI chief of staff di ${settings.userName || 'Marco'}.
 ${marcoProjects}
-Data: ${date} · Tipo giornata: ${dayType.toUpperCase()} · Riunioni: ${calendarEvents.length} · Location: ${detectedCity}
-Salute: ${sleepInfo}
+Data: ${date} · Location: ${detectedCity}
+Tipo giornata: ${dayType.toUpperCase()} — ${dayTypeGuide}
+Dati biometrici Oura: ${cognitiveGuide || sleepInfo}
 Task CRITICI oggi: ${critici || 'nessuno'}
 Task HIGH: ${highTasks || 'nessuno'}
+${nextKeyEvent ? 'Evento chiave: ' + (nextKeyEvent.summary || nextKeyEvent.title) + (nextKeyEvent.time ? ' alle ' + nextKeyEvent.time : '') : ''}
 ${familyCtx ? 'Famiglia oggi: ' + familyCtx : ''}
 ${travelCtx}
-${networkCtx ? 'Network oggi: ' + networkCtx : ''}
-${studyItems.length ? 'Top segnali dal mercato: ' + studyItems.slice(0,3).map(s=>s.title).join(', ') : ''}
+${studyItems.length ? 'Segnali mercato: ' + studyItems.slice(0,2).map(s=>s.title).join(', ') : ''}
 
-Scrivi 2 output separati:
+Scrivi 2 output separati in italiano:
 
-1) INTELLIGENCE_FEED: UNA sola frase (max 130 caratteri) che cattura la priorità assoluta del giorno, collegata ai progetti reali di Marco. Diretta e specifica. Senza virgolette.
+1) INTELLIGENCE_FEED: UNA sola frase (max 130 caratteri). La priorità assoluta del giorno, collegata a un progetto reale. Senza virgolette, diretta e tagliente.
 
-2) CONTEXTUAL_INTELLIGENCE: Analisi esecutiva di 4-6 frasi in italiano. Integra: task critici specifici con nome, condizione fisica e impatto su performance, contesto familiare/location se rilevante, connessioni tra progetti (es. come un task Sellrapido impatta il franchise o viceversa). Parla direttamente dei fatti, usa i nomi reali dei progetti. Niente generic coaching, zero frasi vaghe.
+2) CONTEXTUAL_INTELLIGENCE: Briefing esecutivo di 4-5 frasi. DEVE contenere nell'ordine:
+   - Tipo di giornata + strategia cognitiva specifica per oggi (quando fare deep work, quando fare call)
+   - Lettura dei dati Oura: finestra di picco cognitivo stimata con orario specifico, impatto su performance
+   - L'evento/task più critico del giorno con preparazione concreta (es. "porta le metriche X", "prepara risposta su Y")
+   - Un consiglio pratico e specifico per sfruttare al meglio questa giornata
+   Usa i nomi reali dei progetti. Niente frasi vaghe o consigli generici. Parla come un chief of staff che conosce ogni dettaglio.
 
 Formato risposta:
 INTELLIGENCE_FEED: [testo]
@@ -1192,7 +1215,7 @@ CONTEXTUAL_INTELLIGENCE: [testo]`;
 
     const resp = await claude.messages.create({
       model: claude._provider === 'gemini' ? 'gemini-2.5-flash' : claude._provider === 'groq' ? 'llama-3.3-70b-versatile' : 'claude-3-5-sonnet-20241022',
-      max_tokens: 600,
+      max_tokens: 800,
       messages: [{ role: 'user', content: contextPrompt }]
     });
     const raw = resp.content[0]?.text || '';

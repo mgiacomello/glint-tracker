@@ -4814,7 +4814,7 @@ app.delete('/api/boards/:id/share/:userId', (req, res) => {
 app.get('/api/inbox/pending', (req, res) => {
   const db = readDB();
   const pending = db.pendingTriage || [];
-  res.json({ pending, count: pending.length });
+  res.json({ pending, count: pending.length, lastSync: db.lastInboxSync || null });
 });
 
 // POST /api/inbox/sync — fetch new Gmail headers → populate pendingTriage
