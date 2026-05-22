@@ -650,6 +650,76 @@
     .inbox-badge { display:inline-flex;align-items:center;gap:4px;padding:4px 12px;border-radius:20px;background:rgba(255,184,0,.1);border:1px solid rgba(255,184,0,.25);color:var(--amber);font-size:12px;font-weight:700;cursor:pointer;transition:background .12s; }
     .inbox-badge:hover { background:rgba(255,184,0,.18); }
 
+    /* ── HOME FEED ── */
+    .home-feed { display:flex; flex-direction:column; gap:0; }
+    .home-date-row { display:flex; align-items:center; gap:10px; padding:4px 0 14px; }
+    .home-date { font-size:13px; font-weight:600; color:var(--t1); text-transform:capitalize; }
+    .home-daybadge { font-size:11px; font-weight:700; padding:3px 10px; border-radius:20px; margin-left:auto; }
+    .home-daybadge.maker { background:rgba(255,184,0,.12); color:var(--amber); }
+    .home-daybadge.focus { background:rgba(0,208,132,.1); color:var(--green); }
+    .home-daybadge.manager { background:rgba(59,130,246,.1); color:var(--blue); }
+
+    /* Energy strip */
+    .energy-strip { background:var(--s1); border:1px solid var(--line); border-radius:var(--r); padding:14px 16px; }
+    .energy-top { display:flex; align-items:center; gap:10px; margin-bottom:10px; }
+    .energy-level { font-size:13px; font-weight:700; flex-shrink:0; }
+    .energy-bar-wrap { flex:1; height:4px; background:var(--line); border-radius:4px; overflow:hidden; }
+    .energy-bar-fill { height:100%; border-radius:4px; transition:width .6s cubic-bezier(.4,0,.2,1); }
+    .energy-score { font-size:11px; font-family:'JetBrains Mono',monospace; color:var(--t2); flex-shrink:0; }
+    .energy-stats { display:flex; gap:20px; flex-wrap:wrap; }
+    .energy-stat { display:flex; flex-direction:column; gap:1px; }
+    .energy-stat-val { font-size:15px; font-weight:700; font-family:'JetBrains Mono',monospace; color:var(--t0); }
+    .energy-stat-lbl { font-size:10px; color:var(--t2); font-weight:500; letter-spacing:.04em; }
+    .energy-tip { margin-top:10px; font-size:12px; color:var(--t2); padding-top:10px; border-top:1px solid var(--line2); line-height:1.5; }
+
+    /* Briefing block */
+    .brief-block { background:var(--s1); border:1px solid var(--line); border-radius:var(--r); overflow:hidden; margin-top:10px; }
+    .brief-block-head { padding:12px 16px 0; display:flex; align-items:center; gap:6px; }
+    .brief-block-title { font-size:10px; font-weight:700; color:var(--t2); text-transform:uppercase; letter-spacing:.1em; flex:1; }
+    .brief-block-meta { font-size:10px; color:var(--t2); }
+    .brief-refresh { background:none; border:none; color:var(--t2); cursor:pointer; font-size:15px; padding:0 2px; line-height:1; transition:color .1s; }
+    .brief-refresh:hover { color:var(--t0); }
+    .brief-block-body { padding:12px 16px 16px; font-size:14px; line-height:1.75; color:var(--t1); }
+    .brief-block-empty { padding:24px 16px; text-align:center; color:var(--t2); font-size:13px; line-height:1.7; }
+
+    /* Section separators */
+    .home-sh { display:flex; align-items:center; gap:10px; padding:20px 0 10px; }
+    .home-sh-line { flex:1; height:1px; background:var(--line); }
+    .home-sh-label { font-size:10px; font-weight:700; color:var(--t2); text-transform:uppercase; letter-spacing:.1em; flex-shrink:0; }
+    .home-sh-badge { font-size:10px; font-weight:700; color:var(--t2); background:rgba(255,255,255,.06); padding:2px 8px; border-radius:10px; flex-shrink:0; }
+
+    /* Agenda rows */
+    .agenda-row { display:flex; align-items:center; gap:8px; padding:10px 0; border-bottom:1px solid var(--line2); }
+    .agenda-row:last-child { border-bottom:none; }
+    .agenda-time { font-size:12px; font-family:'JetBrains Mono',monospace; color:var(--t2); min-width:44px; flex-shrink:0; }
+    .agenda-star { font-size:11px; width:12px; flex-shrink:0; color:#f59e0b; }
+    .agenda-title { flex:1; font-size:13px; font-weight:500; color:var(--t0); min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+    .agenda-title.done { text-decoration:line-through; color:var(--t2); }
+
+    /* Priority rows */
+    .prio-row { display:flex; align-items:center; gap:10px; padding:9px 0; border-bottom:1px solid var(--line2); }
+    .prio-row:last-child { border-bottom:none; }
+    .prio-dot { width:7px; height:7px; border-radius:50%; background:var(--red); flex-shrink:0; }
+    .prio-title { flex:1; font-size:13px; font-weight:500; color:var(--t0); min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; cursor:pointer; }
+    .prio-title:hover { color:var(--accent); }
+    .prio-due { font-size:10px; color:var(--t2); flex-shrink:0; background:rgba(255,68,68,.1); padding:2px 7px; border-radius:8px; }
+    .prio-circle { width:20px; height:20px; border-radius:50%; border:2px solid var(--t2); flex-shrink:0; cursor:pointer; transition:all .1s; display:flex; align-items:center; justify-content:center; font-size:10px; }
+    .prio-circle.done { background:var(--green); border-color:var(--green); color:#0a0a0a; }
+
+    /* Inbox row */
+    .inbox-action-row { display:flex; align-items:center; gap:12px; padding:12px 14px; background:rgba(255,184,0,.05); border:1px solid rgba(255,184,0,.18); border-radius:10px; cursor:pointer; transition:background .12s; }
+    .inbox-action-row:hover { background:rgba(255,184,0,.1); }
+    .inbox-action-icon { font-size:20px; flex-shrink:0; }
+    .inbox-action-text { flex:1; }
+    .inbox-action-title { font-size:13px; font-weight:600; color:var(--t0); }
+    .inbox-action-sub { font-size:11px; color:var(--t2); margin-top:1px; }
+    .inbox-action-cta { font-size:12px; font-weight:700; color:var(--amber); flex-shrink:0; }
+
+    /* Reflect footer */
+    .home-reflect-row { padding:20px 0 4px; display:flex; justify-content:center; }
+    .home-reflect-btn { background:none; border:none; color:var(--t2); font-size:12px; cursor:pointer; padding:6px 14px; border-radius:8px; transition:color .12s; }
+    .home-reflect-btn:hover { color:var(--t1); }
+
     /* ── FOCUS TIMER ── */
     .focus-bar {
       position: fixed; bottom: 70px; left: 50%; transform: translateX(-50%);
@@ -687,11 +757,9 @@
   </div>
   <div class="tb-context" id="tb-context"></div>
   <div class="tb-right">
-    <button class="btn-run" id="run-btn" onclick="runAgent(false)">☀️ Briefing</button>
-    <span id="ai-dot" class="ai-dot" title="Agent in esecuzione"></span>
-    <button class="btn-icon" onclick="runAgent(true)" title="Force refresh">⚡</button>
-    <a href="/wellness.html" class="btn-link">🧠</a>
-    <a href="/settings.html" class="btn-link">⚙️</a>
+    <span id="ai-dot" class="ai-dot" title="Analisi in corso"></span>
+    <button class="btn-icon" id="run-btn" onclick="runAgent(false)" title="Aggiorna briefing" style="font-size:16px;padding:4px 10px">⟳</button>
+    <a href="/settings.html" class="btn-link" style="padding:5px 9px">⚙️</a>
     <div class="avatar" id="avatar-btn" onclick="toggleMenu()">?<img id="avatar-img" src="" style="display:none"/></div>
   </div>
   <div class="user-menu" id="user-menu">
@@ -1188,152 +1256,156 @@ function render() {
     return;
   }
 
-  // ── SECTION: OGGI (bento grid) ──
-  const dayType = ins.dayType||'';
-  const badgeClass = {focus:'focus',maker:'maker',manager:'manager'}[dayType]||'focus';
-  const badgeLabel = {focus:'🟢 Focus Day',maker:'🛠️ Maker Day',manager:'👔 Manager Day'}[dayType]||(dayType||'');
-  const pct = total>0 ? Math.round(done/total*100) : 0;
-  const filteredTasks = qFilter==='all'?[...q1,...q2,...q3,...q4]:tasks.filter(t=>(t.quadrant||'Q2').toUpperCase()===qFilter);
-  const studyPreview = study.slice(0,3);
-  const netPreview   = netEvts.slice(0,3);
-  const actData      = d.localActivities||{};
-  const actPreview   = (actData.items||[]).slice(0,3);
-  const sp=(dayData?.userSettings?.familyMembers||[]).find(f=>f.role==='spouse')?.name||'Partner';
-  const ch=(dayData?.userSettings?.familyMembers||[]).find(f=>f.role==='child')?.name||'Figli';
-  const al=family.alessandraEvents||[], tm=family.tommasoAlerts||[];
+  // ── SECTION: OGGI ──
+  const dayType  = ins.dayType||'';
+  const dayLabel = {focus:'Focus Day', maker:'Maker Day', manager:'Manager Day'}[dayType]||'';
+
+  // Oura / energy data
+  const readiness  = health?.readinessScore || 0;
+  const hrv        = health?.hrv || 0;
+  const sleepScore = health?.sleepScore || 0;
+  const stressLvl  = health?.stressLevel ?? null;
+  const sleepMin   = health?.totalSleepMin;
+  const sleepStr   = sleepMin ? Math.floor(sleepMin/60)+'h '+String(sleepMin%60).padStart(2,'0')+'m' : null;
+  const steps      = health?.steps;
+
+  let eLevel, eColor, eBar, eTip;
+  if      (readiness >= 85) { eLevel='Alta';    eColor='var(--green)'; eBar='#00d084'; eTip='Hai carburante per spingere — ideale per decisioni importanti e deep work.'; }
+  else if (readiness >= 70) { eLevel='Media';   eColor='var(--amber)'; eBar='#f59e0b'; eTip='Energia sufficiente — gestisci il carico con attenzione nel pomeriggio.'; }
+  else if (readiness >= 50) { eLevel='Bassa';   eColor='#f97316';     eBar='#f97316'; eTip='Risparmia energie — evita decisioni critiche, priorità solo all\'essenziale.'; }
+  else if (readiness > 0)   { eLevel='Critica'; eColor='var(--red)';  eBar='#ff4444'; eTip='Corpo in recupero — proteggi il sonno stasera e tieni basso lo stress.'; }
+  else                      { eLevel=null; }
+
+  // Briefing text
+  const briefText = ins.contextualIntelligence || ins.growthBrief || ins.intelligenceFeed || null;
+  const syncedAt  = dayData?._syncedAt;
+  const syncedStr = syncedAt ? new Date(syncedAt).toLocaleTimeString('it-IT',{hour:'2-digit',minute:'2-digit'}) : null;
+
+  // Task urgenti Q1 (max 5)
+  const urgentTasks = q1.filter(t=>!items[t.id]?.done).slice(0,5);
+
+  // Proactive AI (max 2)
+  const pa = (ins.proactiveActions||[]).filter(p=>!p._dismissed).slice(0,2);
+
+  // Inbox count
+  const inboxN = _inboxCount || 0;
 
   page.innerHTML = `
     ${_panelHtml()}
+    <div class="home-feed">
 
-    <!-- Hero -->
-    <div class="hero">
-      <div class="hero-l">
-        <div class="hero-date">${new Date().toLocaleDateString('it-IT',{weekday:'long',day:'numeric',month:'long'})}</div>
-        <div class="hero-name">Buongiorno,<br/><em>${userName?esc(userName.split(' ')[0]):'👋'}</em></div>
-        <div class="hero-badges">
-          ${badgeLabel?`<span class="hbadge ${badgeClass}">${badgeLabel}</span>`:''}
-          ${q1Active>0?`<span class="hbadge warn">🔴 ${q1Active} urgent${q1Active>1?'i':''}</span>`:''}
+      <!-- Date + day type -->
+      <div class="home-date-row">
+        <span class="home-date">${new Date().toLocaleDateString('it-IT',{weekday:'long',day:'numeric',month:'long'})}</span>
+        ${dayLabel?`<span class="home-daybadge ${dayType}">${dayLabel}</span>`:''}
+      </div>
+
+      <!-- Energy strip (Oura) -->
+      ${eLevel ? `
+      <div class="energy-strip">
+        <div class="energy-top">
+          <span class="energy-level" style="color:${eColor}">● ${eLevel}</span>
+          <div class="energy-bar-wrap"><div class="energy-bar-fill" style="width:${readiness}%;background:${eBar}"></div></div>
+          <span class="energy-score">${readiness}/100</span>
         </div>
+        <div class="energy-stats">
+          ${hrv       ? `<div class="energy-stat"><span class="energy-stat-val">${hrv}</span><span class="energy-stat-lbl">HRV ms</span></div>` : ''}
+          ${sleepScore? `<div class="energy-stat"><span class="energy-stat-val">${sleepScore}</span><span class="energy-stat-lbl">Sonno</span></div>` : ''}
+          ${sleepStr  ? `<div class="energy-stat"><span class="energy-stat-val">${sleepStr}</span><span class="energy-stat-lbl">Durata</span></div>` : ''}
+          ${stressLvl !== null ? `<div class="energy-stat"><span class="energy-stat-val">${stressLvl}%</span><span class="energy-stat-lbl">Stress</span></div>` : ''}
+          ${steps     ? `<div class="energy-stat"><span class="energy-stat-val">${steps.toLocaleString('it-IT')}</span><span class="energy-stat-lbl">Passi</span></div>` : ''}
+        </div>
+        <div class="energy-tip">${eTip}</div>
+      </div>` :
+      `<div class="energy-strip" style="text-align:center;padding:12px 16px">
+        <span style="font-size:12px;color:var(--t2)">Oura non sincronizzato · <button onclick="syncOura()" style="background:none;border:none;color:var(--accent);cursor:pointer;font-size:12px;font-weight:600">⟳ Sync</button></span>
+      </div>`}
+
+      <!-- Briefing AI -->
+      <div class="brief-block">
+        <div class="brief-block-head">
+          <span class="brief-block-title">✦ Briefing</span>
+          ${syncedStr?`<span class="brief-block-meta">aggiornato ${syncedStr}</span>`:''}
+          <button class="brief-refresh" onclick="runAgent(false)" title="Aggiorna">⟳</button>
+        </div>
+        ${!briefText
+          ? `<div class="brief-block-empty">${_agentRunning
+              ? `<span style="color:var(--t2)">⏳ Analisi in corso…</span>`
+              : `Nessun briefing — si aggiorna automaticamente ogni mattina.`}</div>`
+          : `<div class="brief-block-body">${esc(briefText).replace(/\n/g,'<br/>')}</div>`
+        }
       </div>
-      <div class="hero-kpis">
-        ${total>0?(()=>{const r=30,circ=2*Math.PI*r,off=circ*(1-pct/100);return`<div class="prog-ring-wrap" style="width:72px;height:72px"><svg class="prog-ring-svg" width="72" height="72" viewBox="0 0 72 72"><circle class="prog-ring-bg" cx="36" cy="36" r="${r}"/><circle class="prog-ring-fill" cx="36" cy="36" r="${r}" stroke-dasharray="${circ.toFixed(1)}" stroke-dashoffset="${off.toFixed(1)}"/></svg><div class="prog-ring-inner"><span class="prog-ring-pct">${pct}%</span><span class="prog-ring-lbl">${done}/${total}</span></div></div>`;})():`<div style="width:72px;height:72px"></div>`}
-        <div class="kpi"><div class="kpi-n">${events.length}</div><div class="kpi-l">Riunioni</div></div>
-        <div class="kpi"><div class="kpi-n ${q1Active>0?'red':''}">${q1Active}</div><div class="kpi-l">Urgenti Q1</div></div>
-        <div class="kpi"><div class="kpi-n">${tasks.length}</div><div class="kpi-l">Email</div></div>
-        <div class="kpi"><div class="kpi-n">${study.length}</div><div class="kpi-l">Da leggere</div></div>
+
+      <!-- Agenda -->
+      ${events.length ? `
+      <div class="home-sh">
+        <span class="home-sh-label">Agenda</span>
+        <div class="home-sh-line"></div>
+        <span class="home-sh-badge">${events.length}</span>
       </div>
-    </div>
-
-    <!-- Bento -->
-    <div class="bento">
-
-      ${(()=>{
-        // ── Analisi giornata (span2) ─────────────────────────────────────────
-        const hasText = ins.intelligenceFeed||ins.contextualIntelligence||ins.growthBrief;
-        const inboxN = _inboxCount || 0;
-        return `<div class="bc s2">
-          <div class="bc-head">
-            <span class="bc-title">✦ La tua giornata</span>
-            ${badgeLabel?`<span class="bc-badge ${badgeClass}" style="border-radius:20px">${badgeLabel}</span>`:''}
-            ${inboxN>0?`<button class="inbox-badge" onclick="openTriageModal()" style="margin-left:auto" title="Mail in attesa di triage">📧 ${inboxN} nuove</button>`:''}
-          </div>
-          ${!hasText ? `<div class="empty" style="padding:28px 20px">${_agentRunning?'<div class="ei">⏳</div>Analisi in corso…':'<div class="ei">☀️</div>Clicca <strong>☀️ Briefing</strong> per analizzare la giornata.'}</div>`
-          : `${ins.intelligenceFeed?`<div class="intel-feed"><div class="intel-feed-label">✦ Intelligence Feed</div><div class="intel-feed-text">"${esc(ins.intelligenceFeed)}"</div></div>`:''}
-             ${(ins.contextualIntelligence||ins.growthBrief)?`<div class="brief-body" style="border-top:${ins.intelligenceFeed?'1px solid var(--line2)':'none'}"><div class="brief-text">${esc(ins.contextualIntelligence||ins.growthBrief).replace(/\n/g,'<br/>')}</div></div>`:''}`}
-        </div>`;
-      })()}
-
-      ${(()=>{
-        // ── Piano energia (span1) ────────────────────────────────────────────
-        const slots = ins?.energySchedule || [];
-        const energyColors = { peak:'#7c6ef5', high:'#00d084', medium:'#f59e0b', low:'#94a3b8', recovery:'#64748b' };
-        if (!slots.length) return `<div class="bc"><div class="bc-head"><span class="bc-title">⚡ Energia</span></div><div class="empty-sm" style="padding:20px 16px">Avvia il briefing per generare il piano energia.</div></div>`;
-        const slotsHtml = slots.map(s=>{
-          const color=s.color||energyColors[s.energyLevel]||'#7c6ef5';
-          return `<div class="es-slot" style="margin:0 12px 6px;border-radius:8px">
-            <div class="es-bar" style="background:${esc(color)}"></div>
-            <div class="es-meta">
-              <div class="es-header"><span class="es-time">${esc(s.time||'')}</span><span class="es-label" style="font-size:11px">${esc(s.label||'')}</span></div>
-              ${s.reason?`<div class="es-reason" style="font-size:10px">${esc(s.reason.slice(0,80))}</div>`:''}
-            </div>
-          </div>`;
-        }).join('');
-        return `<div class="bc"><div class="bc-head"><span class="bc-title">⚡ Piano Energia</span><span class="bc-badge">${slots.length}</span></div><div style="padding:8px 0 8px">${slotsHtml}</div></div>`;
-      })()}
-
-      ${(()=>{
-        // ── Riunioni (span1, compatte) ───────────────────────────────────────
-        const compactEvRow = e => {
+      <div>
+        ${events.map(e=>{
           const st=items[e.id]||{};
-          return `<div class="ev-row ${st.done?'done':''}" id="ei-${esc(e.id)}" style="padding:9px 14px">
-            <div class="ev-time" style="min-width:50px">${esc(e.time||'—')}</div>
-            <div class="ev-body"><div class="ev-title" style="font-size:12px">${esc(e.title)}</div></div>
-            <div class="ev-act" style="gap:4px">
+          const key=e.title.toLowerCase().match(/investor|sequoia|client|board|ceo|cto|founder/);
+          return `<div class="agenda-row">
+            <span class="agenda-time">${esc(e.time||'—')}</span>
+            <span class="agenda-star">${key?'★':''}</span>
+            <span class="agenda-title${st.done?' done':''}">${esc(e.title)}</span>
+            <div style="display:flex;align-items:center;gap:5px;flex-shrink:0">
               ${e.meetLink?`<a href="${esc(e.meetLink)}" target="_blank" class="btn-join" style="font-size:10px;padding:3px 8px">Join</a>`:''}
-              <button class="btn-circle ${st.done?'done':''}" onclick="toggleDone('${esc(e.id)}','event')" style="width:18px;height:18px">${st.done?'✓':''}</button>
+              <button class="btn-circle${st.done?' done':''}" onclick="toggleDone('${esc(e.id)}','event')" style="width:20px;height:20px;font-size:10px">${st.done?'✓':''}</button>
             </div>
           </div>`;
-        };
-        const evHtml = events.length ? events.map(compactEvRow).join('') : `<div class="empty-sm" style="padding:18px 16px">Nessuna riunione oggi.</div>`;
-        return `<div class="bc"><div class="bc-head"><span class="bc-title">📅 Riunioni</span>${events.length?`<span class="bc-badge blue">${events.length}</span>`:''}</div>${evHtml}</div>`;
-      })()}
+        }).join('')}
+      </div>` : ''}
 
-      ${(()=>{
-        // ── Board attive (span2) ─────────────────────────────────────────────
-        const boards = boardsData || [];
-        const activeTasks = tasks.filter(t=>!items[t.id]?.done);
-        const boardRows = boards.slice(0,6).map(b => {
-          const openCount = (b.groups||[]).reduce((n,g)=>n+(g.items||[]).filter(i=>!i.done).length, 0);
-          return `<a href="/boards.html#${b.id}" class="board-preview-row">
-            <div class="board-preview-dot" style="background:${esc(b.color||'#7c6ef5')}"></div>
-            <span class="board-preview-name">${esc(b.name)}</span>
-            <span class="board-preview-count ${openCount>0?'has':''}">${openCount} task</span>
-          </a>`;
-        }).join('');
-        return `<div class="bc s2">
-          <div class="bc-head">
-            <span class="bc-title">📋 Board</span>
-            ${boards.length?`<span class="bc-badge">${boards.length}</span>`:''}
-            <a href="/boards.html" style="margin-left:auto;font-size:11px;color:var(--t2);text-decoration:none;padding:3px 8px;border-radius:6px;border:1px solid var(--line)">Apri →</a>
-          </div>
-          ${boards.length ? boardRows : `<div class="empty-sm" style="padding:18px 16px">Nessuna board ancora.<br/><a href="/boards.html" style="color:var(--accent)">Crea la prima board →</a></div>`}
-          ${activeTasks.length?`<div style="padding:8px 14px;border-top:1px solid var(--line2);font-size:11px;color:var(--t2)">📧 ${activeTasks.length} task da email assegnati · <button onclick="nav('growth',null)" style="background:none;border:none;color:var(--accent);cursor:pointer;font-size:11px">Crescita →</button></div>`:''}
-        </div>`;
-      })()}
-
-      <!-- Salute span1 -->
-      <div class="bc">
-        <div class="bc-head"><span class="bc-title">🫀 Salute</span></div>
-        ${health ? `
-        <div class="h-grid">
-          ${(()=>{
-            const s=health.sleepScore, hrv=health.hrv, rhr=health.restingHR;
-            const rd=health.readinessScore, steps=health.steps, sleepMin=health.totalSleepMin;
-            const sc=s>=76?'#86efac':s>=60?'#fde68a':'#fca5a5';
-            const rc=rd>=85?'#86efac':rd>=60?'#fde68a':'#fca5a5';
-            const sleepH=sleepMin?Math.floor(sleepMin/60)+'h '+(sleepMin%60)+'m':null;
-            return`
-            <div class="hm"><div class="hm-val" style="color:${sc}">${s||'?'}</div><div class="hm-lbl">Sonno</div></div>
-            <div class="hm"><div class="hm-val" style="color:${rc}">${rd||'?'}</div><div class="hm-lbl">Readiness</div></div>
-            <div class="hm"><div class="hm-val">${hrv||'?'}</div><div class="hm-lbl">HRV ms</div></div>
-            <div class="hm"><div class="hm-val">${rhr||'?'}</div><div class="hm-lbl">FC riposo</div></div>
-            ${sleepH?`<div class="hm" style="grid-column:span 2"><div class="hm-val" style="font-size:18px">${sleepH}</div><div class="hm-lbl">Sonno totale</div></div>`:''}
-            ${steps?`<div class="hm" style="grid-column:span 2"><div class="hm-val" style="font-size:18px">${steps.toLocaleString('it-IT')}</div><div class="hm-lbl">Passi</div></div>`:''}
-          `})()}
-        </div>
-        ${health.recommendations?`<div class="h-rec">🏃 ${esc(health.recommendations.activity||'')}<br/>🧠 ${esc(health.recommendations.mindset||'')}</div>`:''}
-        ` : `<div class="empty"><div class="ei">🫀</div>Sincronizza Oura.<br/><button onclick="syncOura()" style="margin-top:8px;padding:6px 14px;border-radius:8px;border:none;background:var(--accent);color:#fff;cursor:pointer;font-size:12px">⟳ Sync</button></div>`}
+      <!-- Priorità Q1 -->
+      ${urgentTasks.length ? `
+      <div class="home-sh">
+        <span class="home-sh-label">Priorità</span>
+        <div class="home-sh-line"></div>
+        <span class="home-sh-badge">${urgentTasks.length}</span>
       </div>
+      <div>
+        ${urgentTasks.map(t=>{
+          const st=items[t.id]||{};
+          return `<div class="prio-row">
+            <div class="prio-dot"></div>
+            <span class="prio-title" onclick="openItem('${esc(t.id)}','task')">${esc(t.title)}</span>
+            ${t.due?`<span class="prio-due">${esc(t.due)}</span>`:''}
+            <div class="prio-circle${st.done?' done':''}" onclick="toggleDone('${esc(t.id)}','task')">${st.done?'✓':''}</div>
+          </div>`;
+        }).join('')}
+      </div>` : ''}
 
-      ${(()=>{
-        // ── Proactive AI (span2, max 3 card) ─────────────────────────────────
-        const pa=(ins.proactiveActions||[]).filter(p=>!p._dismissed).slice(0,3);
-        if (!pa.length) return '';
-        return `<div class="bc s2">
-          <div class="bc-head"><span class="bc-title">🧠 Proactive AI</span><span class="bc-badge pur">${pa.length}</span><button onclick="refreshProactiveAI()" style="margin-left:auto;padding:3px 10px;border-radius:6px;border:1px solid var(--line);background:transparent;color:var(--t2);font-size:11px;cursor:pointer">⟳</button></div>
-          <div class="pa-grid">${pa.map((p,i)=>paCard(p,i)).join('')}</div>
-        </div>`;
-      })()}
+      <!-- Inbox -->
+      ${inboxN > 0 ? `
+      <div class="home-sh">
+        <span class="home-sh-label">Inbox</span>
+        <div class="home-sh-line"></div>
+      </div>
+      <div class="inbox-action-row" onclick="openTriageModal()">
+        <span class="inbox-action-icon">📧</span>
+        <div class="inbox-action-text">
+          <div class="inbox-action-title">${inboxN} mail da smistare</div>
+          <div class="inbox-action-sub">Task · Board · Ignora — una alla volta</div>
+        </div>
+        <span class="inbox-action-cta">Inizia →</span>
+      </div>` : ''}
+
+      <!-- Suggerimenti AI -->
+      ${pa.length ? `
+      <div class="home-sh">
+        <span class="home-sh-label">Suggerimenti AI</span>
+        <div class="home-sh-line"></div>
+      </div>
+      <div class="pa-grid">${pa.map((p,i)=>paCard(p,i)).join('')}</div>
+      ` : ''}
+
+      <!-- Riflessione serale -->
+      <div class="home-reflect-row">
+        <button class="home-reflect-btn" onclick="openReflection()">🌙 Riflessione serale</button>
+      </div>
 
     </div>`;
 
@@ -1586,7 +1658,7 @@ async function runAgent(force=false) {
   const btn=document.getElementById('run-btn');
   const aidot=document.getElementById('ai-dot');
   _panelOpen=true; _logLines=[]; _sumHtml='';
-  btn.disabled=true; btn.textContent=force?'⚡ In corso…':'⏳ Analisi…';
+  if(btn){btn.disabled=true; btn.style.opacity='.4';}
   if(aidot){aidot.className='ai-dot active';}
   if(section!=='all') nav('all',null);
   else render();
@@ -1617,7 +1689,7 @@ async function runAgent(force=false) {
     }
   } catch(e){ _push('❌ '+e.message,'err'); }
   _agentRunning = false;
-  btn.disabled=false; btn.textContent='☀️ Briefing';
+  if(btn){btn.disabled=false; btn.style.opacity='';}
   if(aidot){aidot.className='ai-dot done-state'; setTimeout(()=>{aidot.className='ai-dot';},3000);}
 }
 function _push(text,cls){
@@ -1626,7 +1698,7 @@ function _push(text,cls){
   if(log){const d=document.createElement('div');if(cls)d.className=cls;d.textContent=text;log.appendChild(d);log.scrollTop=log.scrollHeight;}
 }
 function closePanel(){ _panelOpen=false; _logLines=[]; _sumHtml=''; document.getElementById('ap')?.classList.remove('open'); }
-function renderEmpty(){ document.getElementById('page').innerHTML=`<div style="padding:80px 24px;text-align:center;color:var(--t1);font-size:14px;line-height:2"><div style="font-size:40px;margin-bottom:16px">☀️</div>Nessun dato per oggi.<br/>Clicca <strong style="color:var(--t0)">☀️ Briefing</strong> per analizzare Gmail e Calendar.</div>`; }
+function renderEmpty(){ document.getElementById('page').innerHTML=`<div style="padding:80px 24px;text-align:center;color:var(--t1);font-size:14px;line-height:2"><div style="font-size:40px;margin-bottom:16px">☀️</div>Nessun dato per oggi.<br/>Il briefing si aggiorna automaticamente ogni mattina.</div>`; }
 
 // ── User menu ──────────────────────────────────────────────────────────────
 function toggleMenu(){document.getElementById('user-menu').classList.toggle('open');document.getElementById('overlay').style.display='block';}
@@ -1929,6 +2001,8 @@ async function saveReflection() {
 function _syncReflectBtn() {
   const btn = document.getElementById('reflect-btn');
   if (!btn) return;
+  // Nascondi floating button sulla home — c'è il link inline in fondo
+  btn.style.display = section === 'all' ? 'none' : '';
   const r = dayData?.reflection;
   const hasDone = r && (typeof r === 'string' ? r !== '' : (r.wins || r.challenges || r.gratitude || r.energy));
   if (hasDone) btn.classList.add('done-state');
@@ -1988,8 +2062,8 @@ async function loadBoards() {
   try {
     const r = await fetch('/api/boards', {credentials:'include'});
     if (!r.ok) return;
-    boardsData = await r.json();
-    // Re-render home bento if we're on the home section
+    const data = await r.json();
+    boardsData = Array.isArray(data) ? data : [];
     if (section === 'all') render();
   } catch {}
 }
