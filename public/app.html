@@ -652,8 +652,10 @@
 
     /* ── HOME FEED ── */
     .home-feed { display:flex; flex-direction:column; gap:0; }
-    .home-date-row { display:flex; align-items:center; gap:10px; padding:4px 0 14px; }
-    .home-date { font-size:13px; font-weight:600; color:var(--t1); text-transform:capitalize; }
+    .home-greeting { font-size:26px; font-weight:800; letter-spacing:-.03em; color:var(--t0); padding:6px 0 2px; line-height:1.15; }
+    .home-greeting em { color:var(--accent); font-style:normal; }
+    .home-date-row { display:flex; align-items:center; gap:10px; padding:2px 0 14px; }
+    .home-date { font-size:12px; font-weight:500; color:var(--t2); text-transform:capitalize; }
     .home-daybadge { font-size:11px; font-weight:700; padding:3px 10px; border-radius:20px; margin-left:auto; }
     .home-daybadge.maker { background:rgba(255,184,0,.12); color:var(--amber); }
     .home-daybadge.focus { background:rgba(0,208,132,.1); color:var(--green); }
@@ -1293,6 +1295,14 @@ function render() {
   page.innerHTML = `
     ${_panelHtml()}
     <div class="home-feed">
+
+      <!-- Saluto -->
+      ${(()=>{
+        const h = new Date().getHours();
+        const first = userName ? esc(userName.split(' ')[0]) : '';
+        const saluto = h < 5 ? 'Buonanotte' : h < 12 ? 'Buongiorno' : h < 18 ? 'Buon pomeriggio' : 'Buonasera';
+        return `<div class="home-greeting">${saluto}${first?`, <em>${first}</em>`:''} 👋</div>`;
+      })()}
 
       <!-- Date + day type -->
       <div class="home-date-row">

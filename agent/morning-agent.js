@@ -1210,8 +1210,8 @@ CONTEXTUAL_INTELLIGENCE: [testo]`;
     growthBrief = contextualIntelligence;
     emit(`  ↳ Intelligence Feed: ${intelligenceFeed.slice(0,80)}`);
   } catch(e) {
-    growthBrief = `Oggi è una ${dayType} day. Buona giornata, ${settings.userName || 'Marco'}!`;
-    contextualIntelligence = growthBrief;
+    growthBrief = '';
+    contextualIntelligence = '';
     emit(`  ↳ Errore contextual intelligence: ${e.message?.slice(0,100)}`);
   }
 
