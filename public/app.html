@@ -941,6 +941,7 @@ let _reflectEnergy = 0;
 let boardsData = null;
 let _inboxCount = 0;
 let _triageEmails = [], _triageIdx = 0, _triageSelectedBoardId = null;
+let _agentLastRun = null; // ISO string from /api/morning-agent/status
 
 // ── Mock mode (audit/demo only — ?mock=1) ─────────────────────────────────
 const _MOCK = new URLSearchParams(location.search).get('mock') === '1';
@@ -994,6 +995,11 @@ async function loadDay() {
     // Load boards and check inbox in background
     loadBoards();
     checkInboxPending();
+    // Load agent last-run status silently
+    fetch('/api/morning-agent/status', {credentials:'include'})
+      .then(r=>r.ok?r.json():null)
+      .then(d=>{ if(d?.lastRun) { _agentLastRun = d.lastRun; } })
+      .catch(()=>{});
   } catch { renderEmpty(); }
 }
 
@@ -1363,8 +1369,11 @@ function render() {
         </div>
         ${!briefText
           ? `<div class="brief-block-empty">${_agentRunning
-              ? `<span style="color:var(--t2)">⏳ Analisi in corso…</span>`
-              : `Nessun briefing — si aggiorna automaticamente ogni mattina.`}</div>`
+              ? `<span style="color:var(--t2)">⏳ Analisi in corso… questo richiede 1-2 minuti</span>`
+              : `<div style="display:flex;flex-direction:column;gap:10px;align-items:flex-start">
+                   <span style="color:var(--t2);font-size:13px">Analisi non disponibile — calendario, mail e dati Oura non ancora sincronizzati.</span>
+                   <button onclick="runAgent(true)" style="background:var(--accent);color:#fff;border:none;border-radius:8px;padding:7px 16px;font-size:13px;font-weight:600;cursor:pointer">⟳ Genera briefing ora</button>
+                 </div>`}</div>`
           : `<div class="brief-block-body">${esc(briefText).replace(/\n/g,'<br/>')}</div>`
         }
       </div>
