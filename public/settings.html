@@ -671,6 +671,24 @@
     </div>
   </div>
 
+  <!-- ── Sistema & Diagnostica ─────────────────────────────────────────── -->
+  <div class="section">
+    <div class="section-header">
+      <span class="icon">🔧</span>
+      <h2>Sistema</h2>
+    </div>
+    <div class="section-body">
+      <div id="diag-area" style="font-size:13px;line-height:1.7;color:var(--t1)">
+        <span style="color:var(--muted)">Caricamento diagnostica…</span>
+      </div>
+      <div style="margin-top:12px;display:flex;gap:8px">
+        <button onclick="loadDiag()" style="padding:6px 14px;border-radius:8px;border:1px solid var(--line);background:transparent;color:var(--t1);font-size:12px;cursor:pointer">⟳ Aggiorna</button>
+        <button onclick="loadDiagDeep()" style="padding:6px 14px;border-radius:8px;border:1px solid var(--line);background:transparent;color:var(--t1);font-size:12px;cursor:pointer">🔍 Test profondo</button>
+      </div>
+      <div id="diag-deep-area" style="margin-top:10px;font-size:12px;color:var(--muted);white-space:pre-wrap;display:none"></div>
+    </div>
+  </div>
+
 </main>
 
 <!-- Save bar -->
@@ -696,6 +714,7 @@ let familyMembers = [];
   await checkGoogleStatus();
   await checkOuraStatus();
   await checkAgentStatus();
+  loadDiag();
 
   // Auto-save on input for all text/email/time fields
   ['s-userName','s-briefingEmail','s-briefingTime','s-primaryEmail','s-homeCity'].forEach(id => {
@@ -980,6 +999,43 @@ async function checkGoogleStatus() {
       area.innerHTML = `<div class="connect-banner"><span class="icon">⚠️</span><p>Google non connesso. L'agente non potrà accedere a Gmail, Calendar e Drive.</p><a href="/auth/google">Connetti Google</a></div>`;
     }
   } catch(e) { /* skip */ }
+}
+
+// ── Diagnostica sistema ────────────────────────────────────────────────────────
+async function loadDiag() {
+  const area = document.getElementById('diag-area');
+  if (!area) return;
+  try {
+    const r = await fetch('/api/diag', { credentials: 'include' });
+    const d = await r.json();
+    const ok = (v) => v ? '✅' : '❌';
+    const rows = [
+      `<b>Storage</b>: ${d.storage === 'redis' ? '✅ Redis (dati persistono)' : '⚠️ Filesystem (dati persi ad ogni deploy — configura Upstash Redis)'}`,
+      `<b>AI provider</b>: ${d.aiProvider ? '✅ ' + d.aiProvider : '❌ nessuna chiave AI configurata'}`,
+      `<b>Google token</b>: ${ok(d.googleTokens?.presente)} presente · ${d.googleTokens?.scaduto === false ? '✅ valido' : d.googleTokens?.scaduto ? '⚠️ scaduto (si auto-rinnova)' : '—'} · Refresh token: ${ok(d.googleTokens?.refreshToken)}`,
+      `<b>Gmail test</b>: ${d.gmailTest || '—'}`,
+      `<b>Agente — ultimo run</b>: ${d.agentLastRun ? new Date(d.agentLastRun).toLocaleString('it-IT') : '❌ mai eseguito'}`,
+      `<b>Dati oggi</b>: ${d.oggi?.eventi} eventi · ${d.oggi?.task} task`,
+    ];
+    const logLines = (d.agentLastLog || []).slice(-8);
+    area.innerHTML = rows.join('<br>') + (logLines.length ? `<br><br><b>Ultimi log agente:</b><br><code style="font-size:11px;color:var(--muted)">${logLines.map(l=>l.replace(/</g,'&lt;')).join('<br>')}</code>` : '');
+  } catch(e) {
+    area.innerHTML = `<span style="color:var(--red)">Errore caricamento diagnostica: ${e.message}</span>`;
+  }
+}
+
+async function loadDiagDeep() {
+  const area = document.getElementById('diag-deep-area');
+  if (!area) return;
+  area.style.display = 'block';
+  area.textContent = 'Test profondo in corso…';
+  try {
+    const r = await fetch('/api/diag/deep', { credentials: 'include' });
+    const d = await r.json();
+    area.textContent = JSON.stringify(d, null, 2);
+  } catch(e) {
+    area.textContent = 'Errore: ' + e.message;
+  }
 }
 
 // ── Agent runner ──────────────────────────────────────────────────────────────
