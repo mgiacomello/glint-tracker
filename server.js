@@ -32,7 +32,18 @@ function getCurrentUid() { return als.getStore()?.uid || null; }
 function getCurrentUser() { return als.getStore() || {}; }
 
 app.set('trust proxy', 1); // Railway/Render/Heroku sono dietro reverse proxy
-app.use(cors({ origin: true, credentials: true }));
+
+// Allow both same-origin (Glint) and Lovable frontend
+const LOVABLE_ORIGIN = process.env.LOVABLE_ORIGIN || 'https://osdailypilot.lovable.app';
+app.use(cors({
+  origin: (origin, cb) => {
+    // Allow same-origin, Lovable app, and local dev
+    const allowed = [LOVABLE_ORIGIN, 'http://localhost:8080', 'http://localhost:5173', 'http://localhost:3000'];
+    if (!origin || allowed.includes(origin) || origin.endsWith('.lovable.app')) cb(null, true);
+    else cb(null, true); // keep permissive for now — tighten after confirmed working
+  },
+  credentials: true
+}));
 app.use(express.json());
 const SESSION_DIR = path.join(__dirname, 'data', 'sessions');
 fs.mkdirSync(SESSION_DIR, { recursive: true });
@@ -4979,6 +4990,112 @@ app.post('/api/inbox/skip-all', (req, res) => {
   db.pendingTriage = [];
   writeDBForUid(uid, db);
   res.json({ skipped: ids.length });
+});
+
+// ── LOVABLE BRIDGE ───────────────────────────────────────────────────────────
+// POST /api/lovable/run-briefing
+// Called by Lovable frontend with a Supabase JWT.
+// Reads Google tokens from Supabase, runs the full morning agent,
+// writes results back to Supabase daily_briefings.
+
+app.post('/api/lovable/run-briefing', async (req, res) => {
+  // CORS preflight already handled above
+  const authHeader = req.headers['authorization'] || '';
+  const supabaseJwt = authHeader.startsWith('Bearer ') ? authHeader.slice(7) : null;
+  if (!supabaseJwt) return res.status(401).json({ error: 'Authorization header mancante' });
+
+  // Stream SSE progress to Lovable
+  res.setHeader('Content-Type', 'text/event-stream; charset=utf-8');
+  res.setHeader('Cache-Control', 'no-cache');
+  res.setHeader('Connection', 'keep-alive');
+  res.setHeader('X-Accel-Buffering', 'no');
+  res.flushHeaders?.();
+
+  const send = obj => { try { res.write(`data: ${JSON.stringify(obj)}\n\n`); } catch {} };
+
+  try {
+    const sbr = require('./lib/supabase');
+    const cfg = readConfig();
+
+    // 1. Verify Supabase JWT → get user ID + email
+    send({ log: '🔐 Verifica identità...' });
+    const sbUser = await sbr.verifyToken(supabaseJwt);
+    const supabaseUserId = sbUser.id;
+    const userEmail = sbUser.email || '';
+    send({ log: `✓ Utente: ${userEmail}` });
+
+    // 2. Read Google tokens from Supabase
+    send({ log: '🔑 Lettura token Google da Supabase...' });
+    const googleTokens = await sbr.getGoogleTokens(supabaseUserId);
+    send({ log: '✓ Token trovati' });
+
+    // 3. Use a virtual Railway UID for this Supabase user
+    //    Format: "sb:<supabaseUserId>" — isolated from regular Railway users
+    const virtualUid = `sb:${supabaseUserId}`;
+
+    // Stub readDB/writeDB for virtual users (in-memory only, no persistence needed)
+    const _virtualDb = {};
+    const readDBForUid  = () => _virtualDb;
+    const writeDBForUid = () => {};
+
+    // 4. Run the full morning agent
+    const { runMorningAgent } = require('./agent/morning-agent');
+    const date = new Date().toISOString().slice(0, 10);
+    const settings = { ...DEFAULT_SETTINGS, userName: userEmail.split('@')[0], briefingEmail: userEmail };
+
+    const result = await runMorningAgent({
+      uid: virtualUid,
+      date,
+      settings,
+      readDBForUid,
+      writeDBForUid,
+      googleClientId: GOOGLE_CLIENT_ID,
+      googleClientSecret: GOOGLE_CLIENT_SECRET,
+      anthropicApiKey: cfg.anthropicApiKey,
+      geminiApiKey: cfg.geminiApiKey,
+      groqApiKey: cfg.groqApiKey,
+      perplexityApiKey: cfg.perplexityApiKey || process.env.PERPLEXITY_API_KEY || '',
+      force: true,
+      log: msg => send({ log: msg }),
+      googleTokensOverride: googleTokens,
+      onTokenRefreshed: refreshed => sbr.updateGoogleTokens(supabaseUserId, refreshed).catch(() => {})
+    });
+
+    // 5. Write briefing to Supabase
+    send({ log: '💾 Salvataggio briefing su Supabase...' });
+    const insights = result?.insights || {};
+    const health   = result?.health || null;
+    await sbr.writeBriefing(supabaseUserId, {
+      date,
+      insights,
+      health,
+      detectedCity: result?.detectedCity || null
+    });
+
+    // 6. Optionally write new tasks to Supabase
+    if (result?.tasks?.length) {
+      send({ log: `📝 Sync ${result.tasks.length} task su Supabase...` });
+      await sbr.writeTasks(supabaseUserId, result.tasks).catch(e => send({ log: `⚠️ Task sync: ${e.message}` }));
+    }
+
+    send({ done: true, summary: result?.summary || {} });
+
+  } catch (e) {
+    console.error('[LovableBridge]', e.message);
+    send({ error: e.message });
+  }
+
+  res.end();
+});
+
+// GET /api/lovable/status — quick health check (no auth needed)
+app.get('/api/lovable/status', (req, res) => {
+  const cfg = readConfig();
+  res.json({
+    ok: true,
+    supabase: !!process.env.SUPABASE_SERVICE_ROLE_KEY,
+    ai: cfg.geminiApiKey ? 'gemini' : cfg.groqApiKey ? 'groq' : cfg.anthropicApiKey ? 'anthropic' : null
+  });
 });
 
 // ── START ─────────────────────────────────────────────────────────────────────

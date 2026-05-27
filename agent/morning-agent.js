@@ -400,7 +400,33 @@ function safeJsonParse(text, fallback = []) {
 
 // ── Token refresh for a specific uid ──────────────────────────────────────────
 
-async function getTokenForUid(uid, { readDBForUid, writeDBForUid, googleClientId, googleClientSecret }) {
+async function getTokenForUid(uid, { readDBForUid, writeDBForUid, googleClientId, googleClientSecret, googleTokensOverride, onTokenRefreshed }) {
+  // If tokens come from Supabase (Lovable users), use the override path
+  if (googleTokensOverride) {
+    const tokens = googleTokensOverride;
+    if (!tokens.refresh_token) throw new Error('Google refresh_token mancante da Supabase.');
+    if (!tokens.access_token || Date.now() > (tokens.expires_at || 0) - 300000) {
+      const r = await fetch('https://oauth2.googleapis.com/token', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: new URLSearchParams({
+          refresh_token: tokens.refresh_token,
+          client_id: googleClientId,
+          client_secret: googleClientSecret,
+          grant_type: 'refresh_token'
+        })
+      });
+      const refreshed = await r.json();
+      if (!refreshed.access_token) throw new Error('Token refresh fallito: ' + JSON.stringify(refreshed.error || refreshed));
+      tokens.access_token = refreshed.access_token;
+      tokens.expires_at = Date.now() + (refreshed.expires_in || 3600) * 1000;
+      // Notify caller so Supabase tokens can be updated
+      if (onTokenRefreshed) onTokenRefreshed({ access_token: tokens.access_token, expires_at: tokens.expires_at });
+    }
+    return tokens.access_token;
+  }
+
+  // Standard path — tokens from internal Railway DB
   const db = readDBForUid(uid);
   const tokens = db.googleTokens;
   if (!tokens?.refresh_token) throw new Error('Google non connesso. Vai in Impostazioni → Connetti Google.');
@@ -438,7 +464,10 @@ async function runMorningAgent({
   groqApiKey = '',
   perplexityApiKey = '',
   force = false,
-  log = console.log
+  log = console.log,
+  // Supabase/Lovable integration (optional)
+  googleTokensOverride = null,  // { access_token, refresh_token, expires_at } from Supabase
+  onTokenRefreshed = null,       // callback(tokens) to update Supabase after refresh
 }) {
   const logs = [];
   function emit(msg) { logs.push(msg); log(msg); }
@@ -454,7 +483,7 @@ async function runMorningAgent({
 
   // ── STEP 1: token ─────────────────────────────────────────────────────────────
   emit(`[1/9] Avvio agente per ${date}...`);
-  const token = await getTokenForUid(uid, { readDBForUid, writeDBForUid, googleClientId, googleClientSecret });
+  const token = await getTokenForUid(uid, { readDBForUid, writeDBForUid, googleClientId, googleClientSecret, googleTokensOverride, onTokenRefreshed });
 
   const todayStart = new Date(date + 'T00:00:00').toISOString();
   const todayEnd   = new Date(date + 'T23:59:59').toISOString();
