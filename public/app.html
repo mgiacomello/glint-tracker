@@ -233,6 +233,7 @@
     .tk-meta a { color: var(--accent); text-decoration: none; }
     .tk-meta a:hover { text-decoration: underline; }
     .tk-brief { font-size: 12px; color: var(--t1); margin-top: 5px; line-height: 1.55; }
+    .wait-badge { font-size: 10px; font-weight: 600; color: var(--amber); background: rgba(251,191,36,.12); border: 1px solid rgba(251,191,36,.25); border-radius: 4px; padding: 1px 7px; white-space: nowrap; }
     .tk-aps { margin-top: 7px; display: none; flex-direction: column; gap: 3px; }
     .tk-aps.open { display: flex; }
     .ap-row { display: flex; align-items: flex-start; gap: 8px; font-size: 12px; color: var(--t1); padding: 2px 0; }
@@ -1549,12 +1550,14 @@ function tkRow(t, st) {
   const qClass = {Q1:'is-q1',Q2:'is-q2',Q3:'is-q3',Q4:'is-q4'}[q]||'';
   const prio = t.priority || '';
   const proj = t.project || '';
+  const waiting = t.waitingOn || '';
   return `<div class="tk-row ${st.done?'done':''} ${qClass}" id="ti-${esc(t.id)}">
     <div class="q-dot ${q}"></div>
     <div class="tk-body">
       <div style="display:flex;align-items:center;gap:7px;flex-wrap:wrap;margin-bottom:2px">
         <span class="tk-title" style="margin-bottom:0">${esc(t.title)}</span>
         ${prio?`<span class="prio-badge ${esc(prio)}">${esc(prio)}</span>`:''}
+        ${waiting?`<span class="wait-badge" title="In attesa di risposta">⏳ ${esc(waiting)}</span>`:''}
       </div>
       <div class="tk-meta">${esc(t.due||'')}${t.link?` &nbsp;<a href="${esc(t.link)}" target="_blank">↗ Apri email</a>`:''}</div>
       ${brief?`<div class="tk-brief">${brief}</div>`:''}

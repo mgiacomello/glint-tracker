@@ -224,6 +224,13 @@ async function gmailGetMessage(token, id) {
   return r.json();
 }
 
+// Scarica l'INTERO thread (tutta la conversazione, non solo l'ultimo messaggio)
+async function gmailGetThread(token, threadId) {
+  const url = `https://gmail.googleapis.com/gmail/v1/users/me/threads/${threadId}?format=full`;
+  const r = await fetch(url, { headers: { Authorization: `Bearer ${token}` }, signal: AbortSignal.timeout(12000) });
+  return r.json();
+}
+
 async function gmailSend(token, to, subject, htmlBody) {
   const raw = [
     `To: ${to}`,
@@ -265,22 +272,35 @@ async function driveSearch(token, q, maxResults = 8) {
 
 // ── Message parsing helpers ────────────────────────────────────────────────────
 
+// Estrae il testo grezzo del corpo (preferendo text/plain → html), senza normalizzare gli spazi
+function extractBodyText(payload) {
+  if (!payload) return '';
+  if (payload.body?.data) return Buffer.from(payload.body.data, 'base64').toString('utf8');
+  const parts = payload.parts || [];
+  const plain = parts.find(p => p.mimeType === 'text/plain');
+  if (plain?.body?.data) return Buffer.from(plain.body.data, 'base64').toString('utf8');
+  const html = parts.find(p => p.mimeType === 'text/html');
+  if (html?.body?.data) return Buffer.from(html.body.data, 'base64').toString('utf8');
+  for (const p of parts) { const r = extractBodyText(p); if (r) return r; }
+  return '';
+}
+
 function gmailBody(message, maxLen = 2000) {
-  function extract(payload) {
-    if (!payload) return '';
-    if (payload.body?.data) return Buffer.from(payload.body.data, 'base64').toString('utf8');
-    const parts = payload.parts || [];
-    const html = parts.find(p => p.mimeType === 'text/html');
-    if (html?.body?.data) return Buffer.from(html.body.data, 'base64').toString('utf8');
-    const plain = parts.find(p => p.mimeType === 'text/plain');
-    if (plain?.body?.data) return Buffer.from(plain.body.data, 'base64').toString('utf8');
-    for (const p of parts) { const r = extract(p); if (r) return r; }
-    return '';
-  }
-  return extract(message.payload)
+  return extractBodyText(message.payload)
     .replace(/<style[^>]*>[\s\S]*?<\/style>/gi, '')
     .replace(/<[^>]+>/g, ' ')
     .replace(/\s+/g, ' ')
+    .trim()
+    .slice(0, maxLen);
+}
+
+// Variante che PRESERVA i newline (serve per togliere le righe citate riga-per-riga)
+function gmailBodyMultiline(message, maxLen = 2000) {
+  return extractBodyText(message.payload)
+    .replace(/<style[^>]*>[\s\S]*?<\/style>/gi, '')
+    .replace(/<[^>]+>/g, ' ')
+    .replace(/[ \t]+/g, ' ')      // collassa spazi/tab ma TIENE i newline
+    .replace(/\n{3,}/g, '\n\n')   // max una riga vuota
     .trim()
     .slice(0, maxLen);
 }
@@ -289,6 +309,41 @@ function gmailHeaders(message) {
   const h = {};
   (message.payload?.headers || []).forEach(x => { h[x.name.toLowerCase()] = x.value; });
   return h;
+}
+
+// Costruisce lo storico leggibile di un thread: tutti i messaggi in ordine cronologico,
+// così l'AI capisce l'intera conversazione (Re: Re: Re:) e non solo l'ultimo messaggio.
+// Rimuove le righe di quote ("> ...") per non duplicare il testo già presente nei msg precedenti.
+function gmailThreadDigest(thread, { maxMessages = 6, perMessageLen = 600 } = {}) {
+  const messages = thread?.messages || [];
+  if (!messages.length) return '';
+  // Tieni gli ultimi N messaggi (i più rilevanti), in ordine cronologico
+  const recent = messages.slice(-maxMessages);
+  const omitted = messages.length - recent.length;
+
+  const stripQuotes = (txt) => txt
+    .split('\n')
+    .filter(line => !/^\s*>/.test(line))          // righe citate
+    .join('\n')
+    .replace(/On .+ wrote:.*$/is, '')             // "On ... wrote:" (EN)
+    .replace(/Il giorno .+ ha scritto:.*$/is, '') // "Il giorno ... ha scritto:" (IT)
+    .replace(/-{2,}\s*Original Message\s*-{2,}.*$/is, '')
+    .replace(/\s+/g, ' ')
+    .trim();
+
+  const parts = recent.map((m, i) => {
+    const h = gmailHeaders(m);
+    const from = h.from || '';
+    const date = h.date || '';
+    const raw = gmailBodyMultiline(m, perMessageLen * 3); // newline preservati per togliere le quote
+    const body = stripQuotes(raw).slice(0, perMessageLen);
+    return `[Msg ${omitted + i + 1}/${messages.length}] Da: ${from} · ${date}\n${body || '(vuoto)'}`;
+  });
+
+  const head = messages.length > 1
+    ? `THREAD con ${messages.length} messaggi${omitted > 0 ? ` (mostrati gli ultimi ${recent.length})` : ''}:`
+    : `MESSAGGIO singolo:`;
+  return `${head}\n${parts.join('\n\n')}`;
 }
 
 function toHHMM(iso, tz = 'Europe/London') {
@@ -683,6 +738,7 @@ async function runMorningAgent({
         const hdrs = m.payload?.headers || [];
         emailHeaders.push({
           id: msg.id,
+          threadId: msg.threadId || m.threadId || null,
           category: catLabel,
           from: hdrs.find(h => h.name === 'From')?.value || '',
           subject: hdrs.find(h => h.name === 'Subject')?.value || '(no subject)',
@@ -704,39 +760,53 @@ async function runMorningAgent({
   emit(`  ↳ ${principaleHeaders.length} email Principale trovate`);
   if (principaleHeaders.length > 0) {
     const toAnalyze = principaleHeaders.slice(0, 35);  // cap a 35 per tenere il payload sotto i limiti
-    emit(`  ↳ Scarico corpo di ${toAnalyze.length} email Principale...`);
+    emit(`  ↳ Scarico thread completo di ${toAnalyze.length} email Principale...`);
 
     const emailsWithBody = [];
+    let threadsRead = 0, multiMsgThreads = 0;
     for (const e of toAnalyze) {
       try {
-        const full = await gmailGetMessage(token, e.id);
-        emailsWithBody.push({ ...e, body: gmailBody(full, 250) });
-      } catch { emailsWithBody.push({ ...e, body: '' }); }
+        if (e.threadId) {
+          // Scarica l'INTERA conversazione (storico), non solo l'ultimo messaggio
+          const thread = await gmailGetThread(token, e.threadId);
+          const msgCount = thread?.messages?.length || 1;
+          if (msgCount > 1) multiMsgThreads++;
+          threadsRead++;
+          emailsWithBody.push({ ...e, body: gmailThreadDigest(thread, { maxMessages: 6, perMessageLen: 550 }), threadSize: msgCount });
+        } else {
+          const full = await gmailGetMessage(token, e.id);
+          emailsWithBody.push({ ...e, body: gmailBody(full, 800), threadSize: 1 });
+        }
+      } catch { emailsWithBody.push({ ...e, body: '', threadSize: 1 }); }
     }
+    emit(`  ↳ ${threadsRead} thread letti · ${multiMsgThreads} con storico multi-messaggio`);
 
     emit(`  ↳ Analisi Gemini di ${emailsWithBody.length} email...`);
     try {
       const emailList = emailsWithBody.map((e, i) =>
-        `EMAIL_${i+1} [id:${e.id}] [${e.category}]\nDa: ${e.from}\nOggetto: ${e.subject}\nData: ${e.date}\n${e.body}`
-      ).join('\n\n---\n\n');
+        `THREAD_${i+1} [id:${e.id}] [${e.category}] [${e.threadSize || 1} msg]\nOggetto: ${e.subject}\nUltimo mittente: ${e.from}\nData: ${e.date}\n${e.body}`
+      ).join('\n\n═══════════\n\n');
 
       const text = await aiCall(aiKeys,
         `Sei l'AI chief of staff di ${settings.userName||'Marco'} (${settings.primaryEmail||''}).
 Data oggi: ${date}.
 
-Analizza queste email e trasformale in task esecutivi. Per ogni email:
-- TITOLO: riformula in modo azionabile e descrittivo (es: "Finalizzazione Contratto Vodafone" non "Re: FWD: update"). Max 55 caratteri. Descrive COSA va fatto, non il subject dell'email.
-- ANALYSIS: 2-3 frasi che spiegano PERCHÉ questo task è importante, il contesto di business, e l'impatto se non gestito. Concreto e specifico.
-- ACTION POINTS: 1-3 azioni concrete, verbi all'infinito.
+Per ogni voce qui sotto ricevi lo STORICO COMPLETO del thread email (tutti i messaggi della conversazione in ordine cronologico, non solo l'ultimo). USA l'intero thread per capire il contesto reale: a che punto è la conversazione, cosa è già stato detto/promesso, chi deve rispondere a chi, e cosa serve fare ADESSO.
+
+Analizza ogni thread e trasformalo in un task esecutivo. Per ognuno:
+- TITOLO: riformula in modo azionabile e descrittivo (es: "Finalizzazione Contratto Vodafone" non "Re: FWD: update"). Max 55 caratteri. Descrive COSA va fatto ORA, non il subject.
+- ANALYSIS: 2-3 frasi. Spiega a che punto è il thread (es: "Hanno già inviato la bozza, attendono la tua firma"), PERCHÉ conta, e l'impatto se ignorato. Cita fatti concreti emersi DALLO STORICO della conversazione, non genericità.
+- ACTION POINTS: 1-3 azioni concrete (verbi all'infinito), coerenti con l'ultimo stato del thread. Se la palla è in mano a qualcun altro, dillo (es: "Sollecitare risposta da X").
 - QUADRANT: Q1=urgente+importante, Q2=importante non urgente, Q3=urgente non importante, Q4=né urgente né importante.
 - PRIORITY: CRITICO (scadenza oggi/domani o deal rilevante), HIGH (questa settimana), MEDIUM, LOW.
+- WAITING_ON: se stai aspettando una risposta da qualcuno, il suo nome; altrimenti "".
 
 Formato JSON (IMPORTANTE: id = solo il codice alfanumerico tra [id:...]):
-{"id":"CODICE_ID","title":"Titolo Azionabile","priority":"CRITICO|HIGH|MEDIUM|LOW","quadrant":"Q1|Q2|Q3|Q4","analysis":"Analisi contestuale 2-3 frasi del perché questo task conta","actionPoints":["Azione 1","Azione 2"],"from":"mittente","project":"nome progetto/azienda se rilevante"}
+{"id":"CODICE_ID","title":"Titolo Azionabile","priority":"CRITICO|HIGH|MEDIUM|LOW","quadrant":"Q1|Q2|Q3|Q4","analysis":"Analisi basata sullo storico del thread","actionPoints":["Azione 1","Azione 2"],"waitingOn":"","from":"mittente","project":"nome progetto/azienda se rilevante"}
 
 Rispondi SOLO con array JSON valido.
 
-EMAIL:\n${emailList}`, 32768);
+THREAD EMAIL:\n${emailList}`, 32768);
 
       emit(`  ↳ Gemini risposta (prime 200 car): ${text.slice(0, 200)}`);
       emailTasks = safeJsonParse(text, []);
@@ -758,6 +828,7 @@ EMAIL:\n${emailList}`, 32768);
     priority: t.priority || null,
     brief: t.analysis || t.brief || '',
     project: t.project || '',
+    waitingOn: t.waitingOn || '',
     link: `https://mail.google.com/mail/u/0/#inbox/${t.id}`,
     actionPoints: Array.isArray(t.actionPoints) ? t.actionPoints : []
   }));
