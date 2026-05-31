@@ -1239,7 +1239,7 @@ SOLO JSON oggetto singolo.`, 400);
 
   for (const task of result.tasks) {
     if (!day.tasks.find(t => t.id === task.id)) {
-      day.tasks.push({ id: task.id, title: task.title, due: task.due, quadrant: task.quadrant, brief: task.brief, link: task.link });
+      day.tasks.push({ id: task.id, title: task.title, due: task.due, quadrant: task.quadrant, brief: task.brief, link: task.link, priority: task.priority || null, waitingOn: task.waitingOn || '', project: task.project || '' });
       day.items[task.id] = {
         done: false, comment: '', quadrant: task.quadrant, type: 'task',
         actionPoints: task.actionPoints.map((t, i) => ({ id: `ap-${Date.now()}-${i}`, text: t, done: false }))

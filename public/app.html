@@ -713,7 +713,30 @@
     .home-sh-label { font-size:10px; font-weight:700; color:var(--t2); text-transform:uppercase; letter-spacing:.1em; flex-shrink:0; }
     .home-sh-badge { font-size:10px; font-weight:700; color:var(--t2); background:rgba(255,255,255,.06); padding:2px 8px; border-radius:10px; flex-shrink:0; }
 
-    /* Agenda rows */
+    /* ── RECAP BLOCKS (Email | Agenda) — i due recap separati ── */
+    .recap-block { margin-top:18px; background:var(--s1); border:1px solid var(--line); border-radius:14px; overflow:hidden; }
+    .recap-head { display:flex; align-items:center; gap:9px; padding:13px 16px; border-bottom:1px solid var(--line2); background:rgba(255,255,255,.015); }
+    .recap-icon { font-size:17px; flex-shrink:0; }
+    .recap-title { font-size:14px; font-weight:700; color:var(--t0); letter-spacing:-.01em; }
+    .recap-sub { margin-left:auto; font-size:11px; font-weight:600; color:var(--t2); }
+    .recap-list { padding:4px 14px; }
+    .recap-empty { padding:22px 16px; text-align:center; font-size:13px; color:var(--t2); }
+
+    /* Agenda recap rows */
+    .ag-row { padding:11px 0; border-bottom:1px solid var(--line2); }
+    .ag-row:last-child { border-bottom:none; }
+    .ag-main { display:flex; align-items:center; gap:8px; }
+    .ag-time { font-size:12px; font-family:'JetBrains Mono',monospace; color:var(--t2); min-width:44px; flex-shrink:0; }
+    .ag-star { font-size:11px; flex-shrink:0; color:#f59e0b; }
+    .ag-title { flex:1; font-size:13px; font-weight:500; color:var(--t0); min-width:0; cursor:pointer; }
+    .ag-title.done { text-decoration:line-through; color:var(--t2); }
+    .ag-acts { display:flex; align-items:center; gap:6px; flex-shrink:0; }
+    .ag-brief-btn { font-size:10px; font-weight:600; color:var(--accent); background:rgba(124,110,245,.1); border:1px solid rgba(124,110,245,.22); border-radius:6px; padding:2px 8px; cursor:pointer; white-space:nowrap; transition:all .12s; }
+    .ag-brief-btn.on { background:var(--accent); color:#fff; }
+    .ag-people { font-size:11px; color:var(--t2); margin:4px 0 0 52px; }
+    .ag-brief { font-size:12.5px; line-height:1.7; color:var(--t1); margin:8px 0 2px 52px; padding:11px 13px; background:rgba(124,110,245,.05); border-left:2px solid var(--accent); border-radius:0 8px 8px 0; white-space:normal; }
+
+    /* Agenda rows (legacy) */
     .agenda-row { display:flex; align-items:center; gap:8px; padding:10px 0; border-bottom:1px solid var(--line2); }
     .agenda-row:last-child { border-bottom:none; }
     .agenda-time { font-size:12px; font-family:'JetBrains Mono',monospace; color:var(--t2); min-width:44px; flex-shrink:0; }
@@ -947,7 +970,7 @@ let _agentLastRun = null; // ISO string from /api/morning-agent/status
 // ── Mock mode (audit/demo only — ?mock=1) ─────────────────────────────────
 const _MOCK = new URLSearchParams(location.search).get('mock') === '1';
 if (_MOCK) {
-  const _MOCK_DATA = {events:[{id:'e1',title:'Standup team prodotto',time:'09:30',participants:'Luca, Sara, Marta',meetLink:'https://meet.google.com/abc'},{id:'e2',title:'Call con investor — Sequoia',time:'11:00',participants:'Marco Rossi',meetLink:'https://meet.google.com/xyz'},{id:'e3',title:'Design review Sprint 12',time:'15:00',participants:'Sara Bianchi'}],tasks:[{id:'t1',title:'Re: Proposta partnership Vodafone — scadenza oggi',quadrant:'Q1',due:'Oggi',brief:'Rispondere entro le 17:00.',link:'#'},{id:'t2',title:'Re: Feedback investitori Q1 report',quadrant:'Q1',due:'Domani',brief:'Preparare slide deck aggiornato.',link:'#'},{id:'t3',title:'Newsletter Product Hunt — nuovi tool AI',quadrant:'Q2',due:'',brief:'3 nuovi strumenti rilevanti.',link:'#'},{id:'t4',title:'Booking confirmation — hotel Milano',quadrant:'Q3',due:'15 Mag',brief:'Confermare entro giovedì.',link:'#'},{id:'t5',title:'Re: Promo LinkedIn Premium 40%',quadrant:'Q4',due:'',brief:'Sconto limitato.',link:'#'}],items:{e1:{done:true,comment:'',actionPoints:[],quadrant:'Q1',type:'event'},e2:{done:false,comment:'',actionPoints:[{id:'ap1',text:'Preparare deck 5 slide',done:false},{id:'ap2',text:'Confermare termini deal',done:true}],quadrant:'Q1',type:'event'},e3:{done:false,comment:'',actionPoints:[],quadrant:'Q1',type:'event'},t1:{done:false,comment:'',quadrant:'Q1',type:'task',actionPoints:[{id:'ap3',text:'Rivedere prezzi con CFO',done:false}]},t2:{done:false,comment:'',quadrant:'Q1',type:'task',actionPoints:[]},t3:{done:false,comment:'',quadrant:'Q2',type:'task',actionPoints:[]},t4:{done:false,comment:'',quadrant:'Q3',type:'task',actionPoints:[]},t5:{done:true,comment:'',quadrant:'Q4',type:'task',actionPoints:[]}},health:{sleepScore:84,hrv:62,restingHR:52,stressLevel:28,readinessScore:88,steps:7420,totalSleepMin:437,recommendations:{activity:'30 min camminata nel pomeriggio',mindset:'Meditazione prima della call investor'}},insights:{dayType:'maker',growthBrief:'Maker Day ideale per deep work. La call con Sequoia alle 11 è il momento chiave — prepara metriche MoM e ARR. Stress basso (28) e HRV ottimo (62ms) suggeriscono picco cognitivo prima di pranzo.',studyItems:[{title:'OpenAI lancia GPT-5 con reasoning avanzato',source:'Product Hunt',summary:'GPT-5 supera Claude 3.5 nei benchmark. Implicazioni per i prodotti AI.',priority:'high',category:'AI',recommendation:'Valuta integrazione nei prossimi 30gg',link:'#',done:false},{title:'Come Notion ha acquisito 30M utenti senza paid ads',source:'Growth Newsletter',summary:'Community-led growth e template virali.',priority:'high',category:'Growth',link:'#',done:false},{title:'GDPR AI — nuova normativa giugno',source:'Legal Update',summary:'Obbligo di disclosure per AI che prende decisioni autonome.',priority:'medium',category:'Legal',link:'#',done:false}]},family:{alessandraEvents:[{time:'18:30',title:'Yoga in centro',isAway:false},{time:'20:00',title:'Cena con le amiche',isAway:true}],tommasoAlerts:[{title:'Verifica matematica domani — frazioni',link:'#',priority:'high'},{title:'Gita scolastica 16 maggio — modulo',link:'#',priority:'medium'}]},network:{city:'Milano, Italy',events:[{title:'StartupItalia Open Summit',date:'14 Maggio 2026',time:'09:00',description:'Il più grande evento startup italiano.',link:'#',location:'Base Milano',tags:['startup','networking']},{title:'Milano VC Founders Dinner',date:'15 Maggio 2026',time:'19:30',description:'Cena privata con 20 founder e 5 VC.',link:'#',location:'Brera',tags:['vc','founders']},{title:'AI Product Meetup — Politecnico',date:'16 Maggio 2026',time:'18:00',description:'Demo prodotti AI con focus LLM B2B.',link:'#',location:'PoliMi',tags:['AI','product']}],_refreshedAt:new Date().toISOString()},localActivities:{city:'Milano, Italy',items:[{type:'solo',title:'Mostra Basquiat — Palazzo Reale',description:'Retrospettiva di 80 opere del maestro neo-espressionista.',category:'art',location:'Piazza Duomo',price:'€€',why:'Ultima settimana, quasi sold-out',link:'#'},{type:'solo',title:'Mercato Navigli Vintage',description:'Vinili, libri, design anni 70.',category:'culture',location:'Navigli',price:'€',why:'Perfetto per staccare',link:'#'},{type:'couple',title:'Cena da Seta — 1★ Michelin',description:'Cucina milanese contemporanea in cortile del 600.',category:'food',location:'Brera',price:'€€€',why:'Prenotazione disponibile giovedì',link:'#'},{type:'couple',title:'Aperitivo Terrazza Triennale',description:'Vista Parco Sempione al tramonto.',category:'food',location:'Parco Sempione',price:'€€',why:'Meteo perfetto questo week',link:'#'},{type:'family',title:'MUBA — Laboratorio Piccoli Architetti',description:'Costruire con materiali di riciclo.',category:'culture',location:'Porta Volta',price:'€€',why:'Perfetto per 8 anni',link:'#'},{type:'family',title:'Sea Life Gardaland',description:'Acquario con squali e tartarughe.',category:'nature',location:'Desenzano del Garda',price:'€€',why:'Gita di giornata ideale',link:'#'},{type:'restaurant',title:'Trippa Milano — Pop-up stagionale',description:'Chef Diego Rossi, format pop-up.',category:'food',location:'Porta Romana',price:'€€',why:'Sold-out in 2h, lista attesa',link:'#'},{type:'restaurant',title:'Iyo Omakase',description:'Sushi 18 portate, stella Michelin.',category:'food',location:'Corso Sempione',price:'€€€',why:'Il più hype su Instagram food ora',link:'#'}],_refreshedAt:new Date().toISOString()},userSettings:{familyMembers:[{role:'spouse',name:'Alessandra'},{role:'child',name:'Tommaso',age:8}],homeCity:'Milano, Italy'}};
+  const _MOCK_DATA = {events:[{id:'e1',title:'Standup team prodotto',time:'09:30',participants:'Luca, Sara, Marta',meetLink:'https://meet.google.com/abc'},{id:'e2',title:'Call con investor — Sequoia',time:'11:00',participants:'Marco Rossi',meetLink:'https://meet.google.com/xyz'},{id:'e3',title:'Design review Sprint 12',time:'15:00',participants:'Sara Bianchi'}],tasks:[{id:'t1',title:'Finalizzare partnership Vodafone',quadrant:'Q1',due:'Oggi',priority:'CRITICO',project:'Vodafone',brief:'Il thread è a 4 messaggi: hanno inviato la bozza finale martedì, attendono la tua conferma sui termini di pricing prima di passare al legal. Rispondere entro le 17:00 sblocca la firma.',link:'#'},{id:'t2',title:'Slide deck per investitori Q1',quadrant:'Q1',due:'Domani',priority:'HIGH',project:'Fundraise',waitingOn:'Sara (dati ARR)',brief:'Marco ha chiesto il report aggiornato; sei in attesa dei dati ARR da Sara prima di completare il deck.',link:'#'},{id:'t3',title:'Newsletter Product Hunt — nuovi tool AI',quadrant:'Q2',due:'',brief:'3 nuovi strumenti rilevanti.',link:'#'},{id:'t4',title:'Booking confirmation — hotel Milano',quadrant:'Q3',due:'15 Mag',brief:'Confermare entro giovedì.',link:'#'},{id:'t5',title:'Re: Promo LinkedIn Premium 40%',quadrant:'Q4',due:'',brief:'Sconto limitato.',link:'#'}],items:{e1:{done:true,comment:'',actionPoints:[],quadrant:'Q1',type:'event'},e2:{done:false,comment:'',actionPoints:[{id:'ap1',text:'Preparare deck 5 slide',done:false},{id:'ap2',text:'Confermare termini deal',done:true}],quadrant:'Q1',type:'event',brief:'CONTESTO: Sequoia ha mostrato interesse nel round seed dopo la demo di aprile. Negli ultimi scambi email hanno chiesto le metriche MoM e il dettaglio CAC/LTV.\nOBIETTIVO: Ottenere un secondo meeting con il partner senior.\nPUNTI APERTI: pricing del round, dimensione del ticket, board seat.\nACTION PRE-MEETING: porta lo slide con ARR aggiornato; prepara risposta sulla runway (18 mesi); rivedi i numeri di churn.'},e3:{done:false,comment:'',actionPoints:[],quadrant:'Q1',type:'event'},t1:{done:false,comment:'',quadrant:'Q1',type:'task',actionPoints:[{id:'ap3',text:'Rivedere prezzi con CFO',done:false}]},t2:{done:false,comment:'',quadrant:'Q1',type:'task',actionPoints:[]},t3:{done:false,comment:'',quadrant:'Q2',type:'task',actionPoints:[]},t4:{done:false,comment:'',quadrant:'Q3',type:'task',actionPoints:[]},t5:{done:true,comment:'',quadrant:'Q4',type:'task',actionPoints:[]}},health:{sleepScore:84,hrv:62,restingHR:52,stressLevel:28,readinessScore:88,steps:7420,totalSleepMin:437,recommendations:{activity:'30 min camminata nel pomeriggio',mindset:'Meditazione prima della call investor'}},insights:{dayType:'maker',growthBrief:'Maker Day ideale per deep work. La call con Sequoia alle 11 è il momento chiave — prepara metriche MoM e ARR. Stress basso (28) e HRV ottimo (62ms) suggeriscono picco cognitivo prima di pranzo.',studyItems:[{title:'OpenAI lancia GPT-5 con reasoning avanzato',source:'Product Hunt',summary:'GPT-5 supera Claude 3.5 nei benchmark. Implicazioni per i prodotti AI.',priority:'high',category:'AI',recommendation:'Valuta integrazione nei prossimi 30gg',link:'#',done:false},{title:'Come Notion ha acquisito 30M utenti senza paid ads',source:'Growth Newsletter',summary:'Community-led growth e template virali.',priority:'high',category:'Growth',link:'#',done:false},{title:'GDPR AI — nuova normativa giugno',source:'Legal Update',summary:'Obbligo di disclosure per AI che prende decisioni autonome.',priority:'medium',category:'Legal',link:'#',done:false}]},family:{alessandraEvents:[{time:'18:30',title:'Yoga in centro',isAway:false},{time:'20:00',title:'Cena con le amiche',isAway:true}],tommasoAlerts:[{title:'Verifica matematica domani — frazioni',link:'#',priority:'high'},{title:'Gita scolastica 16 maggio — modulo',link:'#',priority:'medium'}]},network:{city:'Milano, Italy',events:[{title:'StartupItalia Open Summit',date:'14 Maggio 2026',time:'09:00',description:'Il più grande evento startup italiano.',link:'#',location:'Base Milano',tags:['startup','networking']},{title:'Milano VC Founders Dinner',date:'15 Maggio 2026',time:'19:30',description:'Cena privata con 20 founder e 5 VC.',link:'#',location:'Brera',tags:['vc','founders']},{title:'AI Product Meetup — Politecnico',date:'16 Maggio 2026',time:'18:00',description:'Demo prodotti AI con focus LLM B2B.',link:'#',location:'PoliMi',tags:['AI','product']}],_refreshedAt:new Date().toISOString()},localActivities:{city:'Milano, Italy',items:[{type:'solo',title:'Mostra Basquiat — Palazzo Reale',description:'Retrospettiva di 80 opere del maestro neo-espressionista.',category:'art',location:'Piazza Duomo',price:'€€',why:'Ultima settimana, quasi sold-out',link:'#'},{type:'solo',title:'Mercato Navigli Vintage',description:'Vinili, libri, design anni 70.',category:'culture',location:'Navigli',price:'€',why:'Perfetto per staccare',link:'#'},{type:'couple',title:'Cena da Seta — 1★ Michelin',description:'Cucina milanese contemporanea in cortile del 600.',category:'food',location:'Brera',price:'€€€',why:'Prenotazione disponibile giovedì',link:'#'},{type:'couple',title:'Aperitivo Terrazza Triennale',description:'Vista Parco Sempione al tramonto.',category:'food',location:'Parco Sempione',price:'€€',why:'Meteo perfetto questo week',link:'#'},{type:'family',title:'MUBA — Laboratorio Piccoli Architetti',description:'Costruire con materiali di riciclo.',category:'culture',location:'Porta Volta',price:'€€',why:'Perfetto per 8 anni',link:'#'},{type:'family',title:'Sea Life Gardaland',description:'Acquario con squali e tartarughe.',category:'nature',location:'Desenzano del Garda',price:'€€',why:'Gita di giornata ideale',link:'#'},{type:'restaurant',title:'Trippa Milano — Pop-up stagionale',description:'Chef Diego Rossi, format pop-up.',category:'food',location:'Porta Romana',price:'€€',why:'Sold-out in 2h, lista attesa',link:'#'},{type:'restaurant',title:'Iyo Omakase',description:'Sushi 18 portate, stella Michelin.',category:'food',location:'Corso Sempione',price:'€€€',why:'Il più hype su Instagram food ora',link:'#'}],_refreshedAt:new Date().toISOString()},userSettings:{familyMembers:[{role:'spouse',name:'Alessandra'},{role:'child',name:'Tommaso',age:8}],homeCity:'Milano, Italy'}};
   window.fetch = async (url) => new Response(JSON.stringify(url.includes('/api/day/') ? _MOCK_DATA : {uid:'mock',name:'Marco Giacomello',email:'marco@test.com',picture:''}), {status:200,headers:{'Content-Type':'application/json'}});
 }
 
@@ -1313,8 +1336,19 @@ function render() {
   const syncedAt  = dayData?._syncedAt;
   const syncedStr = syncedAt ? new Date(syncedAt).toLocaleTimeString('it-IT',{hour:'2-digit',minute:'2-digit'}) : null;
 
-  // Task urgenti Q1 (max 5)
-  const urgentTasks = q1.filter(t=>!items[t.id]?.done).slice(0,5);
+  // ── RECAP EMAIL: tutti i task derivati da mail, ordinati per priorità ──
+  const _prioRank = { CRITICO:0, HIGH:1, MEDIUM:2, LOW:3 };
+  const emailTasks = tasks
+    .filter(t=>!items[t.id]?.done)
+    .sort((a,b)=>{
+      const qa=(_prioRank[a.priority]??(a.quadrant==='Q1'?0:2));
+      const qb=(_prioRank[b.priority]??(b.quadrant==='Q1'?0:2));
+      return qa-qb;
+    });
+  const emailDoneN = tasks.filter(t=>items[t.id]?.done).length;
+
+  // ── RECAP AGENDA: eventi del giorno (con mini-brief) ──
+  const agendaEvents = events;
 
   // Proactive AI (max 2)
   const pa = (ins.proactiveActions||[]).filter(p=>!p._dismissed).slice(0,2);
@@ -1379,47 +1413,31 @@ function render() {
         }
       </div>
 
-      <!-- Agenda -->
-      ${events.length ? `
-      <div class="home-sh">
-        <span class="home-sh-label">Agenda</span>
-        <div class="home-sh-line"></div>
-        <span class="home-sh-badge">${events.length}</span>
+      <!-- ═══ RECAP 1: EMAIL ═══ -->
+      <div class="recap-block">
+        <div class="recap-head">
+          <span class="recap-icon">📧</span>
+          <span class="recap-title">Recap Email</span>
+          <span class="recap-sub">${emailTasks.length} da gestire${emailDoneN?` · ${emailDoneN} fatti`:''}</span>
+        </div>
+        ${emailTasks.length
+          ? `<div class="recap-list">${emailTasks.map(t=>tkRow(t, items[t.id]||{})).join('')}</div>`
+          : `<div class="recap-empty">${_agentRunning?'⏳ Analisi email in corso…':'Nessun task dalle email. Inbox pulita ✓'}</div>`
+        }
       </div>
-      <div>
-        ${events.map(e=>{
-          const st=items[e.id]||{};
-          const key=e.title.toLowerCase().match(/investor|sequoia|client|board|ceo|cto|founder/);
-          return `<div class="agenda-row">
-            <span class="agenda-time">${esc(e.time||'—')}</span>
-            <span class="agenda-star">${key?'★':''}</span>
-            <span class="agenda-title${st.done?' done':''}">${esc(e.title)}</span>
-            <div style="display:flex;align-items:center;gap:5px;flex-shrink:0">
-              ${e.meetLink?`<a href="${esc(e.meetLink)}" target="_blank" class="btn-join" style="font-size:10px;padding:3px 8px">Join</a>`:''}
-              <button class="btn-circle${st.done?' done':''}" onclick="toggleDone('${esc(e.id)}','event')" style="width:20px;height:20px;font-size:10px">${st.done?'✓':''}</button>
-            </div>
-          </div>`;
-        }).join('')}
-      </div>` : ''}
 
-      <!-- Priorità Q1 -->
-      ${urgentTasks.length ? `
-      <div class="home-sh">
-        <span class="home-sh-label">Priorità</span>
-        <div class="home-sh-line"></div>
-        <span class="home-sh-badge">${urgentTasks.length}</span>
+      <!-- ═══ RECAP 2: AGENDA ═══ -->
+      <div class="recap-block">
+        <div class="recap-head">
+          <span class="recap-icon">📅</span>
+          <span class="recap-title">Recap Agenda</span>
+          <span class="recap-sub">${agendaEvents.length} ${agendaEvents.length===1?'impegno':'impegni'}</span>
+        </div>
+        ${agendaEvents.length
+          ? `<div class="recap-list">${agendaEvents.map(e=>agendaRecapRow(e, items[e.id]||{})).join('')}</div>`
+          : `<div class="recap-empty">Nessun evento in calendario oggi.</div>`
+        }
       </div>
-      <div>
-        ${urgentTasks.map(t=>{
-          const st=items[t.id]||{};
-          return `<div class="prio-row">
-            <div class="prio-dot"></div>
-            <span class="prio-title" onclick="openItem('${esc(t.id)}','task')">${esc(t.title)}</span>
-            ${t.due?`<span class="prio-due">${esc(t.due)}</span>`:''}
-            <div class="prio-circle${st.done?' done':''}" onclick="toggleDone('${esc(t.id)}','task')">${st.done?'✓':''}</div>
-          </div>`;
-        }).join('')}
-      </div>` : ''}
 
       <!-- Inbox -->
       ${inboxN > 0 ? `
@@ -1544,6 +1562,38 @@ function render() {
 }
 
 // ── Row builders ───────────────────────────────────────────────────────────
+
+// Riga del Recap Agenda: evento + mini-brief espandibile (come affrontarlo al meglio)
+function agendaRecapRow(e, st) {
+  const brief = (st.brief || e.brief || '').trim();
+  const briefHtml = esc(brief).replace(/\n/g,'<br/>');
+  const key = (e.title||'').toLowerCase().match(/investor|sequoia|client|board|ceo|cto|founder|pitch|demo/);
+  const hasBrief = brief.length > 0;
+  return `<div class="ag-row ${st.done?'done':''}" id="ag-${esc(e.id)}">
+    <div class="ag-main">
+      <span class="ag-time">${esc(e.time||'—')}</span>
+      ${key?'<span class="ag-star">★</span>':''}
+      <span class="ag-title${st.done?' done':''}" ${hasBrief?`onclick="toggleAgBrief('${esc(e.id)}')"`:''}>${esc(e.title)}</span>
+      <div class="ag-acts">
+        ${hasBrief?`<button class="ag-brief-btn" id="agb-btn-${esc(e.id)}" onclick="toggleAgBrief('${esc(e.id)}')" title="Come affrontarlo">ⓘ brief</button>`:''}
+        ${e.meetLink?`<a href="${esc(e.meetLink)}" target="_blank" class="btn-join" style="font-size:10px;padding:3px 8px">Join</a>`:''}
+        <button class="btn-circle${st.done?' done':''}" onclick="toggleDone('${esc(e.id)}','event')" style="width:20px;height:20px;font-size:10px">${st.done?'✓':''}</button>
+      </div>
+    </div>
+    ${e.participants?`<div class="ag-people">👥 ${esc(e.participants)}</div>`:''}
+    ${hasBrief?`<div class="ag-brief" id="agb-${esc(e.id)}" style="display:none">${briefHtml}</div>`:''}
+  </div>`;
+}
+
+function toggleAgBrief(id) {
+  const el = document.getElementById('agb-'+id);
+  const btn = document.getElementById('agb-btn-'+id);
+  if (!el) return;
+  const open = el.style.display !== 'none';
+  el.style.display = open ? 'none' : 'block';
+  if (btn) btn.classList.toggle('on', !open);
+}
+
 function tkRow(t, st) {
   const aps=st.actionPoints||[], q=(t.quadrant||'Q2').toUpperCase();
   const brief = esc(t.brief||'').replace(/\n/g,'<br/>');
