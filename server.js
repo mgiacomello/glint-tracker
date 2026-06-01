@@ -94,7 +94,8 @@ app.use(session({
 app.use(express.static('public'));
 
 // ── Auth middleware ───────────────────────────────────────────────────────────
-const PUBLIC_API = ['/auth/google', '/api/me', '/api/logout', '/api/health', '/api/diag'];
+// Route con auth propria (SYSTEM_TOKEN o JWT Supabase) → bypassano la session auth globale
+const PUBLIC_API = ['/auth/google', '/api/me', '/api/logout', '/api/health', '/api/diag', '/api/cron/', '/api/lovable/'];
 app.use((req, res, next) => {
   // System token bypass (for scheduled tasks)
   const authHeader = req.headers.authorization || '';
@@ -5096,6 +5097,105 @@ app.get('/api/lovable/status', (req, res) => {
     supabase: !!process.env.SUPABASE_SERVICE_ROLE_KEY,
     ai: cfg.geminiApiKey ? 'gemini' : cfg.groqApiKey ? 'groq' : cfg.anthropicApiKey ? 'anthropic' : null
   });
+});
+
+// ── MORNING BRIEFING SCHEDULER ────────────────────────────────────────────────
+// Esegue automaticamente il briefing per ogni utente al suo briefingTime locale.
+// Rispetta timezone + briefingTime per-utente. Idempotente (una volta al giorno).
+// In-process: funziona finché il servizio Railway è attivo. Per affidabilità extra
+// c'è anche POST /api/cron/morning (cron esterno con SYSTEM_TOKEN).
+
+const _schedulerSeen = new Set(); // `${uid}:${localDate}` già gestiti in questo processo
+
+async function runMorningForUser(uid, user, date) {
+  const cfg = readConfig();
+  if (!cfg.anthropicApiKey && !cfg.geminiApiKey && !cfg.groqApiKey) {
+    console.warn('[scheduler] nessuna API AI configurata, salto');
+    return;
+  }
+  const { runMorningAgent } = require('./agent/morning-agent');
+  const db = readDBForUid(uid);
+  const settings = {
+    ...DEFAULT_SETTINGS,
+    userName: user.name || '',
+    briefingEmail: user.email || '',
+    primaryEmail: user.email || '',
+    ...(db.userSettings || {})
+  };
+  await als.run({ uid }, async () => {
+    const result = await runMorningAgent({
+      uid, date, settings, readDBForUid, writeDBForUid,
+      googleClientId: GOOGLE_CLIENT_ID, googleClientSecret: GOOGLE_CLIENT_SECRET,
+      anthropicApiKey: cfg.anthropicApiKey, geminiApiKey: cfg.geminiApiKey, groqApiKey: cfg.groqApiKey,
+      perplexityApiKey: settings.perplexityApiKey || process.env.PERPLEXITY_API_KEY || '',
+      force: false, log: () => {}
+    });
+    const fresh = readDBForUid(uid);
+    fresh.morningAgentLastRun = new Date().toISOString();
+    writeDBForUid(uid, fresh);
+    try {
+      const s = result?.summary || {};
+      const q1 = s.q1Tasks || 0;
+      sendPushToUser(uid, {
+        title: '☀️ Briefing pronto',
+        body: `${q1 > 0 ? `🔴 ${q1} urgenti · ` : ''}${s.events || 0} riunioni · ${s.tasks || 0} email`,
+        tag: 'morning-brief', url: '/app.html', requireInteraction: false
+      }).catch(() => {});
+    } catch {}
+    console.log(`[scheduler] ✅ briefing completato per ${user.email || uid}`);
+  });
+}
+
+// Itera tutti gli utenti; esegue il briefing per chi è "in orario" e non l'ha già fatto oggi.
+// ignoreTime=true → esegue subito (usato dal cron esterno), mantenendo il guard giornaliero.
+async function checkMorningSchedule({ ignoreTime = false } = {}) {
+  let users;
+  try { users = readUsers(); } catch { return; }
+  for (const [uid, user] of Object.entries(users)) {
+    try {
+      const db = readDBForUid(uid);
+      if (!db.googleTokens?.refresh_token) continue; // serve Google connesso
+
+      const settings = { ...DEFAULT_SETTINGS, ...(db.userSettings || {}) };
+      const tz = settings.timezone || 'Europe/London';
+      const briefingTime = settings.briefingTime || '06:30';
+
+      const now = new Date();
+      const localDate = now.toLocaleDateString('en-CA', { timeZone: tz });           // YYYY-MM-DD
+      const localHHMM = now.toLocaleTimeString('en-GB', { timeZone: tz, hour: '2-digit', minute: '2-digit' });
+
+      const key = `${uid}:${localDate}`;
+      if (_schedulerSeen.has(key)) continue;
+
+      // Già eseguito oggi? (sopravvive ai riavvii via morningAgentLastRun)
+      const lastRunDate = db.morningAgentLastRun
+        ? new Date(db.morningAgentLastRun).toLocaleDateString('en-CA', { timeZone: tz })
+        : null;
+      if (lastRunDate === localDate) { _schedulerSeen.add(key); continue; }
+
+      // Orario raggiunto?
+      if (ignoreTime || localHHMM >= briefingTime) {
+        _schedulerSeen.add(key);
+        console.log(`[scheduler] avvio briefing ${user.email || uid} · ${localHHMM} ${tz}`);
+        await runMorningForUser(uid, user, localDate);
+      }
+    } catch (e) {
+      console.warn(`[scheduler] errore per ${uid}:`, e.message);
+    }
+  }
+}
+
+// Controlla ogni 5 minuti + un primo giro 30s dopo l'avvio (se il server parte dopo l'orario)
+setInterval(() => { checkMorningSchedule().catch(() => {}); }, 5 * 60 * 1000);
+setTimeout(() => { checkMorningSchedule().catch(() => {}); }, 30 * 1000);
+
+// POST /api/cron/morning — hook per scheduler esterno (Railway Cron, cron-job.org…)
+// Protetto da SYSTEM_TOKEN. Esegue subito i briefing dovuti (guard giornaliero attivo).
+app.post('/api/cron/morning', (req, res) => {
+  const tok = req.headers['x-system-token'] || req.query.token;
+  if (tok !== SYSTEM_TOKEN) return res.status(401).json({ error: 'unauthorized' });
+  res.json({ started: true, at: new Date().toISOString() });
+  checkMorningSchedule({ ignoreTime: true }).catch(e => console.warn('[cron/morning]', e.message));
 });
 
 // ── START ─────────────────────────────────────────────────────────────────────
