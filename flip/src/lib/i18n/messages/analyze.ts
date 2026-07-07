@@ -1,0 +1,292 @@
+import { type Dict } from "./types";
+
+// Namespace prefixes: analyze.*, analyzing.*, eyes.*, demo.*
+export const analyze: Dict = {
+  it: {
+    // ── AnalyzeFlow: frame + phases ──
+    "analyze.frame.back": "Indietro",
+    "analyze.frame.title": "Analisi documento",
+    "analyze.title.camera": "Scansiona documento",
+    "analyze.title.upload": "Carica documento",
+    "analyze.doc.multiPage": "Documento ({n} pagine)",
+
+    // done screen (mood variants)
+    "analyze.done.good": "Tutto in ordine! 👀",
+    "analyze.done.mediocre": "Ci sono cose da guardare 👀",
+    "analyze.done.bad": "Occhio a questo documento 👀",
+    "analyze.done.subtitle": "Ecco cosa ho scoperto nel tuo documento.",
+
+    // error screen
+    "analyze.error.title": "Qualcosa è andato storto",
+    "analyze.error.generic": "Non è stato possibile completare l'analisi. Riprova.",
+    "analyze.error.retry": "Riprova",
+    "analyze.error.emptyResponse": "Risposta vuota dal server. Riprova.",
+    "analyze.error.incomplete": "Analisi incompleta. Riprova con un documento più chiaro.",
+
+    // ── Upload ──
+    "analyze.upload.title": "Carica foto o documento",
+    "analyze.upload.hint": "PDF, Word, Excel o più foto insieme (max 10MB a file)",
+    "analyze.upload.tooBig": "\"{name}\" è troppo grande ({size}). Massimo 10MB a file.",
+
+    // ── Camera (multi-page) ──
+    "analyze.camera.error": "Non riesco ad accedere alla fotocamera. Puoi caricare un file dal menu precedente.",
+    "analyze.camera.pageOne": "pagina",
+    "analyze.camera.pageMany": "pagine",
+    "analyze.camera.removePage": "Rimuovi pagina",
+    "analyze.camera.pageAlt": "Pagina {n}",
+    "analyze.camera.flip": "Cambia fotocamera",
+    "analyze.camera.addPage": "Aggiungi pagina",
+    "analyze.camera.shoot": "Scatta",
+    "analyze.camera.analyze": "Analizza",
+    "analyze.camera.hintMore": "Tocca + per un'altra pagina, poi ✓ per analizzare",
+    "analyze.camera.hintFirst": "Scatta la prima pagina del documento",
+
+    // ── AnalyzingView ──
+    "analyzing.foundTitle": "Ho trovato qualcosa!",
+    "analyzing.readingTitle": "Sto leggendo per te…",
+    "analyzing.foundSub": "Sto preparando i punti da controllare.",
+    "analyzing.readingSub": "Cerco le cose importanti e le trappole nascoste.",
+
+    // ── EyesView ──
+    "eyes.brand": "Chiaro Live",
+    "eyes.tagline": "Analisi in tempo reale",
+    "eyes.close": "Chiudi",
+    "eyes.reading": "Sto leggendo il documento…",
+    "eyes.flip": "Cambia fotocamera",
+    "eyes.analyze": "Analizza",
+    "eyes.torch": "Torcia",
+    "eyes.hint": "Inquadra un documento • Tocca 👁 per analizzare",
+    "eyes.liveLabel": "Inquadratura live",
+    "eyes.error.camera": "Fotocamera non disponibile. Usa 'Carica file' dalla Home.",
+    "eyes.error.torch": "Torcia non supportata su questo dispositivo.",
+    "eyes.error.read": "Non sono riuscito a leggere. Avvicinati e riprova.",
+
+    // ── DemoBanner ──
+    "demo.title": "Modalità demo.",
+    "demo.body": "Questa è un'analisi di esempio (uguale per ogni file). Per analizzare davvero i tuoi documenti serve la chiave AI.",
+  },
+
+  en: {
+    "analyze.frame.back": "Back",
+    "analyze.frame.title": "Document analysis",
+    "analyze.title.camera": "Scan document",
+    "analyze.title.upload": "Upload document",
+    "analyze.doc.multiPage": "Document ({n} pages)",
+
+    "analyze.done.good": "All good! 👀",
+    "analyze.done.mediocre": "A few things to check 👀",
+    "analyze.done.bad": "Watch out for this one 👀",
+    "analyze.done.subtitle": "Here's what I found in your document.",
+
+    "analyze.error.title": "Something went wrong",
+    "analyze.error.generic": "We couldn't finish the analysis. Please try again.",
+    "analyze.error.retry": "Try again",
+    "analyze.error.emptyResponse": "Empty response from the server. Please try again.",
+    "analyze.error.incomplete": "Analysis incomplete. Try again with a clearer document.",
+
+    "analyze.upload.title": "Upload a photo or document",
+    "analyze.upload.hint": "PDF, Word, Excel or several photos at once (max 10MB per file)",
+    "analyze.upload.tooBig": "\"{name}\" is too big ({size}). Max 10MB per file.",
+
+    "analyze.camera.error": "I can't access the camera. You can upload a file from the previous menu.",
+    "analyze.camera.pageOne": "page",
+    "analyze.camera.pageMany": "pages",
+    "analyze.camera.removePage": "Remove page",
+    "analyze.camera.pageAlt": "Page {n}",
+    "analyze.camera.flip": "Switch camera",
+    "analyze.camera.addPage": "Add page",
+    "analyze.camera.shoot": "Capture",
+    "analyze.camera.analyze": "Analyze",
+    "analyze.camera.hintMore": "Tap + for another page, then ✓ to analyze",
+    "analyze.camera.hintFirst": "Capture the first page of the document",
+
+    "analyzing.foundTitle": "I found something!",
+    "analyzing.readingTitle": "Reading it for you…",
+    "analyzing.foundSub": "Getting the points to check ready.",
+    "analyzing.readingSub": "Looking for what matters and any hidden traps.",
+
+    "eyes.brand": "Chiaro Live",
+    "eyes.tagline": "Real-time analysis",
+    "eyes.close": "Close",
+    "eyes.reading": "Reading the document…",
+    "eyes.flip": "Switch camera",
+    "eyes.analyze": "Analyze",
+    "eyes.torch": "Torch",
+    "eyes.hint": "Frame a document • Tap 👁 to analyze",
+    "eyes.liveLabel": "Live shot",
+    "eyes.error.camera": "Camera unavailable. Use 'Upload file' from the Home screen.",
+    "eyes.error.torch": "Torch not supported on this device.",
+    "eyes.error.read": "I couldn't read it. Move closer and try again.",
+
+    "demo.title": "Demo mode.",
+    "demo.body": "This is a sample analysis (the same for every file). To really analyze your documents you need the AI key.",
+  },
+
+  es: {
+    "analyze.frame.back": "Atrás",
+    "analyze.frame.title": "Análisis del documento",
+    "analyze.title.camera": "Escanear documento",
+    "analyze.title.upload": "Subir documento",
+    "analyze.doc.multiPage": "Documento ({n} páginas)",
+
+    "analyze.done.good": "¡Todo en orden! 👀",
+    "analyze.done.mediocre": "Hay cosas que revisar 👀",
+    "analyze.done.bad": "Ojo con este documento 👀",
+    "analyze.done.subtitle": "Esto es lo que encontré en tu documento.",
+
+    "analyze.error.title": "Algo salió mal",
+    "analyze.error.generic": "No se pudo completar el análisis. Inténtalo de nuevo.",
+    "analyze.error.retry": "Reintentar",
+    "analyze.error.emptyResponse": "Respuesta vacía del servidor. Inténtalo de nuevo.",
+    "analyze.error.incomplete": "Análisis incompleto. Inténtalo con un documento más claro.",
+
+    "analyze.upload.title": "Sube una foto o un documento",
+    "analyze.upload.hint": "PDF, Word, Excel o varias fotos juntas (máx. 10MB por archivo)",
+    "analyze.upload.tooBig": "\"{name}\" es demasiado grande ({size}). Máximo 10MB por archivo.",
+
+    "analyze.camera.error": "No puedo acceder a la cámara. Puedes subir un archivo desde el menú anterior.",
+    "analyze.camera.pageOne": "página",
+    "analyze.camera.pageMany": "páginas",
+    "analyze.camera.removePage": "Quitar página",
+    "analyze.camera.pageAlt": "Página {n}",
+    "analyze.camera.flip": "Cambiar cámara",
+    "analyze.camera.addPage": "Añadir página",
+    "analyze.camera.shoot": "Capturar",
+    "analyze.camera.analyze": "Analizar",
+    "analyze.camera.hintMore": "Toca + para otra página y luego ✓ para analizar",
+    "analyze.camera.hintFirst": "Captura la primera página del documento",
+
+    "analyzing.foundTitle": "¡Encontré algo!",
+    "analyzing.readingTitle": "Lo estoy leyendo por ti…",
+    "analyzing.foundSub": "Estoy preparando los puntos que hay que revisar.",
+    "analyzing.readingSub": "Busco lo importante y las trampas ocultas.",
+
+    "eyes.brand": "Chiaro Live",
+    "eyes.tagline": "Análisis en tiempo real",
+    "eyes.close": "Cerrar",
+    "eyes.reading": "Estoy leyendo el documento…",
+    "eyes.flip": "Cambiar cámara",
+    "eyes.analyze": "Analizar",
+    "eyes.torch": "Linterna",
+    "eyes.hint": "Enfoca un documento • Toca 👁 para analizar",
+    "eyes.liveLabel": "Toma en vivo",
+    "eyes.error.camera": "Cámara no disponible. Usa 'Subir archivo' desde el Inicio.",
+    "eyes.error.torch": "La linterna no es compatible con este dispositivo.",
+    "eyes.error.read": "No pude leerlo. Acércate e inténtalo de nuevo.",
+
+    "demo.title": "Modo demo.",
+    "demo.body": "Este es un análisis de ejemplo (igual para cada archivo). Para analizar de verdad tus documentos necesitas la clave de IA.",
+  },
+
+  fr: {
+    "analyze.frame.back": "Retour",
+    "analyze.frame.title": "Analyse du document",
+    "analyze.title.camera": "Scanner le document",
+    "analyze.title.upload": "Importer un document",
+    "analyze.doc.multiPage": "Document ({n} pages)",
+
+    "analyze.done.good": "Tout est en ordre ! 👀",
+    "analyze.done.mediocre": "Quelques points à regarder 👀",
+    "analyze.done.bad": "Attention à ce document 👀",
+    "analyze.done.subtitle": "Voici ce que j'ai trouvé dans votre document.",
+
+    "analyze.error.title": "Un problème est survenu",
+    "analyze.error.generic": "Impossible de terminer l'analyse. Réessayez.",
+    "analyze.error.retry": "Réessayer",
+    "analyze.error.emptyResponse": "Réponse vide du serveur. Réessayez.",
+    "analyze.error.incomplete": "Analyse incomplète. Réessayez avec un document plus net.",
+
+    "analyze.upload.title": "Importez une photo ou un document",
+    "analyze.upload.hint": "PDF, Word, Excel ou plusieurs photos à la fois (max 10 Mo par fichier)",
+    "analyze.upload.tooBig": "\"{name}\" est trop volumineux ({size}). Maximum 10 Mo par fichier.",
+
+    "analyze.camera.error": "Je n'arrive pas à accéder à la caméra. Vous pouvez importer un fichier depuis le menu précédent.",
+    "analyze.camera.pageOne": "page",
+    "analyze.camera.pageMany": "pages",
+    "analyze.camera.removePage": "Supprimer la page",
+    "analyze.camera.pageAlt": "Page {n}",
+    "analyze.camera.flip": "Changer de caméra",
+    "analyze.camera.addPage": "Ajouter une page",
+    "analyze.camera.shoot": "Capturer",
+    "analyze.camera.analyze": "Analyser",
+    "analyze.camera.hintMore": "Touchez + pour une autre page, puis ✓ pour analyser",
+    "analyze.camera.hintFirst": "Capturez la première page du document",
+
+    "analyzing.foundTitle": "J'ai trouvé quelque chose !",
+    "analyzing.readingTitle": "Je lis pour vous…",
+    "analyzing.foundSub": "Je prépare les points à vérifier.",
+    "analyzing.readingSub": "Je cherche l'essentiel et les pièges cachés.",
+
+    "eyes.brand": "Chiaro Live",
+    "eyes.tagline": "Analyse en temps réel",
+    "eyes.close": "Fermer",
+    "eyes.reading": "Je lis le document…",
+    "eyes.flip": "Changer de caméra",
+    "eyes.analyze": "Analyser",
+    "eyes.torch": "Lampe",
+    "eyes.hint": "Cadrez un document • Touchez 👁 pour analyser",
+    "eyes.liveLabel": "Prise en direct",
+    "eyes.error.camera": "Caméra indisponible. Utilisez « Importer un fichier » depuis l'Accueil.",
+    "eyes.error.torch": "La lampe n'est pas prise en charge sur cet appareil.",
+    "eyes.error.read": "Je n'ai pas réussi à lire. Rapprochez-vous et réessayez.",
+
+    "demo.title": "Mode démo.",
+    "demo.body": "Ceci est une analyse d'exemple (identique pour chaque fichier). Pour analyser réellement vos documents, il faut la clé IA.",
+  },
+
+  de: {
+    "analyze.frame.back": "Zurück",
+    "analyze.frame.title": "Dokumentanalyse",
+    "analyze.title.camera": "Dokument scannen",
+    "analyze.title.upload": "Dokument hochladen",
+    "analyze.doc.multiPage": "Dokument ({n} Seiten)",
+
+    "analyze.done.good": "Alles in Ordnung! 👀",
+    "analyze.done.mediocre": "Ein paar Dinge zum Prüfen 👀",
+    "analyze.done.bad": "Vorsicht bei diesem Dokument 👀",
+    "analyze.done.subtitle": "Das habe ich in deinem Dokument gefunden.",
+
+    "analyze.error.title": "Etwas ist schiefgelaufen",
+    "analyze.error.generic": "Die Analyse konnte nicht abgeschlossen werden. Bitte versuche es erneut.",
+    "analyze.error.retry": "Erneut versuchen",
+    "analyze.error.emptyResponse": "Leere Antwort vom Server. Bitte versuche es erneut.",
+    "analyze.error.incomplete": "Analyse unvollständig. Versuche es mit einem deutlicheren Dokument.",
+
+    "analyze.upload.title": "Foto oder Dokument hochladen",
+    "analyze.upload.hint": "PDF, Word, Excel oder mehrere Fotos zusammen (max. 10 MB pro Datei)",
+    "analyze.upload.tooBig": "\"{name}\" ist zu groß ({size}). Maximal 10 MB pro Datei.",
+
+    "analyze.camera.error": "Ich kann nicht auf die Kamera zugreifen. Du kannst eine Datei über das vorherige Menü hochladen.",
+    "analyze.camera.pageOne": "Seite",
+    "analyze.camera.pageMany": "Seiten",
+    "analyze.camera.removePage": "Seite entfernen",
+    "analyze.camera.pageAlt": "Seite {n}",
+    "analyze.camera.flip": "Kamera wechseln",
+    "analyze.camera.addPage": "Seite hinzufügen",
+    "analyze.camera.shoot": "Aufnehmen",
+    "analyze.camera.analyze": "Analysieren",
+    "analyze.camera.hintMore": "Tippe auf + für eine weitere Seite, dann auf ✓ zum Analysieren",
+    "analyze.camera.hintFirst": "Nimm die erste Seite des Dokuments auf",
+
+    "analyzing.foundTitle": "Ich habe etwas gefunden!",
+    "analyzing.readingTitle": "Ich lese es für dich…",
+    "analyzing.foundSub": "Ich bereite die Punkte zum Prüfen vor.",
+    "analyzing.readingSub": "Ich suche das Wichtige und versteckte Fallen.",
+
+    "eyes.brand": "Chiaro Live",
+    "eyes.tagline": "Analyse in Echtzeit",
+    "eyes.close": "Schließen",
+    "eyes.reading": "Ich lese das Dokument…",
+    "eyes.flip": "Kamera wechseln",
+    "eyes.analyze": "Analysieren",
+    "eyes.torch": "Taschenlampe",
+    "eyes.hint": "Richte die Kamera auf ein Dokument • Tippe auf 👁 zum Analysieren",
+    "eyes.liveLabel": "Live-Aufnahme",
+    "eyes.error.camera": "Kamera nicht verfügbar. Nutze „Datei hochladen“ auf der Startseite.",
+    "eyes.error.torch": "Taschenlampe wird auf diesem Gerät nicht unterstützt.",
+    "eyes.error.read": "Ich konnte es nicht lesen. Geh näher heran und versuche es erneut.",
+
+    "demo.title": "Demo-Modus.",
+    "demo.body": "Dies ist eine Beispielanalyse (für jede Datei gleich). Um deine Dokumente wirklich zu analysieren, brauchst du den KI-Schlüssel.",
+  },
+};

@@ -1,0 +1,205 @@
+@import "tailwindcss";
+
+/* ============================================================
+   Chiaro — Design System · "Non ti fregano più!"
+   ============================================================ */
+
+@theme {
+  /* Brand (trust / safety green) */
+  --color-flip-50: #ecfdf5;
+  --color-flip-100: #d1fae5;
+  --color-flip-200: #a7f3d0;
+  --color-flip-300: #6ee7b7;
+  --color-flip-400: #34d399;
+  --color-flip-500: #10b981; /* primary */
+  --color-flip-600: #059669;
+  --color-flip-700: #047857;
+  --color-flip-800: #065f46;
+  --color-flip-900: #064e3b;
+
+  /* Accent (intelligence) */
+  --color-ink-400: #6366f1;
+  --color-ink-500: #4f46e5;
+  --color-ink-600: #4338ca;
+
+  /* Surfaces */
+  --color-canvas: #eef2f8;
+  --color-surface: #ffffff;
+  --color-surface-2: #f6f9fc;
+
+  /* Text */
+  --color-content: #0f172a;
+  --color-content-soft: #475569;
+  --color-content-mute: #94a3b8;
+
+  /* Risk semaphore */
+  --color-risk-safe: #10b981;
+  --color-risk-warn: #f59e0b;
+  --color-risk-danger: #ef4444;
+
+  /* Radii */
+  --radius-card: 1.5rem;
+
+  /* Shadows */
+  --shadow-card: 0 10px 30px -12px rgb(15 23 42 / 0.12);
+  --shadow-float: 0 20px 50px -20px rgb(15 23 42 / 0.25);
+
+  /* Fonts */
+  --font-sans: var(--font-geist-sans), system-ui, sans-serif;
+}
+
+:root {
+  --background: var(--color-canvas);
+  --foreground: var(--color-content);
+}
+
+* {
+  -webkit-tap-highlight-color: transparent;
+}
+
+html,
+body {
+  height: 100%;
+}
+
+body {
+  background: var(--color-canvas);
+  color: var(--color-content);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+  overscroll-behavior-y: none;
+}
+
+/* Brand gradients */
+.flip-gradient {
+  background-image: linear-gradient(
+    135deg,
+    var(--color-flip-400) 0%,
+    var(--color-flip-600) 45%,
+    var(--color-ink-500) 100%
+  );
+}
+
+.flip-text-gradient {
+  background-image: linear-gradient(120deg, var(--color-flip-500), var(--color-ink-500));
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+/* Mobile app frame */
+.app-shell {
+  width: 100%;
+  max-width: 480px;
+  margin-inline: auto;
+  min-height: 100dvh;
+  position: relative;
+}
+
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+.pb-safe {
+  padding-bottom: max(1rem, env(safe-area-inset-bottom));
+}
+.pt-safe {
+  padding-top: max(1rem, env(safe-area-inset-top));
+}
+
+/* Animations */
+@keyframes flip-pop {
+  0% { transform: scale(0.96); opacity: 0; }
+  100% { transform: scale(1); opacity: 1; }
+}
+.animate-pop { animation: flip-pop 0.25s ease-out both; }
+
+@keyframes flip-rise {
+  0% { transform: translateY(10px); opacity: 0; }
+  100% { transform: translateY(0); opacity: 1; }
+}
+.animate-rise { animation: flip-rise 0.35s ease-out both; }
+
+@keyframes flip-breathe {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.06); }
+}
+.animate-breathe { animation: flip-breathe 2.6s ease-in-out infinite; }
+
+@keyframes flip-spin {
+  to { transform: rotate(360deg); }
+}
+.animate-spin-slow { animation: flip-spin 1.2s linear infinite; }
+
+/* ── Duolingo-style chunky press ─────────────────────────── */
+.btn-pop {
+  border-bottom-width: 5px;
+  border-bottom-color: rgba(0, 0, 0, 0.18);
+  transition: transform 0.06s ease, border-bottom-width 0.06s ease;
+}
+.btn-pop:active {
+  transform: translateY(3px);
+  border-bottom-width: 2px;
+}
+
+@keyframes flip-bob {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-8px); }
+}
+.animate-bob { animation: flip-bob 3s ease-in-out infinite; }
+
+@keyframes flip-wiggle {
+  0%, 100% { transform: rotate(0deg); }
+  25% { transform: rotate(-4deg); }
+  75% { transform: rotate(4deg); }
+}
+.animate-wiggle { animation: flip-wiggle 0.6s ease-in-out; }
+
+/* Duolingo-style: slightly chunkier icons */
+svg.lucide {
+  stroke-width: 2.25px;
+}
+
+/* ── Claymorphic 3D mascot motion ────────────────────────── */
+@keyframes clay-bob {
+  0%, 100% { transform: translateY(0) scaleX(1) scaleY(1); }
+  50% { transform: translateY(-12px) scaleX(0.985) scaleY(1.015); }
+}
+.clay-bob {
+  animation: clay-bob 2.8s ease-in-out infinite;
+  transform-origin: center bottom;
+}
+
+@keyframes clay-shadow {
+  0%, 100% { transform: scaleX(1); opacity: 0.16; }
+  50% { transform: scaleX(0.78); opacity: 0.08; }
+}
+.clay-shadow {
+  animation: clay-shadow 2.8s ease-in-out infinite;
+  transform-box: fill-box;
+  transform-origin: center;
+}
+
+@keyframes clay-blink {
+  0%, 90%, 100% { transform: scaleY(0.05); }
+  94%, 97% { transform: scaleY(1); }
+}
+.clay-blink {
+  animation: clay-blink 4.4s ease-in-out infinite;
+  transform-box: fill-box;
+  transform-origin: center;
+}
+@keyframes clay-blink2 {
+  0%, 91%, 100% { transform: scaleY(0.05); }
+  95%, 98% { transform: scaleY(1); }
+}
+.clay-blink2 {
+  animation: clay-blink2 4.4s ease-in-out infinite;
+  transform-box: fill-box;
+  transform-origin: center;
+}

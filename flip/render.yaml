@@ -1,0 +1,31 @@
+# Render Blueprint for FLIP (Next.js 16, always-on web service).
+# In Render: New → Blueprint, point to this repo, set Root Directory = "flip".
+services:
+  - type: web
+    name: flip
+    runtime: node
+    plan: free
+    region: frankfurt
+    buildCommand: npm install && npm run build
+    startCommand: npm start
+    healthCheckPath: /login
+    autoDeploy: true
+    envVars:
+      - key: NODE_VERSION
+        value: "22"
+      # Secrets — set these in the Render dashboard (sync:false = not stored in git):
+      # REQUIRED — the AI engine (Groq, free tier):
+      - key: GROQ_API_KEY
+        sync: false
+      # OPTIONAL — only if you enable accounts (Supabase). Without them the app
+      # runs in local-only mode (no login backend needed):
+      - key: NEXT_PUBLIC_SUPABASE_URL
+        sync: false
+      - key: NEXT_PUBLIC_SUPABASE_ANON_KEY
+        sync: false
+      - key: SUPABASE_SERVICE_ROLE_KEY
+        sync: false
+      - key: NEXT_PUBLIC_SITE_URL
+        sync: false
+      - key: NEXT_PUBLIC_AI_BUDGET_EUR
+        value: "20"
