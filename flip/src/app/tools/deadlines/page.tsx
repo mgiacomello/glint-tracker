@@ -46,7 +46,7 @@ export default function DeadlinesPage() {
                 {d.analysis.deadlines.map((dl, i) => (
                   <li key={i} className="flex items-start justify-between gap-3 rounded-xl bg-surface-2 p-3">
                     <div className="min-w-0">
-                      <p className="text-sm font-semibold">{dl.title}</p>
+                      <p className="text-sm font-semibold break-words">{dl.title}</p>
                       <p className="truncate text-xs text-content-mute">{dl.rawText}</p>
                     </div>
                     <div className="shrink-0 text-right">

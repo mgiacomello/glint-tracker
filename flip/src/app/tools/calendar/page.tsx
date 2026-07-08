@@ -102,7 +102,7 @@ function Group({
             <Link href={`/document/${d.docId}`} className="min-w-0 flex-1 p-4">
               <div className="flex items-start justify-between gap-3">
                 <div className="min-w-0">
-                  <p className="font-semibold">{d.title}</p>
+                  <p className="font-semibold break-words">{d.title}</p>
                   <p className="truncate text-xs text-content-mute">{d.docTitle}</p>
                 </div>
                 {d.amount && (

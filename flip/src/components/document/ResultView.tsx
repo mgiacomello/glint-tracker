@@ -59,8 +59,8 @@ export function ResultView({
 
         {/* 1 · What it is — plain-language framing */}
         <section className="animate-rise space-y-2">
-          <h1 className="text-2xl font-extrabold leading-tight">{analysis.title}</h1>
-          <p className="leading-relaxed text-content-soft">{analysis.summary}</p>
+          <h1 className="text-2xl font-extrabold leading-tight break-words">{analysis.title}</h1>
+          <p className="leading-relaxed text-content-soft break-words">{analysis.summary}</p>
           <ComplexityChip score={analysis.complexity} />
         </section>
 
@@ -92,7 +92,7 @@ export function ResultView({
                     {i + 1}
                   </span>
                   <span className="min-w-0 flex-1">
-                    <span className="block font-semibold">{p.title}</span>
+                    <span className="block font-semibold break-words">{p.title}</span>
                     <span className="line-clamp-1 text-sm text-content-mute">{p.teaser}</span>
                   </span>
                   <ChevronRight className="h-5 w-5 shrink-0 text-content-mute" />
@@ -205,7 +205,7 @@ function VerdictHero({ analysis }: { analysis: DocumentAnalysis }) {
           <p className="text-xs font-bold uppercase tracking-wide text-content-mute">
             {t("result.whatToDo")}
           </p>
-          <p className="mt-0.5 leading-snug text-content">{analysis.headline}</p>
+          <p className="mt-0.5 leading-snug text-content break-words">{analysis.headline}</p>
         </div>
       </div>
     </div>
@@ -275,12 +275,12 @@ function DeepDive({
       <main className="flex-1 space-y-3 px-5 py-5 pb-10">
         <div className="rounded-2xl border border-flip-200 bg-flip-50 p-4 animate-rise">
           <div className="flex items-center gap-3">
-            <span className="grid h-9 w-9 place-items-center rounded-full bg-flip-100 font-bold text-flip-700">
+            <span className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-flip-100 font-bold text-flip-700">
               <TriangleAlert className="h-5 w-5" />
             </span>
-            <h1 className="text-xl font-extrabold">{point.title}</h1>
+            <h1 className="min-w-0 text-xl font-extrabold break-words">{point.title}</h1>
           </div>
-          <p className="mt-2 text-content-soft">{point.teaser}</p>
+          <p className="mt-2 text-content-soft break-words">{point.teaser}</p>
         </div>
 
         <InfoCard title={t("deepdive.whatHappens")}>{point.whatHappens}</InfoCard>
@@ -293,7 +293,7 @@ function DeepDive({
               <Lightbulb className="h-5 w-5" />
               {t("deepdive.canDo")}
             </h3>
-            <p className="mt-1 leading-relaxed text-flip-800">{point.canDo}</p>
+            <p className="mt-1 leading-relaxed text-flip-800 break-words">{point.canDo}</p>
           </div>
         )}
 
@@ -313,7 +313,7 @@ function InfoCard({ title, children }: { title: string; children: React.ReactNod
   return (
     <Card className="p-4">
       <h3 className="font-bold">{title}</h3>
-      <p className="mt-1 leading-relaxed text-content-soft">{children}</p>
+      <p className="mt-1 leading-relaxed text-content-soft break-words">{children}</p>
     </Card>
   );
 }

@@ -69,28 +69,28 @@ export default function ComparePage() {
         <div className="space-y-4">
           {winner !== "none" && (
             <div className="flex items-center gap-3 rounded-2xl bg-flip-50 p-4">
-              <Trophy className="h-6 w-6 text-flip-600" />
-              <div>
-                <p className="font-bold text-flip-700">
+              <Trophy className="h-6 w-6 shrink-0 text-flip-600" />
+              <div className="min-w-0">
+                <p className="font-bold text-flip-700 break-words">
                   {t("compare.better", { n: (winner === "a" ? docA?.analysis.title : docB?.analysis.title) ?? "" })}
                 </p>
-                <p className="text-sm text-content-soft">{result.recommendationReason}</p>
+                <p className="text-sm text-content-soft break-words">{result.recommendationReason}</p>
               </div>
             </div>
           )}
-          <p className="text-content-soft">{result.summary}</p>
+          <p className="text-content-soft break-words">{result.summary}</p>
           <div className="space-y-2">
             {result.differences.map((d, i) => (
               <div key={i} className="rounded-2xl bg-surface p-4 shadow-[var(--shadow-card)]">
-                <p className="mb-2 font-bold">{d.topic}</p>
+                <p className="mb-2 font-bold break-words">{d.topic}</p>
                 <div className="grid grid-cols-2 gap-3 text-sm">
-                  <div className="rounded-xl bg-surface-2 p-3">
+                  <div className="min-w-0 rounded-xl bg-surface-2 p-3">
                     <p className="mb-1 text-xs font-bold uppercase text-content-mute">A</p>
-                    <p className="text-content-soft">{d.a}</p>
+                    <p className="text-content-soft break-words">{d.a}</p>
                   </div>
-                  <div className="rounded-xl bg-surface-2 p-3">
+                  <div className="min-w-0 rounded-xl bg-surface-2 p-3">
                     <p className="mb-1 text-xs font-bold uppercase text-content-mute">B</p>
-                    <p className="text-content-soft">{d.b}</p>
+                    <p className="text-content-soft break-words">{d.b}</p>
                   </div>
                 </div>
               </div>

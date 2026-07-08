@@ -63,8 +63,8 @@ export default function RadarPage() {
                     {riskLabel}
                   </span>
                 </div>
-                <p className="mt-1 font-bold">{p.title}</p>
-                <p className="mt-0.5 text-sm text-content-soft">{p.keepInMind}</p>
+                <p className="mt-1 font-bold break-words">{p.title}</p>
+                <p className="mt-0.5 text-sm text-content-soft break-words">{p.keepInMind}</p>
                 <p className="mt-2 truncate text-xs text-content-mute">{t("radar.from", { n: docTitle })}</p>
               </Link>
             );
