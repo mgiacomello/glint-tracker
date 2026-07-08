@@ -11,11 +11,11 @@ import type { CapacitorConfig } from "@capacitor/cli";
  * Set FLIP_APP_URL to your deployed URL before `npx cap sync`.
  */
 const config: CapacitorConfig = {
-  appId: "it.flip.app",
+  appId: "info.chiaro.app",
   appName: "Chiaro",
   webDir: "public", // placeholder; real content is served from server.url
   server: {
-    url: process.env.FLIP_APP_URL || "https://flip.onrender.com",
+    url: process.env.FLIP_APP_URL || "https://chiaro.onrender.com",
     cleartext: false,
   },
   ios: {

@@ -8,9 +8,11 @@ import { AnalyzeSheet } from "@/components/AnalyzeSheet";
 import { Upload } from "lucide-react";
 import { useT, useLang } from "@/lib/i18n/provider";
 import { SCAM_STORIES, FOX_LINES } from "@/lib/i18n/messages/nav";
+import type { LangCode } from "@/lib/i18n";
 import type { FlipUser } from "@/lib/auth";
 
-function greetingKey(hour: number): "greeting.morning" | "greeting.afternoon" | "greeting.evening" {
+type GreetKey = "greeting.morning" | "greeting.afternoon" | "greeting.evening";
+function greetingKey(hour: number): GreetKey {
   if (hour < 12) return "greeting.morning";
   if (hour < 18) return "greeting.afternoon";
   return "greeting.evening";
@@ -21,26 +23,18 @@ export function HomeView({ user, fooledCount }: { user: FlipUser; fooledCount: n
   const lang = useLang();
   const [sheetOpen, setSheetOpen] = useState(false);
 
-  // Time-based selection must happen after mount so SSR renders a stable
-  // placeholder (index 0) and there is no hydration mismatch.
-  const [now, setNow] = useState<number | null>(null);
-  useEffect(() => {
-    setNow(Date.now());
-    // Rotate the fox line every 5s like the original.
-    const id = setInterval(() => setNow(Date.now()), 5000);
-    return () => clearInterval(id);
-  }, []);
-
   const stories = SCAM_STORIES[lang] ?? SCAM_STORIES.it;
-  const foxLines = FOX_LINES[lang] ?? FOX_LINES.it;
 
-  const storyIndex = now === null ? 0 : Math.floor(now / (1000 * 60 * 5)) % stories.length;
-  const foxIndex = now === null ? 0 : Math.floor(now / 5000) % foxLines.length;
-  const story = stories[storyIndex];
-  const foxLine = foxLines[foxIndex];
-
-  const hour = now === null ? new Date().getHours() : new Date(now).getHours();
-  const greetingText = t(greetingKey(hour));
+  // Pick greeting + story once after mount (stable → the page no longer
+  // re-renders every 5s; only the fox line ticks, isolated below). SSR renders
+  // index 0 / "morning" so there's no hydration mismatch.
+  const [story, setStory] = useState(stories[0]);
+  const [greetKey, setGreetKey] = useState<GreetKey>("greeting.morning");
+  useEffect(() => {
+    const now = Date.now();
+    setStory(stories[Math.floor(now / (1000 * 60 * 5)) % stories.length]);
+    setGreetKey(greetingKey(new Date(now).getHours()));
+  }, [stories]);
 
   return (
     <div className="flex min-h-dvh flex-col">
@@ -48,7 +42,7 @@ export function HomeView({ user, fooledCount }: { user: FlipUser; fooledCount: n
 
       <main className="flex flex-1 flex-col items-center overflow-y-auto no-scrollbar px-6 pb-6 text-center">
         <h1 className="mt-3 text-3xl font-extrabold">
-          {greetingText}, {user.name}
+          {t(greetKey)}, {user.name}
         </h1>
 
         {/* Highlighted live stat — the scare-number up top */}
@@ -68,7 +62,7 @@ export function HomeView({ user, fooledCount }: { user: FlipUser; fooledCount: n
         <div className="mt-6 flex flex-col items-center">
           {/* speech bubble */}
           <div className="relative mb-1 rounded-2xl bg-surface px-4 py-2 text-[15px] font-bold text-content shadow-[var(--shadow-card)]">
-            {foxLine}
+            <FoxLine lang={lang} />
             <span className="absolute -bottom-1 left-1/2 h-3 w-3 -translate-x-1/2 rotate-45 rounded-[3px] bg-surface" />
           </div>
 
@@ -92,4 +86,16 @@ export function HomeView({ user, fooledCount }: { user: FlipUser; fooledCount: n
       <AnalyzeSheet open={sheetOpen} onClose={() => setSheetOpen(false)} />
     </div>
   );
+}
+
+/** Rotating mascot speech line — isolated so only this ticks every 5s, not the whole home. */
+function FoxLine({ lang }: { lang: LangCode }) {
+  const lines = FOX_LINES[lang] ?? FOX_LINES.it;
+  const [i, setI] = useState(0);
+  useEffect(() => {
+    setI(0);
+    const id = setInterval(() => setI((x) => (x + 1) % lines.length), 5000);
+    return () => clearInterval(id);
+  }, [lines.length]);
+  return <>{lines[i]}</>;
 }

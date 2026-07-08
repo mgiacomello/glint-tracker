@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Mail, ShieldCheck, ArrowRight, ArrowLeft } from "lucide-react";
 import { FlipWordmark } from "@/components/TopBar";
@@ -184,13 +185,13 @@ export default function LoginPage() {
 
         <p className="mt-8 text-center text-xs text-content-mute">
           {t("login.termsPrefix")}{" "}
-          <a href="/terms" className="underline">
+          <Link href="/terms" className="underline">
             {t("login.termsLink")}
-          </a>{" "}
+          </Link>{" "}
           {t("login.termsAnd")}{" "}
-          <a href="/privacy" className="underline">
+          <Link href="/privacy" className="underline">
             {t("login.privacyLink")}
-          </a>
+          </Link>
           {t("login.termsSuffix")}
         </p>
       </div>
