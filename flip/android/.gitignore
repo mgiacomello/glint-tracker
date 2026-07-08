@@ -104,3 +104,10 @@ app/src/main/res/xml/config.xml
 key.properties
 *.keystore
 *.jks
+
+# IDE & release build outputs (not source)
+.idea/
+/app/release/
+/app/build/
+capacitor.build.gradle
+capacitor.settings.gradle
