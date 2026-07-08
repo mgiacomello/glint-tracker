@@ -4,6 +4,7 @@ import { useState } from "react";
 import { Menu } from "lucide-react";
 import { Baloo_2 } from "next/font/google";
 import { MenuDrawer } from "@/components/MenuDrawer";
+import { LottieLogo } from "@/components/LottieLogo";
 import { cn } from "@/lib/utils";
 import { useT } from "@/lib/i18n/provider";
 import type { FlipUser } from "@/lib/auth";
@@ -45,7 +46,7 @@ export function TopBar({ user, radarCount = 0 }: { user: FlipUser; radarCount?: 
   const [menuOpen, setMenuOpen] = useState(false);
   return (
     <header className="sticky top-0 z-30 flex items-center justify-between bg-canvas/80 px-5 py-4 backdrop-blur-md pt-safe">
-      <FlipWordmark />
+      <LottieLogo height={30} />
       <button
         onClick={() => setMenuOpen(true)}
         aria-label={t("topbar.menu")}

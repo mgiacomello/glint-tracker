@@ -4,7 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Mail, ShieldCheck, ArrowRight, ArrowLeft } from "lucide-react";
-import { FlipWordmark } from "@/components/TopBar";
+import { LottieLogo } from "@/components/LottieLogo";
 import { Button } from "@/components/ui";
 import { createClient, hasSupabaseEnv } from "@/lib/supabase/client";
 import { useT } from "@/lib/i18n/provider";
@@ -80,7 +80,7 @@ export default function LoginPage() {
     <div className="flex min-h-dvh flex-col justify-center px-7">
       <div className="mx-auto w-full max-w-sm">
         <div className="mb-8 flex flex-col items-center text-center">
-          <FlipWordmark big />
+          <LottieLogo height={52} />
           <p className="mt-3 text-lg font-bold">{t("login.tagline")}</p>
           <p className="mt-2 text-sm text-content-soft">{t("login.intro")}</p>
         </div>
