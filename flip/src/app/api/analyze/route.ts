@@ -36,10 +36,17 @@ export async function POST(request: Request) {
   }
 
   const label = multi ? `documento in ${files.length} pagine` : files[0].name;
+  // Groq free tier caps each request at ~12k tokens/min. Keep the document text
+  // small enough that (system prompt + doc + output) stays under it, otherwise
+  // every real PDF gets a 413 "request too large".
+  const MAX_DOC_CHARS = 14_000;
+  const clipped = docText.slice(0, MAX_DOC_CHARS);
+  const truncated = docText.length > MAX_DOC_CHARS;
   const userText =
     (mode === "eyes" ? REALTIME_HINT + "\n\n" : "") +
     (multi ? "Le pagine seguenti fanno parte di UN SOLO documento: analizzalo nel suo insieme.\n\n" : "") +
-    `Ecco il testo del documento "${label}":\n\n"""\n${docText.slice(0, 60_000)}\n"""\n\n` +
+    `Ecco il testo del documento "${label}":\n\n"""\n${clipped}\n"""\n\n` +
+    (truncated ? "(Il documento è lungo: analizza con attenzione questa prima parte.)\n\n" : "") +
     `Analizzalo e produci l'output JSONL richiesto. Scrivi TUTTI i testi dell'analisi in ${lang}.` +
     profile;
 
@@ -50,7 +57,7 @@ export async function POST(request: Request) {
         const completion = await getAI().chat.completions.create({
           model: MODEL,
           stream: true,
-          max_tokens: 4000,
+          max_tokens: 3500,
           messages: [
             { role: "system", content: SYSTEM_PROMPT },
             { role: "user", content: userText },
@@ -84,6 +91,8 @@ function friendlyError(err: unknown): string {
       return "La chiave dell'AI non è valida. Controlla GROQ_API_KEY nelle impostazioni del server.";
     case 400:
       return "Il documento non è stato accettato. Prova con un file più piccolo o una foto più chiara.";
+    case 413:
+      return "Il documento è troppo lungo per il piano AI gratuito. Prova con un documento più corto o con meno pagine.";
     case 429:
       return "Troppe richieste in questo momento (limite gratuito Groq). Riprova tra un minuto.";
     case 500:
