@@ -6,6 +6,7 @@ export const nav: Dict = {
     // Home
     "home.fooled": "Nell'ultima ora, altre {n} persone si sono fatte fregare",
     "home.fooledLabel": "persone si sono fatte fregare nell'ultima ora",
+    "home.privacyFooter": "I tuoi documenti non vengono salvati",
     "home.uploadCta": "Carica un documento",
     "home.uploadHint": "In pochi secondi ti dico se c'è una fregatura",
     // Greeting
@@ -50,6 +51,7 @@ export const nav: Dict = {
   en: {
     "home.fooled": "In the last hour, {n} more people got ripped off",
     "home.fooledLabel": "people got ripped off in the last hour",
+    "home.privacyFooter": "Your documents are never saved",
     "home.uploadCta": "Upload a document",
     "home.uploadHint": "In seconds I'll tell you if it's a rip-off",
     "greeting.morning": "Good morning",
@@ -88,6 +90,7 @@ export const nav: Dict = {
   es: {
     "home.fooled": "En la última hora, otras {n} personas cayeron en la trampa",
     "home.fooledLabel": "personas cayeron en la trampa en la última hora",
+    "home.privacyFooter": "Tus documentos nunca se guardan",
     "home.uploadCta": "Sube un documento",
     "home.uploadHint": "En segundos te digo si hay gato encerrado",
     "greeting.morning": "Buenos días",
@@ -126,6 +129,7 @@ export const nav: Dict = {
   fr: {
     "home.fooled": "Dans la dernière heure, {n} personnes de plus se sont fait avoir",
     "home.fooledLabel": "personnes se sont fait avoir dans la dernière heure",
+    "home.privacyFooter": "Tes documents ne sont jamais enregistrés",
     "home.uploadCta": "Envoie un document",
     "home.uploadHint": "En quelques secondes, je te dis s'il y a une arnaque",
     "greeting.morning": "Bonjour",
@@ -164,6 +168,7 @@ export const nav: Dict = {
   de: {
     "home.fooled": "In der letzten Stunde sind weitere {n} Leute reingelegt worden",
     "home.fooledLabel": "Menschen wurden in der letzten Stunde reingelegt",
+    "home.privacyFooter": "Deine Dokumente werden nie gespeichert",
     "home.uploadCta": "Dokument hochladen",
     "home.uploadHint": "In Sekunden sage ich dir, ob es eine Abzocke ist",
     "greeting.morning": "Guten Morgen",

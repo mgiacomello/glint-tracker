@@ -1,10 +1,11 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Link from "next/link";
 import { TopBar } from "@/components/TopBar";
 import { LottieMascot } from "@/components/LottieMascot";
 import { AnalyzeSheet } from "@/components/AnalyzeSheet";
-import { Upload } from "lucide-react";
+import { Upload, Lock } from "lucide-react";
 import { useT, useLang } from "@/lib/i18n/provider";
 import { SCAM_STORIES, FOX_LINES } from "@/lib/i18n/messages/nav";
 import type { LangCode } from "@/lib/i18n";
@@ -80,6 +81,22 @@ export function HomeView({ user, fooledCount }: { user: FlipUser; fooledCount: n
           </p>
         </div>
       </main>
+
+      <footer className="border-t border-black/5 px-6 py-3 text-center pb-safe">
+        <p className="flex items-center justify-center gap-1.5 text-xs font-bold text-flip-700">
+          <Lock className="h-3.5 w-3.5" />
+          {t("home.privacyFooter")}
+        </p>
+        <p className="mt-1 text-xs text-content-mute">
+          <Link href="/privacy" className="underline">
+            {t("login.privacyLink")}
+          </Link>
+          {" · "}
+          <Link href="/terms" className="underline">
+            {t("login.termsLink")}
+          </Link>
+        </p>
+      </footer>
 
       <AnalyzeSheet open={sheetOpen} onClose={() => setSheetOpen(false)} />
     </div>
