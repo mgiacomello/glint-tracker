@@ -18,7 +18,6 @@ import { Card } from "@/components/ui";
 import { useTTS } from "@/lib/tts";
 import { useT } from "@/lib/i18n/provider";
 import { cn } from "@/lib/utils";
-import { markRead } from "@/lib/store";
 import { DemoBanner } from "@/components/DemoBanner";
 import { LottieMascot } from "@/components/LottieMascot";
 import { moodForRisk, complexityMeta } from "@/lib/analysis/types";
@@ -28,21 +27,18 @@ import type { DocumentAnalysis, AnalysisPoint, RiskLevel } from "@/lib/analysis/
 const RISK_RANK: Record<RiskLevel, number> = { danger: 0, warn: 1, safe: 2 };
 
 export function ResultView({
-  id,
   fileName,
   analysis,
+  onBack,
 }: {
-  id: string;
   fileName: string;
   analysis: DocumentAnalysis;
+  onBack?: () => void;
 }) {
   const router = useRouter();
   const t = useT();
   const [openPoint, setOpenPoint] = useState<AnalysisPoint | null>(null);
-
-  useEffect(() => {
-    markRead(id);
-  }, [id]);
+  const back = onBack ?? (() => router.push("/"));
 
   if (openPoint) {
     return <DeepDive fileName={fileName} point={openPoint} onBack={() => setOpenPoint(null)} />;
@@ -52,7 +48,7 @@ export function ResultView({
 
   return (
     <div className="flex min-h-dvh flex-col">
-      <Header title={t("result.header")} subtitle={fileName} onBack={() => router.push("/documents")} />
+      <Header title={t("result.header")} subtitle={fileName} onBack={back} />
 
       <main className="flex-1 space-y-6 px-5 py-5 pb-12">
         <DemoBanner />
@@ -109,21 +105,26 @@ export function ResultView({
           </p>
           <AudioPlayer transcript={analysis.transcript} />
           {analysis.deadlines.length > 0 && (
-            <button
-              onClick={() => router.push("/tools/calendar")}
-              className="flex w-full items-center gap-3 rounded-2xl bg-surface p-4 text-left shadow-[var(--shadow-card)] transition active:scale-[0.99]"
-            >
-              <span className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-amber-100 text-amber-600">
-                <CalendarClock className="h-5 w-5" />
-              </span>
-              <span className="flex-1 text-sm font-semibold text-content">
+            <div className="rounded-2xl bg-surface p-4 shadow-[var(--shadow-card)]">
+              <p className="mb-2 flex items-center gap-2 text-sm font-bold text-content">
+                <CalendarClock className="h-4 w-4 shrink-0 text-amber-600" />
                 {t(
                   analysis.deadlines.length === 1 ? "result.deadlines.one" : "result.deadlines.other",
                   { n: analysis.deadlines.length },
                 )}
-              </span>
-              <ChevronRight className="h-5 w-5 shrink-0 text-content-mute" />
-            </button>
+              </p>
+              <ul className="space-y-1.5">
+                {analysis.deadlines.map((d, i) => (
+                  <li key={i} className="flex items-baseline justify-between gap-3 text-sm">
+                    <span className="min-w-0 break-words text-content-soft">
+                      {d.title}
+                      {d.date ? ` · ${new Date(d.date).toLocaleDateString()}` : ""}
+                    </span>
+                    {d.amount && <span className="shrink-0 font-semibold text-flip-700">{d.amount}</span>}
+                  </li>
+                ))}
+              </ul>
+            </div>
           )}
         </section>
       </main>

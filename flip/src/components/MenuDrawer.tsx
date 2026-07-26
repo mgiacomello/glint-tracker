@@ -4,10 +4,6 @@ import { useRouter } from "next/navigation";
 import {
   Download,
   Lightbulb,
-  ScanEye,
-  GitCompareArrows,
-  CalendarClock,
-  CalendarDays,
   Settings,
   Globe,
   LogOut,
@@ -36,12 +32,10 @@ export function MenuDrawer({
   open,
   onClose,
   user,
-  radarCount = 0,
 }: {
   open: boolean;
   onClose: () => void;
   user: FlipUser;
-  radarCount?: number;
 }) {
   const t = useT();
   const router = useRouter();
@@ -73,15 +67,6 @@ export function MenuDrawer({
       items: [
         { label: t("menu.installApp"), icon: <Download className="h-5 w-5" />, tone: "indigo", onClick: onInstall },
         { label: t("menu.reviewTutorial"), icon: <Lightbulb className="h-5 w-5" />, tone: "amber", href: "/tutorial" },
-      ],
-    },
-    {
-      label: t("menu.sectionTools"),
-      items: [
-        { label: t("menu.radar"), icon: <ScanEye className="h-5 w-5" />, tone: "flip", href: "/tools/radar", badge: radarCount },
-        { label: t("menu.compare"), icon: <GitCompareArrows className="h-5 w-5" />, tone: "indigo", href: "/tools/compare" },
-        { label: t("menu.deadlines"), icon: <CalendarClock className="h-5 w-5" />, tone: "amber", href: "/tools/deadlines" },
-        { label: t("menu.calendar"), icon: <CalendarDays className="h-5 w-5" />, tone: "rose", href: "/tools/calendar" },
       ],
     },
     {

@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from "react";
 import { TopBar } from "@/components/TopBar";
-import { BottomNav } from "@/components/BottomNav";
 import { LottieMascot } from "@/components/LottieMascot";
 import { AnalyzeSheet } from "@/components/AnalyzeSheet";
 import { Upload } from "lucide-react";
@@ -82,7 +81,6 @@ export function HomeView({ user, fooledCount }: { user: FlipUser; fooledCount: n
         </div>
       </main>
 
-      <BottomNav />
       <AnalyzeSheet open={sheetOpen} onClose={() => setSheetOpen(false)} />
     </div>
   );

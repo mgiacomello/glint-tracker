@@ -4,7 +4,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { X, RotateCcw, Eye, Flashlight, FlashlightOff, Loader2 } from "lucide-react";
 import { consumeAnalysisStream, assembleAnalysis } from "@/lib/analysis/stream";
-import { saveDocument } from "@/lib/store";
+import { setPendingResult } from "@/lib/session";
 import { getLang } from "@/lib/i18n";
 import { useT } from "@/lib/i18n/provider";
 import { getProfile } from "@/lib/profile";
@@ -86,8 +86,8 @@ export function EyesView() {
       });
       const analysis = assembleAnalysis(meta.current, points, deadlines);
       if (!analysis) throw new Error();
-      const doc = saveDocument(t("eyes.liveLabel"), analysis);
-      router.replace(`/document/${doc.id}`);
+      setPendingResult({ fileName: t("eyes.liveLabel"), analysis });
+      router.replace("/result");
     } catch {
       setErr(t("eyes.error.read"));
       setBusy(false);

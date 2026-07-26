@@ -3,64 +3,27 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { Globe, Download, Trash2, ShieldCheck, Volume2, ChevronRight, LogOut, UserRound, Bell } from "lucide-react";
+import { Globe, Download, ShieldCheck, Volume2, ChevronRight, LogOut, UserRound } from "lucide-react";
 import { SubPage } from "@/components/SubPage";
 import { IconBadge, SectionLabel } from "@/components/ui";
 import { useT } from "@/lib/i18n/provider";
 import { promptInstall } from "@/lib/pwa";
 import { createClient, hasSupabaseEnv } from "@/lib/supabase/client";
-import { listDocuments, allDeadlines } from "@/lib/store";
-import { scheduleDeadlineReminders, cancelDeadlineReminders } from "@/lib/notifications";
 
 export default function SettingsPage() {
   const router = useRouter();
   const t = useT();
   const [tts, setTts] = useState(true);
-  const [reminders, setReminders] = useState(false);
-  const [docCount, setDocCount] = useState(0);
   const budget = process.env.NEXT_PUBLIC_AI_BUDGET_EUR;
 
   useEffect(() => {
     setTts(localStorage.getItem("flip:tts") !== "off");
-    const remOn = localStorage.getItem("chiaro:reminders") === "on";
-    setReminders(remOn);
-    setDocCount(listDocuments().length);
-    // keep reminders in sync with the latest deadlines (silent)
-    if (remOn) scheduleDeadlineReminders(allDeadlines()).catch(() => {});
   }, []);
 
   const toggleTts = () => {
     const next = !tts;
     setTts(next);
     localStorage.setItem("flip:tts", next ? "on" : "off");
-  };
-
-  const toggleReminders = async () => {
-    const next = !reminders;
-    setReminders(next);
-    localStorage.setItem("chiaro:reminders", next ? "on" : "off");
-    if (next) {
-      const res = await scheduleDeadlineReminders(allDeadlines());
-      if (res.permission === "denied") {
-        alert(t("settings.reminders.denied"));
-        setReminders(false);
-        localStorage.setItem("chiaro:reminders", "off");
-      } else if (res.native) {
-        alert(t("settings.reminders.scheduled", { count: res.scheduled }));
-      } else {
-        alert(t("settings.reminders.enabled"));
-      }
-    } else {
-      await cancelDeadlineReminders();
-    }
-  };
-
-  const clearAll = () => {
-    if (confirm(t("settings.deleteConfirm"))) {
-      localStorage.removeItem("flip:documents");
-      window.dispatchEvent(new Event("flip:documents-changed"));
-      setDocCount(0);
-    }
   };
 
   const logout = async () => {
@@ -75,9 +38,6 @@ export default function SettingsPage() {
           <SectionLabel>{t("settings.section.preferences")}</SectionLabel>
           <Row icon={<Volume2 className="h-5 w-5" />} tone="flip" label={t("settings.tts.label")} hint={t("settings.tts.hint")}>
             <Toggle on={tts} onClick={toggleTts} />
-          </Row>
-          <Row icon={<Bell className="h-5 w-5" />} tone="amber" label={t("settings.reminders.label")} hint={t("settings.reminders.hint")}>
-            <Toggle on={reminders} onClick={toggleReminders} />
           </Row>
           <LinkRow href="/settings/profile" icon={<UserRound className="h-5 w-5" />} tone="flip" label={t("settings.profile.label")} />
           <LinkRow href="/settings/language" icon={<Globe className="h-5 w-5" />} tone="indigo" label={t("settings.language.label")} trailing="🇮🇹" />
@@ -105,15 +65,6 @@ export default function SettingsPage() {
             {t("settings.privacyBlurb")}
             {budget && <p className="mt-2">{t("settings.aiBudget", { budget })}</p>}
           </div>
-          <button
-            onClick={clearAll}
-            className="flex w-full items-center gap-3 rounded-2xl p-2 text-left text-risk-danger hover:bg-rose-50"
-          >
-            <IconBadge tone="rose" className="h-10 w-10 rounded-xl">
-              <Trash2 className="h-5 w-5" />
-            </IconBadge>
-            <span className="flex-1 font-medium">{t("settings.deleteDocs", { count: docCount })}</span>
-          </button>
         </div>
 
         <button

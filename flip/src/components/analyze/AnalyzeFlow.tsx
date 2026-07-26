@@ -9,7 +9,7 @@ import { DemoBanner } from "@/components/DemoBanner";
 import { Button } from "@/components/ui";
 import { MAX_UPLOAD_BYTES, formatBytes } from "@/lib/utils";
 import { consumeAnalysisStream, assembleAnalysis } from "@/lib/analysis/stream";
-import { saveDocument } from "@/lib/store";
+import { setPendingResult } from "@/lib/session";
 import { getLang } from "@/lib/i18n";
 import { useT } from "@/lib/i18n/provider";
 import { getProfile } from "@/lib/profile";
@@ -75,11 +75,11 @@ export function AnalyzeFlow({ mode }: { mode: "upload" | "camera" }) {
         if (!analysis) throw new Error(t("analyze.error.incomplete"));
 
         setProgress(100);
-        const doc = saveDocument(label, analysis);
+        setPendingResult({ fileName: label, analysis });
         // celebratory beat before showing the result — fox reacts to the verdict
         setDoneMood(moodForRisk(analysis.overallRisk));
         setPhase("done");
-        setTimeout(() => router.replace(`/document/${doc.id}`), 1250);
+        setTimeout(() => router.replace("/result"), 1250);
       } catch (e) {
         // raw error text goes to the console; the user sees a localized message.
         console.error("analyze:", e);
