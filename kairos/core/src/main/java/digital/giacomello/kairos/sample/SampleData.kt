@@ -64,14 +64,44 @@ object SampleData {
             distanceKm = 975, source = Source.GMAIL),
     )
 
-    val flights = listOf(today, nextWeek) + past
+    private fun hist(num: String, airline: String, from: String, to: String, y: Int, mo: Int, d: Int, h: Int, durMin: Int, delayMin: Int,
+                     fromZ: ZoneId = ROME, st: FlightStatus = FlightStatus.ARRIVED): Flight {
+        val dep = at(y, mo, d, h, 0, fromZ)
+        return Flight("${num}_$y-$mo-$d", num, "%d-%02d-%02d".format(y, mo, d), airline, st,
+            Endpoint(from, scheduled = dep, actual = dep + delayMin * M),
+            Endpoint(to, scheduled = dep + durMin * M, actual = dep + (durMin + delayMin) * M), source = Source.GMAIL)
+    }
 
-    val prefs = TravelPrefs(origin = "Via Example 1, Milano", mode = TravelMode.TAXI, lounge = true)
+    /** Un anno abbondante di viaggi Milano/Roma/Londra, per le statistiche. */
+    val history = past + listOf(
+        hist("AZ2041", "ITA Airways", "FCO", "LIN", 2026, 1, 14, 8, 70, 4),
+        hist("AZ2050", "ITA Airways", "LIN", "FCO", 2026, 1, 16, 19, 70, 22),
+        hist("BA583", "British Airways", "LIN", "LHR", 2026, 2, 3, 7, 125, 0),
+        hist("BA576", "British Airways", "LHR", "LIN", 2026, 2, 6, 17, 120, 48, LONDON),
+        hist("U23842", "easyJet", "MXP", "LGW", 2026, 3, 20, 10, 115, 9),
+        hist("U23843", "easyJet", "LGW", "MXP", 2026, 3, 23, 14, 110, 95, LONDON),
+        hist("AZ211", "ITA Airways", "LIN", "LCY", 2026, 5, 11, 7, 130, 2),
+        hist("AZ214", "ITA Airways", "LCY", "LIN", 2026, 5, 13, 18, 115, 0, LONDON),
+        hist("FR1027", "Ryanair", "BGY", "STN", 2026, 6, 1, 6, 120, 0, st = FlightStatus.CANCELED),
+        hist("AZ1781", "ITA Airways", "FCO", "BCN", 2026, 7, 2, 9, 105, 31),
+        hist("VY6103", "Vueling", "BCN", "FCO", 2026, 7, 6, 21, 100, 12, ZoneId.of("Europe/Madrid")),
+        hist("EK92", "Emirates", "MXP", "DXB", 2025, 12, 20, 21, 365, 18),
+        hist("EK91", "Emirates", "DXB", "MXP", 2025, 12, 28, 8, 400, 0, ZoneId.of("Asia/Dubai")),
+        hist("BA571", "British Airways", "LIN", "LHR", 2025, 11, 4, 10, 125, 6),
+        hist("BA582", "British Airways", "LHR", "LIN", 2025, 11, 7, 20, 120, 64, LONDON),
+    )
+
+    val flights = listOf(today, nextWeek) + history
+
+    val prefs = TravelPrefs(origin = "Via Example 1, Milano", mode = TravelMode.TRANSIT, lounge = true)
 
     val plan: LeavePlan = LeavePlanner.plan(
-        today, prefs, travelMinutes = 24, travelSource = "Google, traffico previsto",
-        travelSummary = "Viale Forlanini · traffico moderato",
-        strikes = listOf(StrikeAlert("Sciopero taxi", "Taxi Milano · 4 ore: dalle 8.00 alle 12.00 · valuta mezzi o NCC", affectsAirline = false, affectsTransport = true)),
+        today, prefs, travelMinutes = 27, travelSource = "Google, orari mezzi",
+        travelSummary = "M4 · 09:03 da San Babila",
+        strikes = listOf(StrikeAlert("Sciopero trasporto pubblico locale",
+            "Personale ATM Milano · 4 ore: dalle 18.00 alle 22.00 · non tocca la tua corsa del mattino",
+            affectsAirline = false, affectsTransport = true, from = "18:00", to = "22:00")),
+        fixedLeaveAt = at(2026, 11, 26, 8, 56),
     )!!
 
     val plans = mapOf(today.id to plan)

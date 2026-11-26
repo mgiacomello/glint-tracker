@@ -17,6 +17,7 @@ import digital.giacomello.kairos.notify.Notifier
 import digital.giacomello.kairos.ui.screens.AddFlightScreen
 import digital.giacomello.kairos.ui.screens.FlightDetailScreen
 import digital.giacomello.kairos.ui.screens.FlightListScreen
+import digital.giacomello.kairos.ui.screens.StatsScreen
 import digital.giacomello.kairos.ui.theme.KairosTheme
 
 class MainActivity : ComponentActivity() {
@@ -44,8 +45,10 @@ class MainActivity : ComponentActivity() {
                                 vm = vm,
                                 onOpen = { nav.navigate("detail/$it") },
                                 onAdd = { vm.resetAdd(); nav.navigate("add") },
+                                onStats = { nav.navigate("stats") },
                             )
                         }
+                        composable("stats") { StatsScreen(vm) }
                         composable("add") {
                             AddFlightScreen(vm = vm, onDone = { id ->
                                 nav.popBackStack()

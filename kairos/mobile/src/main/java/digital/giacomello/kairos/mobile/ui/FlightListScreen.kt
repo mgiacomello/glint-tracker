@@ -58,6 +58,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import digital.giacomello.kairos.model.Flight
 import digital.giacomello.kairos.model.Source
 import digital.giacomello.kairos.notify.Notifier
+import digital.giacomello.kairos.stats.TravelStats
 import digital.giacomello.kairos.travel.LeavePlan
 import digital.giacomello.kairos.travel.TravelService
 import java.time.Instant
@@ -67,7 +68,7 @@ import java.time.format.DateTimeFormatter
 import java.util.Locale
 
 @Composable
-fun FlightListScreen(vm: MobileViewModel, onOpen: (String) -> Unit, onSettings: () -> Unit) {
+fun FlightListScreen(vm: MobileViewModel, onOpen: (String) -> Unit, onSettings: () -> Unit, onStats: () -> Unit) {
     val flights by vm.flights.collectAsStateWithLifecycle()
     val plans by vm.plans.collectAsStateWithLifecycle()
     val busy by vm.busy.collectAsStateWithLifecycle()
@@ -80,7 +81,7 @@ fun FlightListScreen(vm: MobileViewModel, onOpen: (String) -> Unit, onSettings: 
     FlightListContent(
         flights = flights, plans = plans, busy = busy, isDemo = vm.isDemo, gmail = vm.gmailConfigured,
         snack = snack, now = System.currentTimeMillis(), onOpen = onOpen, onSettings = onSettings,
-        onSync = { vm.sync() }, onScanGmail = { vm.sync(scanGmail = true) }, onAdd = { showAdd = true },
+        onSync = { vm.sync() }, onScanGmail = { vm.sync(scanGmail = true) }, onAdd = { showAdd = true }, onStats = onStats,
     )
 
     if (showAdd) AddFlightDialog(onDismiss = { showAdd = false }) { n, d ->
@@ -95,7 +96,7 @@ fun FlightListScreen(vm: MobileViewModel, onOpen: (String) -> Unit, onSettings: 
 fun FlightListContent(
     flights: List<Flight>, plans: Map<String, LeavePlan>, busy: Boolean, isDemo: Boolean, gmail: Boolean,
     snack: SnackbarHostState, now: Long, onOpen: (String) -> Unit, onSettings: () -> Unit,
-    onSync: () -> Unit, onScanGmail: () -> Unit, onAdd: () -> Unit,
+    onSync: () -> Unit, onScanGmail: () -> Unit, onAdd: () -> Unit, onStats: () -> Unit = {},
 ) {
     val upcoming = flights.filter { !it.status.isFinished }
     val past = flights.filter { it.status.isFinished }
@@ -126,8 +127,8 @@ fun FlightListContent(
                 items(upcoming, key = { it.id }) { f -> FlightRow(f, plans[f.id], now) { onOpen(f.id) } }
                 if (past.isNotEmpty()) {
                     item { SectionTitle("Passati") }
-                    item { StatsCard(past) }
-                    items(past.reversed(), key = { it.id }) { f -> FlightRow(f, null, now) { onOpen(f.id) } }
+                    item { StatsCard(past, onStats) }
+                    items(past.sortedByDescending { it.date }.take(10), key = { it.id }) { f -> FlightRow(f, null, now) { onOpen(f.id) } }
                 }
             }
         }
@@ -206,18 +207,15 @@ private fun FlightRow(f: Flight, plan: LeavePlan?, now: Long, onClick: () -> Uni
 
 /** Statistiche dei voli passati (il "passaporto" del viaggiatore). */
 @Composable
-private fun StatsCard(past: List<Flight>) {
-    val km = past.sumOf { it.distanceKm ?: 0 }
-    val minutes = past.sumOf { it.durationMinutes ?: 0 }
-    val airports = past.flatMap { listOf(it.departure.iata, it.arrival.iata) }.toSet().size
-    val airlines = past.map { it.number.take(2) }.toSet().size
-    Card(Modifier.fillMaxWidth(), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer)) {
+private fun StatsCard(past: List<Flight>, onClick: () -> Unit) {
+    val s = TravelStats.from(past)
+    Card(Modifier.fillMaxWidth().clickable(onClick = onClick), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer)) {
         Row(Modifier.fillMaxWidth().padding(16.dp), horizontalArrangement = Arrangement.SpaceBetween) {
-            Stat("${past.size}", "voli")
-            Stat("%,d".format(Locale.ITALIAN, km), "km")
-            Stat("${minutes / 60}", "ore")
-            Stat("$airports", "aeroporti")
-            Stat("$airlines", "compagnie")
+            Stat("${s.flights}", "voli")
+            Stat("%,d".format(Locale.ITALIAN, s.km), "km")
+            Stat("${s.airMinutes / 60}", "ore")
+            Stat("${s.onTimePct ?: "—"}%", "puntuali")
+            Stat("${s.avgArrivalDelay ?: 0}'", "rit. medio")
         }
     }
 }

@@ -65,19 +65,30 @@ class TravelService(private val context: Context) {
             var travel = prev?.travelMinutes ?: prefs.fallbackTravelMinutes
             var source = prev?.travelSource ?: "stima"
             var summary = prev?.travelSummary
+            var fixedLeave = prev?.takeIf { it.mode == TravelMode.TRANSIT && it.travelSource.startsWith("Google") }?.leaveAt
             if (stale && prefs.origin.isNotBlank() && routes.isConfigured) {
-                val guess = LeavePlanner.plan(f, prefs, travel, source)?.leaveAt ?: now
-                runCatching { routes.travel(prefs.origin, depA, f.departure.iata, prefs.mode, guess) }
+                val draft = LeavePlanner.plan(f, prefs, travel, source, strikes = alerts)
+                val guess = draft?.leaveAt ?: now
+                // Mezzi: arrivare in aeroporto entro (arrivo consigliato − margine)
+                val marginMin = draft?.steps?.firstOrNull { it.label.startsWith("Margine") }?.minutes ?: 15
+                val arriveBy = draft?.let { it.arriveAirportAt - marginMin * 60_000L }
+                runCatching { routes.travel(prefs.origin, depA, f.departure.iata, prefs.mode, guess, arriveBy) }
                     .onSuccess {
                         travel = it.minutes
-                        source = if (prefs.mode == TravelMode.TRANSIT) "Google, mezzi pubblici" else "Google, traffico previsto"
                         summary = it.summary
+                        if (prefs.mode == TravelMode.TRANSIT) {
+                            source = "Google, orari mezzi"
+                            fixedLeave = it.departAt?.let { d -> d - 5 * 60_000L } // 5' di scorta per la fermata
+                        } else {
+                            source = "Google, traffico previsto"
+                            fixedLeave = null
+                        }
                     }
             } else if (prefs.origin.isBlank() || !routes.isConfigured) {
-                travel = prefs.fallbackTravelMinutes; source = "stima"; summary = null
+                travel = prefs.fallbackTravelMinutes; source = "stima"; summary = null; fixedLeave = null
             }
 
-            val p = LeavePlanner.plan(f, prefs, travel, source, summary, alerts) ?: continue
+            val p = LeavePlanner.plan(f, prefs, travel, source, summary, alerts, fixedLeave) ?: continue
             var plan = p.copy(
                 computedAt = if (stale) now else prev?.computedAt ?: now,
                 notifiedPrepare = prev?.notifiedPrepare == true,

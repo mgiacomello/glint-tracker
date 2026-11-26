@@ -12,7 +12,7 @@
 
 // ---------------- Config ----------------
 
-var QUERY = 'newer_than:120d -in:spam -in:trash (' + [
+var QUERY = 'newer_than:730d -in:spam -in:trash (' + [
   'category:reservations',
   'subject:(volo OR flight OR "e-ticket" OR itinerary OR itinerario OR "boarding pass" OR "carta d\'imbarco" OR prenotazione OR booking OR check-in)',
   'from:(ba.com OR ita-airways.com OR ryanair.com OR wizzair.com OR easyjet.com OR booking.com OR edreams.com OR lufthansa.com OR airfrance.fr OR klm.com OR vueling.com OR iberia.com OR emirates.com OR qatarairways.com OR turkishairlines.com OR swiss.com OR expedia.com OR skyscanner.net OR lastminute.com OR volagratis.com OR opodo.com)'
@@ -39,7 +39,13 @@ function setup() {
 
 /** Scansione periodica. */
 function scan() {
-  var threads = GmailApp.search(QUERY, 0, 150);
+  // Fino a 2 anni di storico (per le statistiche), a pagine da 100 thread
+  var threads = [];
+  for (var start = 0; start < 600; start += 100) {
+    var page = GmailApp.search(QUERY, start, 100);
+    threads = threads.concat(page);
+    if (page.length < 100) break;
+  }
   var found = {};
   threads.forEach(function (th) {
     th.getMessages().forEach(function (m) {
@@ -51,9 +57,8 @@ function scan() {
     });
   });
 
-  var today = isoDate(new Date(Date.now() - 24 * 3600 * 1000)); // da ieri in poi
+  // Tutti i voli (passati inclusi: servono per km, ore e ritardi nelle statistiche)
   var list = Object.keys(found).map(function (k) { return found[k]; })
-    .filter(function (f) { return f.date >= today; })
     .sort(function (a, b) { return a.date < b.date ? -1 : 1; });
 
   PropertiesService.getScriptProperties().setProperty('FLIGHTS', JSON.stringify({

@@ -48,6 +48,8 @@ object LeavePlanner {
     fun plan(
         f: Flight, prefs: TravelPrefs, travelMinutes: Int, travelSource: String,
         travelSummary: String? = null, strikes: List<StrikeAlert> = emptyList(),
+        /** Mezzi pubblici: uscita fissata dalla corsa scelta (orario corsa − cammino − 5'). */
+        fixedLeaveAt: Long? = null,
     ): LeavePlan? {
         val sched = f.departure.scheduled ?: f.departure.best ?: return null
         val best = f.departure.best ?: sched
@@ -98,11 +100,24 @@ object LeavePlanner {
         }
         val arriveAirportAt = t
 
-        val strikeExtra = if (strikes.any { it.affectsTransport || it.affectsAirline }) 30 else 0
+        // +30' solo se lo sciopero tocca davvero il tragitto (fascia oraria) o il volo
+        val rome = java.time.ZoneId.of("Europe/Rome")
+        val tripStart = java.time.Instant.ofEpochMilli(arriveAirportAt - (travelMinutes + kind.margin + 30) * 60_000L).atZone(rome).toLocalTime()
+        val tripEnd = java.time.Instant.ofEpochMilli(arriveAirportAt).atZone(rome).toLocalTime()
+        val strikeExtra = if (strikes.any { it.affectsAirline || (it.affectsTransport && it.overlaps(tripStart, tripEnd)) }) 30 else 0
         val margin = kind.margin + (travelMinutes * 0.10).roundToInt() + prefs.extraMargin + strikeExtra
-        // Ordine inverso: letto da casa al gate diventa "viaggio → margine → controlli → ..."
-        back(if (strikeExtra > 0) "Margine (+30' sciopero)" else "Margine", margin)
-        back("Viaggio (${prefs.mode.label.lowercase()})", travelMinutes)
+        val marginLabel = if (strikeExtra > 0) "Margine (+30' sciopero)" else "Margine"
+        if (fixedLeaveAt != null && fixedLeaveAt < arriveAirportAt) {
+            // La corsa dei mezzi fissa l'uscita: il margine è quello che resta tra arrivo e "ora limite"
+            val total = ((arriveAirportAt - fixedLeaveAt) / 60_000L).toInt()
+            back(marginLabel, (total - travelMinutes).coerceAtLeast(0))
+            back("Viaggio (${prefs.mode.label.lowercase()})", minOf(travelMinutes, total))
+            t = fixedLeaveAt
+        } else {
+            // Ordine inverso: letto da casa al gate diventa "viaggio → margine → controlli → ..."
+            back(marginLabel, margin)
+            back("Viaggio (${prefs.mode.label.lowercase()})", travelMinutes)
+        }
 
         return LeavePlan(
             flightId = f.id,

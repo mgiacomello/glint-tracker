@@ -71,7 +71,7 @@ class FlightRepository(
         val yesterday = LocalDate.now().minusDays(1).toString()
 
         for (ef in found) {
-            if (ef.date < yesterday) continue
+            val isPast = ef.date < yesterday
             val id = Flight.idFor(ef.number, ef.date)
             if (id in dismissed) continue
             val existing = current[id]
@@ -83,11 +83,13 @@ class FlightRepository(
                 current[id] = updated
                 continue
             }
+            // Voli passati: una sola richiesta storica (orari effettivi -> statistiche ritardi), poi mai più
             val live = runCatching { provider.lookup(ef.number, ef.date) }.getOrNull()
-            val f = (live ?: fromEmail(ef))
+            val f = (live ?: fromEmail(ef, isPast))
                 .copy(source = Source.GMAIL)
                 .withEmail(ef.booking(), ef.terminal, ef.arrTerminal, ef.gate)
             current[id] = f
+            if (isPast) continue // lo storico entra in silenzio, niente notifiche
             events += FlightEvent(
                 f, "Nuovo volo da Gmail",
                 "${f.number} ${f.departure.iata}→${f.arrival.iata} · ${ef.date}${f.booking?.seat?.let { " · posto $it" } ?: ""}",
@@ -139,7 +141,7 @@ class FlightRepository(
      * se l'aeroporto è in tabella usiamo il suo fuso (countdown corretto), altrimenti offset 0
      * (ora mostrata corretta, countdown approssimato) finché arrivano i dati live.
      */
-    private fun fromEmail(ef: EmailFlight): Flight {
+    private fun fromEmail(ef: EmailFlight, isPast: Boolean = false): Flight {
         fun endpoint(iata: String?, date: String?, time: String?): Endpoint {
             val ap = Airports.get(iata)
             val ldt = runCatching { LocalDateTime.parse("${date!!}T${time!!}") }.getOrNull()
@@ -154,7 +156,7 @@ class FlightRepository(
             id = Flight.idFor(ef.number, ef.date),
             number = Flight.normalizeNumber(ef.number),
             date = ef.date,
-            status = FlightStatus.SCHEDULED,
+            status = if (isPast) FlightStatus.ARRIVED else FlightStatus.SCHEDULED,
             departure = endpoint(ef.from, ef.date, ef.time),
             arrival = endpoint(ef.to, ef.arrDate ?: ef.date, ef.arrTime),
             lastUpdated = 0L, // forza un nuovo tentativo al prossimo giro

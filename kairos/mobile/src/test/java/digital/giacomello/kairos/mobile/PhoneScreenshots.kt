@@ -9,6 +9,7 @@ import digital.giacomello.kairos.mobile.ui.FlightDetailContent
 import digital.giacomello.kairos.mobile.ui.FlightListContent
 import digital.giacomello.kairos.mobile.ui.KairosTheme
 import digital.giacomello.kairos.mobile.ui.SettingsContent
+import digital.giacomello.kairos.mobile.ui.StatsContent
 import digital.giacomello.kairos.sample.SampleData
 import org.junit.Before
 import org.junit.Test
@@ -51,6 +52,10 @@ class PhoneScreenshots {
     @Test fun inFlight() = shot("3-in-volo") {
         FlightDetailContent(SampleData.airborne, null, SampleData.airborneNow, onBack = {}, onRefresh = {}, onRemove = {})
     }
+
+    @Test fun stats() = shot("5-statistiche") { StatsContent(SampleData.flights, onBack = {}) }
+
+    @Test fun statsYear() = shot("6-statistiche-2026") { StatsContent(SampleData.flights, onBack = {}, initialYear = 2026) }
 
     @Test fun settings() = shot("4-impostazioni") {
         SettingsContent(SampleData.prefs, gmail = true, maps = true, live = true, onSave = {}, onBack = {})

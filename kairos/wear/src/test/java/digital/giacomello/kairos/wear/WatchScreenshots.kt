@@ -15,6 +15,7 @@ import com.github.takahirom.roborazzi.captureRoboImage
 import digital.giacomello.kairos.sample.SampleData
 import digital.giacomello.kairos.ui.screens.FlightDetailContent
 import digital.giacomello.kairos.ui.screens.FlightListContent
+import digital.giacomello.kairos.ui.screens.StatsContent
 import digital.giacomello.kairos.ui.theme.KairosTheme
 import org.junit.Before
 import org.junit.Test
@@ -47,7 +48,7 @@ class WatchScreenshots {
         }
 
     @Test fun list() = shot("1-elenco") {
-        FlightListContent(SampleData.flights.take(2), refreshing = false, isDemo = false, now = SampleData.now, onOpen = {}, onAdd = {}, onRefresh = {})
+        FlightListContent(SampleData.flights, refreshing = false, isDemo = false, now = SampleData.now, onOpen = {}, onAdd = {}, onRefresh = {})
     }
 
     @Test fun detail() = shot("2-dettaglio") {
@@ -61,6 +62,10 @@ class WatchScreenshots {
     @Test fun boardingPass() = shot("2c-carta-imbarco") {
         FlightDetailContent(SampleData.today, SampleData.plan, refreshing = false, now = SampleData.now, onRefresh = {}, onRemove = {}, initialItem = 8)
     }
+
+    @Test fun stats() = shot("4-statistiche") { StatsContent(SampleData.flights) }
+
+    @Test fun statsDelays() = shot("4b-ritardi") { StatsContent(SampleData.flights, initialItem = 3) }
 
     @Test fun inFlight() = shot("3-in-volo") {
         FlightDetailContent(SampleData.airborne, null, refreshing = false, now = SampleData.airborneNow, onRefresh = {}, onRemove = {})

@@ -30,9 +30,17 @@ class RoutesClient(private val apiKey: String) {
 
     val isConfigured get() = apiKey.isNotBlank()
 
-    data class Result(val minutes: Int, val km: Double?, val summary: String?)
+    /**
+     * @param departAt per i mezzi pubblici: orario della prima corsa da prendere (es. partenza del treno),
+     *                 già al netto del cammino fino alla fermata. null per auto/taxi.
+     */
+    data class Result(val minutes: Int, val km: Double?, val summary: String?, val departAt: Long? = null)
 
-    suspend fun travel(origin: String, dest: Airport?, destIata: String, mode: TravelMode, departAt: Long): Result =
+    /**
+     * @param departAt auto/taxi: orario di partenza previsto (per il traffico).
+     * @param arriveBy mezzi pubblici: entro quando arrivare in aeroporto; Google sceglie la corsa giusta.
+     */
+    suspend fun travel(origin: String, dest: Airport?, destIata: String, mode: TravelMode, departAt: Long, arriveBy: Long? = null): Result =
         withContext(Dispatchers.IO) {
             val transit = mode == TravelMode.TRANSIT
             val body = buildJsonObject {
@@ -44,9 +52,14 @@ class RoutesClient(private val apiKey: String) {
                 }
                 put("travelMode", if (transit) "TRANSIT" else "DRIVE")
                 if (!transit) put("routingPreference", "TRAFFIC_AWARE")
-                // departureTime deve essere nel futuro
-                val t = maxOf(departAt, System.currentTimeMillis() + 60_000)
-                put("departureTime", Instant.ofEpochMilli(t).toString())
+                if (transit && arriveBy != null && arriveBy > System.currentTimeMillis() + 10 * 60_000) {
+                    // Mezzi: orari fissi -> chiediamo "arrivare entro", non "partire alle"
+                    put("arrivalTime", Instant.ofEpochMilli(arriveBy).toString())
+                } else {
+                    // departureTime deve essere nel futuro
+                    val t = maxOf(departAt, System.currentTimeMillis() + 60_000)
+                    put("departureTime", Instant.ofEpochMilli(t).toString())
+                }
                 put("languageCode", "it")
             }
 
@@ -55,7 +68,14 @@ class RoutesClient(private val apiKey: String) {
                 .header("X-Goog-Api-Key", apiKey)
                 .header(
                     "X-Goog-FieldMask",
-                    "routes.duration,routes.distanceMeters,routes.description,routes.legs.steps.transitDetails.transitLine.nameShort,routes.legs.steps.transitDetails.transitLine.name",
+                    listOf(
+                        "routes.duration", "routes.distanceMeters", "routes.description",
+                        "routes.legs.steps.travelMode", "routes.legs.steps.staticDuration",
+                        "routes.legs.steps.transitDetails.transitLine.nameShort",
+                        "routes.legs.steps.transitDetails.transitLine.name",
+                        "routes.legs.steps.transitDetails.stopDetails.departureTime",
+                        "routes.legs.steps.transitDetails.stopDetails.departureStop.name",
+                    ).joinToString(","),
                 )
                 .post(body.toString().toRequestBody("application/json".toMediaType()))
                 .build()
@@ -68,14 +88,30 @@ class RoutesClient(private val apiKey: String) {
                 val secs = route["duration"]?.jsonPrimitive?.contentOrNull?.removeSuffix("s")?.toLongOrNull()
                     ?: throw IOException("Durata mancante")
                 val km = route["distanceMeters"]?.jsonPrimitive?.contentOrNull?.toDoubleOrNull()?.div(1000)
-                val lines = if (transit) route["legs"]?.jsonArray?.flatMap { leg ->
-                    leg.jsonObject["steps"]?.jsonArray.orEmpty().mapNotNull { st ->
-                        st.jsonObject["transitDetails"]?.jsonObject?.get("transitLine")?.jsonObject?.let { l ->
-                            (l["nameShort"] ?: l["name"])?.jsonPrimitive?.contentOrNull
-                        }
+                if (!transit) {
+                    return@use Result(((secs + 59) / 60).toInt(), km, route["description"]?.jsonPrimitive?.contentOrNull)
+                }
+                // Mezzi pubblici: linee usate + prima corsa (fermata e orario) + cammino iniziale
+                val steps = route["legs"]?.jsonArray.orEmpty().flatMap { it.jsonObject["steps"]?.jsonArray.orEmpty() }.map { it.jsonObject }
+                val lines = steps.mapNotNull { st ->
+                    st["transitDetails"]?.jsonObject?.get("transitLine")?.jsonObject?.let { l -> (l["nameShort"] ?: l["name"])?.jsonPrimitive?.contentOrNull }
+                }.distinct()
+                val firstIdx = steps.indexOfFirst { it["transitDetails"] != null }
+                val first = steps.getOrNull(firstIdx)?.get("transitDetails")?.jsonObject?.get("stopDetails")?.jsonObject
+                val firstDep = first?.get("departureTime")?.jsonPrimitive?.contentOrNull?.let { runCatching { Instant.parse(it).toEpochMilli() }.getOrNull() }
+                val firstStop = first?.get("departureStop")?.jsonObject?.get("name")?.jsonPrimitive?.contentOrNull
+                val walkBefore = steps.take(maxOf(firstIdx, 0)).sumOf {
+                    it["staticDuration"]?.jsonPrimitive?.contentOrNull?.removeSuffix("s")?.toLongOrNull() ?: 0L
+                }
+                val summary = buildString {
+                    append(lines.joinToString(" → ").ifBlank { "Mezzi pubblici" })
+                    if (firstDep != null) {
+                        append(" · ").append(java.time.format.DateTimeFormatter.ofPattern("HH:mm")
+                            .format(Instant.ofEpochMilli(firstDep).atZone(java.time.ZoneId.systemDefault())))
+                        firstStop?.let { append(" da ").append(it) }
                     }
-                }?.distinct()?.joinToString(" → ") else route["description"]?.jsonPrimitive?.contentOrNull
-                Result(((secs + 59) / 60).toInt(), km, lines?.takeIf { it.isNotBlank() })
+                }
+                Result(((secs + 59) / 60).toInt(), km, summary, departAt = firstDep?.let { it - walkBefore * 1000 })
             }
         }
 }

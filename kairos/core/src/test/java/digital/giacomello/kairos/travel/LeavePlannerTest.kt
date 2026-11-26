@@ -48,11 +48,31 @@ class LeavePlannerTest {
         assertEquals(30 * min, p1.leaveAt - p0.leaveAt)
     }
 
+    @Test fun mezzi_uscitaFissataDallaCorsa() {
+        // Arrivo consigliato a FCO -115'; corsa che fa uscire a -170' con 40' di viaggio -> margine 15'
+        val fixed = dep - 170 * min
+        val p = LeavePlanner.plan(flight("FCO", "LHR"), TravelPrefs(mode = TravelMode.TRANSIT), 40, "Google", fixedLeaveAt = fixed)!!
+        assertEquals(fixed, p.leaveAt)
+        assertEquals(15, p.steps.first { it.label.startsWith("Margine") }.minutes)
+        assertEquals(40, p.steps.first { it.label.startsWith("Viaggio") }.minutes)
+    }
+
     @Test fun sciopero_aggiunge30() {
         val s = listOf(StrikeAlert("Sciopero", "x", affectsAirline = true, affectsTransport = false))
         val p0 = LeavePlanner.plan(flight("FCO", "LIN"), TravelPrefs(), 30, "t")!!
         val p1 = LeavePlanner.plan(flight("FCO", "LIN"), TravelPrefs(), 30, "t", strikes = s)!!
         assertEquals(30 * min, p0.leaveAt - p1.leaveAt)
+    }
+
+    @Test fun sciopero_fuoriFascia_nonAggiunge() {
+        // Volo alle 9:00: sciopero mezzi 18-22 non tocca il tragitto del mattino
+        val sera = listOf(StrikeAlert("Sciopero TPL", "x", affectsAirline = false, affectsTransport = true, from = "18:00", to = "22:00"))
+        val mattina = listOf(StrikeAlert("Sciopero TPL", "x", affectsAirline = false, affectsTransport = true, from = "05:00", to = "09:00"))
+        val p0 = LeavePlanner.plan(flight("FCO", "LIN"), TravelPrefs(), 30, "t")!!
+        assertEquals(p0.leaveAt, LeavePlanner.plan(flight("FCO", "LIN"), TravelPrefs(), 30, "t", strikes = sera)!!.leaveAt)
+        assertEquals(p0.leaveAt - 30 * min, LeavePlanner.plan(flight("FCO", "LIN"), TravelPrefs(), 30, "t", strikes = mattina)!!.leaveAt)
+        assertEquals("18:00" to "22:00", StrikeAlert.window("4 ORE: DALLE 18.00 ALLE 22.00"))
+        assertEquals(null, StrikeAlert.window("24 ORE: DALLE 00.00 ALLE 23.59"))
     }
 
     @Test fun scioperi_match() {

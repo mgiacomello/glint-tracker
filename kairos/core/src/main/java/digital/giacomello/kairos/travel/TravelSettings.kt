@@ -13,16 +13,16 @@ import kotlinx.serialization.Serializable
 
 @Serializable
 enum class TravelMode(val label: String) {
-    DRIVE("Auto"),
-    TAXI("Taxi / NCC"),
     TRANSIT("Mezzi pubblici"),
+    TAXI("Taxi / NCC"),
+    DRIVE("Auto"),
 }
 
 /** Preferenze di viaggio dell'utente. */
 data class TravelPrefs(
     /** Indirizzo da cui si parte di solito (casa/ufficio). Vuoto = non calcolare il percorso. */
     val origin: String = "",
-    val mode: TravelMode = TravelMode.TAXI,
+    val mode: TravelMode = TravelMode.TRANSIT,
     val checkedBag: Boolean = false,
     /** Ha accesso lounge (es. LoungeKey) e vuole il tempo per andarci. */
     val lounge: Boolean = true,
@@ -32,7 +32,7 @@ data class TravelPrefs(
     /** Minuti di sicurezza in più, a gusto personale. */
     val extraMargin: Int = 0,
     /** Tempo di viaggio da usare se manca la chiave Google o la rete. */
-    val fallbackTravelMinutes: Int = 45,
+    val fallbackTravelMinutes: Int = 60,
     val notifyLeave: Boolean = true,
 )
 

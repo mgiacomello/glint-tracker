@@ -32,17 +32,17 @@ import digital.giacomello.kairos.ui.theme.KairosColors
 import digital.giacomello.kairos.ui.theme.c
 
 @Composable
-fun FlightListScreen(vm: FlightsViewModel, onOpen: (String) -> Unit, onAdd: () -> Unit) {
+fun FlightListScreen(vm: FlightsViewModel, onOpen: (String) -> Unit, onAdd: () -> Unit, onStats: () -> Unit = {}) {
     val flights by vm.flights.collectAsStateWithLifecycle()
     val refreshing by vm.refreshing.collectAsStateWithLifecycle()
-    FlightListContent(flights, refreshing, vm.isDemo, System.currentTimeMillis(), onOpen, onAdd, onRefresh = { vm.refresh() })
+    FlightListContent(flights, refreshing, vm.isDemo, System.currentTimeMillis(), onOpen, onAdd, onRefresh = { vm.refresh() }, onStats = onStats)
 }
 
 /** Elenco voli senza stato (usato anche per gli screenshot). */
 @Composable
 fun FlightListContent(
     flights: List<Flight>, refreshing: Boolean, isDemo: Boolean, now: Long,
-    onOpen: (String) -> Unit, onAdd: () -> Unit, onRefresh: () -> Unit,
+    onOpen: (String) -> Unit, onAdd: () -> Unit, onRefresh: () -> Unit, onStats: () -> Unit = {},
 ) {
     val listState = rememberScalingLazyListState()
 
@@ -72,7 +72,14 @@ fun FlightListContent(
                     )
                 }
             }
-            items(flights, key = { it.id }) { f -> FlightCard(f, now) { onOpen(f.id) } }
+            // Sul polso solo i prossimi voli + gli ultimi 2; lo storico completo è nelle statistiche
+            val shown = flights.filter { !it.status.isFinished } + flights.filter { it.status.isFinished }.sortedByDescending { it.date }.take(2)
+            items(shown, key = { it.id }) { f -> FlightCard(f, now) { onOpen(f.id) } }
+            if (flights.any { it.status.isFinished }) {
+                item {
+                    FilledTonalButton(onClick = onStats, modifier = Modifier.fillMaxWidth()) { Text("Statistiche") }
+                }
+            }
             if (flights.isNotEmpty()) {
                 item {
                     FilledTonalButton(onClick = onRefresh, modifier = Modifier.fillMaxWidth()) {

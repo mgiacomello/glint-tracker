@@ -47,7 +47,28 @@ data class Strike(
 
 /** Sciopero rilevante per un volo, con il motivo. */
 @Serializable
-data class StrikeAlert(val title: String, val detail: String, val affectsAirline: Boolean, val affectsTransport: Boolean)
+data class StrikeAlert(
+    val title: String, val detail: String, val affectsAirline: Boolean, val affectsTransport: Boolean,
+    /** Fascia oraria locale "HH:mm" (es. "DALLE 18.00 ALLE 22.00"); null = tutto il giorno. */
+    val from: String? = null, val to: String? = null,
+) {
+    /** true se lo sciopero si sovrappone alla fascia [start, end] (ora locale italiana). */
+    fun overlaps(start: java.time.LocalTime, end: java.time.LocalTime): Boolean {
+        val a = from?.let { runCatching { java.time.LocalTime.parse(it) }.getOrNull() } ?: return true
+        val b = to?.let { runCatching { java.time.LocalTime.parse(it) }.getOrNull() } ?: return true
+        return if (a <= b) start <= b && end >= a else true // fasce a cavallo di mezzanotte: prudenza
+    }
+
+    companion object {
+        private val WINDOW = Regex("DALLE\\s+(\\d{1,2})[.:](\\d{2})\\s+ALLE\\s+(\\d{1,2})[.:](\\d{2})", RegexOption.IGNORE_CASE)
+        fun window(modalita: String?): Pair<String, String>? {
+            val m = WINDOW.find(modalita ?: return null) ?: return null
+            if (modalita.contains("24 ORE", ignoreCase = true)) return null
+            val (h1, m1, h2, m2) = m.destructured
+            return "%02d:%s".format(h1.toInt(), m1) to "%02d:%s".format(h2.toInt().coerceAtMost(23), if (h2.toInt() >= 24) "59" else m2)
+        }
+    }
+}
 
 object StrikeSource {
     const val ATTRIBUTION = "Scioperi: dati MIT via onData (CC BY 4.0)"
@@ -112,10 +133,13 @@ object StrikeSource {
                         taxi -> "Sciopero taxi"
                         else -> "Sciopero ${s.settore?.lowercase() ?: "trasporti"}"
                     },
-                    detail = listOfNotNull(s.categoria?.lowercase()?.replaceFirstChar { it.uppercase() }, s.modalita?.lowercase(), s.sindacati)
+                    detail = (listOfNotNull(s.categoria?.lowercase()?.replaceFirstChar { it.uppercase() }, s.modalita?.lowercase(), s.sindacati) +
+                        listOfNotNull(if (ground || ground2) "valuta taxi/NCC o una corsa prima delle fasce di garanzia" else null))
                         .joinToString(" · "),
                     affectsAirline = mine || generic,
                     affectsTransport = ground || ground2 || taxi,
+                    from = StrikeAlert.window(s.modalita)?.first,
+                    to = StrikeAlert.window(s.modalita)?.second,
                 )
             }
             .distinctBy { it.title + it.detail }

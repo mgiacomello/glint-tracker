@@ -1,7 +1,10 @@
-# Kair.OS — flight tracker per Android e Wear OS (Galaxy Watch)
+# Kair.OS — flight tracker personale per Android e Wear OS (Galaxy Watch)
 
-App nativa Kotlin in due versioni, telefono e orologio (Galaxy Watch 9 / Wear OS 6, compatibile Wear OS 3+),
-con logica condivisa.
+App **ad uso personale** (non distribuita), nativa Kotlin in due versioni, telefono e orologio
+(Galaxy Watch 9 / Wear OS 6, compatibile Wear OS 3+), con logica condivisa.
+
+Screenshot reali delle schermate: [`docs/screenshots/`](docs/screenshots/)
+(rigenerabili con `./gradlew :mobile:testDebugUnitTest :wear:testDebugUnitTest`).
 
 ```
 kairos/
@@ -18,12 +21,12 @@ kairos/
 | Import automatico | Voli da Gmail: numero, data, orari, aeroporti, **posto, gruppo, imbarco, chiusura gate, terminal, classe, PNR** | tel + watch |
 | Stato live | Orari previsti/effettivi, ritardo, terminal, gate, nastro bagagli, aereo, matricola | tel + watch |
 | Avvisi | Ritardo/anticipo (≥10'), cambio gate/terminal, imbarco, gate chiuso, decollo, atterraggio, nastro, cancellazione, dirottamento, nuovo volo da Gmail, carta d'imbarco arrivata | tel + watch |
-| **Quando partire** | Ora di uscita calcolata all'indietro dal gate: viaggio con **traffico previsto** (o **mezzi pubblici**), margine, bag drop, controlli (fast track), passaporti extra-Schengen, **tempo lounge (LoungeKey)**; usa la chiusura gate della carta d'imbarco se c'è | tel + watch |
-| **Scioperi** | Incrocia gli scioperi MIT del giorno del volo: settore aereo (nazionale/regionale), **la tua compagnia**, treni/TPL se vai coi mezzi, taxi; aggiunge 30' e avvisa | tel + watch |
+| **Quando partire** | Ora di uscita calcolata all'indietro dal gate. Default **mezzi pubblici**: Google sceglie la corsa per arrivare in tempo e l'app dice **linea, fermata e orario** (es. "M4 · 09:03 da San Babila"); in alternativa taxi/auto con traffico previsto. Poi margine, bag drop, controlli (fast track), passaporti extra-Schengen, **tempo lounge (LoungeKey)**; usa la chiusura gate della carta d'imbarco se c'è | tel + watch |
+| **Scioperi** | Incrocia gli scioperi MIT del giorno del volo: settore aereo (nazionale/regionale), **la tua compagnia**, treni/TPL se vai coi mezzi, taxi. Aggiunge 30' solo se la **fascia oraria** dello sciopero tocca il tuo tragitto | tel + watch |
 | Notifiche viaggio | "Preparati" 30' prima, "Esci ora", "Sciopero" | tel + watch |
 | Live | Notifica continua con avanzamento (tel), Ongoing Activity (watch) | tel + watch |
 | Quadrante | Tile "Prossimo volo" (stato, countdown, gate, ora di uscita, posto) + complicazione countdown | watch |
-| Statistiche | Voli, km, ore, aeroporti, compagnie | tel |
+| **Statistiche** | Km (e giri della Terra), ore in volo, voli, aeroporti, paesi; **puntualità** (arrivo entro 15'), ritardo medio, tempo totale perso, voli con oltre 1h, peggior ritardo, cancellati; volo più lungo; voli per anno; rotte/aeroporti/compagnie top; filtro per anno. Lo storico arriva da Gmail (ultimi 2 anni) | tel + watch |
 | Demo | Senza chiavi gira con voli simulati | tel + watch |
 
 ## Chiavi (in `local.properties`, mai nel repo)
@@ -70,7 +73,6 @@ fast track, bagaglio. Sul watch: tile "Prossimo volo" e complicazione "Countdown
 5. **Attese ai controlli**: nessuna API ufficiale per FCO/MXP/LIN/LHR; si usano stime per tipo di scalo.
 6. Voli da email non ancora coperti dall'API (es. fra molti mesi): restano "solo email" e diventano live da soli.
 
-## Note legali (per uso personale → distribuzione)
-- Nome, grafica e codice sono originali; le funzioni (non proteggibili in sé) sono comuni ai tracker di voli.
-- Prima di pubblicare: verifica i ToS commerciali di AeroDataBox/Google (cache, display, attribuzione "Google"),
-  privacy policy (dati di viaggio e PNR = dati personali GDPR), verifica OAuth Google per Gmail (scope restricted).
+## Uso personale
+L'app non viene distribuita: chiavi API nell'APK, script Gmail nel proprio account e assenza di backend
+sono scelte accettabili. Se un giorno cambiasse: backend per le chiavi, OAuth Gmail verificato, privacy policy.

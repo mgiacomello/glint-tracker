@@ -45,12 +45,14 @@ class MainActivity : ComponentActivity() {
                             vm = vm,
                             onOpen = { nav.navigate("detail/$it") },
                             onSettings = { nav.navigate("settings") },
+                            onStats = { nav.navigate("stats") },
                         )
                     }
                     composable("detail/{id}") { e ->
                         FlightDetailScreen(vm, e.arguments?.getString("id").orEmpty(), onBack = { nav.popBackStack() })
                     }
                     composable("settings") { SettingsScreen(vm, onBack = { nav.popBackStack() }) }
+                    composable("stats") { StatsScreen(vm, onBack = { nav.popBackStack() }) }
                 }
             }
         }
