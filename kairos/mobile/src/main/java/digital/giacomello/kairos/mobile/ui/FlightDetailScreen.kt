@@ -61,15 +61,21 @@ fun FlightDetailScreen(vm: MobileViewModel, id: String, onBack: () -> Unit) {
     val f = flights.firstOrNull { it.id == id }
     var now by remember { mutableLongStateOf(System.currentTimeMillis()) }
     LaunchedEffect(Unit) { while (true) { delay(30_000); now = System.currentTimeMillis() } }
+    FlightDetailContent(f, f?.let { plans[it.id] }, now, onBack, onRefresh = { vm.sync() }, onRemove = { vm.remove(it); onBack() })
+}
 
+/** Dettaglio volo senza stato (usato anche per gli screenshot). */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun FlightDetailContent(f: Flight?, plan: LeavePlan?, now: Long, onBack: () -> Unit, onRefresh: () -> Unit, onRemove: (String) -> Unit) {
     Scaffold(
         topBar = {
             TopAppBar(
                 title = { Text(f?.let { "${it.number}${it.airline?.let { a -> " · $a" } ?: ""}" } ?: "") },
                 navigationIcon = { IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, "Indietro") } },
                 actions = {
-                    IconButton(onClick = { vm.sync() }) { Icon(Icons.Default.Refresh, "Aggiorna") }
-                    if (f != null) IconButton(onClick = { vm.remove(f.id); onBack() }) { Icon(Icons.Default.Delete, "Rimuovi") }
+                    IconButton(onClick = onRefresh) { Icon(Icons.Default.Refresh, "Aggiorna") }
+                    if (f != null) IconButton(onClick = { onRemove(f.id) }) { Icon(Icons.Default.Delete, "Rimuovi") }
                 },
             )
         },
@@ -80,7 +86,7 @@ fun FlightDetailScreen(vm: MobileViewModel, id: String, onBack: () -> Unit) {
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
             Hero(f, now)
-            plans[f.id]?.let { LeavePlanCard(it) }
+            plan?.let { LeavePlanCard(it) }
             EndpointCard("Partenza", f.departure, departure = true)
             EndpointCard("Arrivo", f.arrival, departure = false)
             BoardingCard(f)

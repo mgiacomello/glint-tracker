@@ -100,8 +100,9 @@ object LeavePlanner {
 
         val strikeExtra = if (strikes.any { it.affectsTransport || it.affectsAirline }) 30 else 0
         val margin = kind.margin + (travelMinutes * 0.10).roundToInt() + prefs.extraMargin + strikeExtra
-        back("Viaggio (${prefs.mode.label.lowercase()})", travelMinutes)
+        // Ordine inverso: letto da casa al gate diventa "viaggio → margine → controlli → ..."
         back(if (strikeExtra > 0) "Margine (+30' sciopero)" else "Margine", margin)
+        back("Viaggio (${prefs.mode.label.lowercase()})", travelMinutes)
 
         return LeavePlan(
             flightId = f.id,

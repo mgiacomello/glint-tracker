@@ -35,8 +35,16 @@ import digital.giacomello.kairos.ui.theme.c
 fun FlightListScreen(vm: FlightsViewModel, onOpen: (String) -> Unit, onAdd: () -> Unit) {
     val flights by vm.flights.collectAsStateWithLifecycle()
     val refreshing by vm.refreshing.collectAsStateWithLifecycle()
+    FlightListContent(flights, refreshing, vm.isDemo, System.currentTimeMillis(), onOpen, onAdd, onRefresh = { vm.refresh() })
+}
+
+/** Elenco voli senza stato (usato anche per gli screenshot). */
+@Composable
+fun FlightListContent(
+    flights: List<Flight>, refreshing: Boolean, isDemo: Boolean, now: Long,
+    onOpen: (String) -> Unit, onAdd: () -> Unit, onRefresh: () -> Unit,
+) {
     val listState = rememberScalingLazyListState()
-    val now = System.currentTimeMillis()
 
     ScreenScaffold(
         scrollState = listState,
@@ -48,7 +56,7 @@ fun FlightListScreen(vm: FlightsViewModel, onOpen: (String) -> Unit, onAdd: () -
             item {
                 ListHeader {
                     Text(
-                        if (vm.isDemo) "Kair.OS · DEMO" else "Kair.OS",
+                        if (isDemo) "Kair.OS · DEMO" else "Kair.OS",
                         color = MaterialTheme.colorScheme.primary,
                         fontWeight = FontWeight.Bold,
                     )
@@ -67,7 +75,7 @@ fun FlightListScreen(vm: FlightsViewModel, onOpen: (String) -> Unit, onAdd: () -
             items(flights, key = { it.id }) { f -> FlightCard(f, now) { onOpen(f.id) } }
             if (flights.isNotEmpty()) {
                 item {
-                    FilledTonalButton(onClick = { vm.refresh() }, modifier = Modifier.fillMaxWidth()) {
+                    FilledTonalButton(onClick = onRefresh, modifier = Modifier.fillMaxWidth()) {
                         Text(if (refreshing) "Aggiorno…" else "Aggiorna")
                     }
                 }
@@ -94,7 +102,7 @@ private fun FlightCard(f: Flight, now: Long, onClick: () -> Unit) {
                 fontSize = 20.sp, fontWeight = FontWeight.Bold,
             )
             Text(
-                "${f.departure.localTime(f.departure.best)} – ${f.arrival.localTime(f.arrival.best)}  ·  ${f.date.substring(5)}",
+                "${f.departure.localTime(f.departure.best)} – ${f.arrival.localTime(f.arrival.best)}  ·  ${shortDate(f.date)}",
                 fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
             if (!f.status.isFinished) {
@@ -103,3 +111,7 @@ private fun FlightCard(f: Flight, now: Long, onClick: () -> Unit) {
         }
     }
 }
+
+private fun shortDate(iso: String): String = runCatching {
+    java.time.LocalDate.parse(iso).format(java.time.format.DateTimeFormatter.ofPattern("d MMM", java.util.Locale.ITALIAN))
+}.getOrDefault(iso)

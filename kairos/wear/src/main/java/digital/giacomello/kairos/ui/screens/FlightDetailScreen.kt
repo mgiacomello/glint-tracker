@@ -31,6 +31,7 @@ import digital.giacomello.kairos.model.Endpoint
 import digital.giacomello.kairos.model.Flight
 import digital.giacomello.kairos.model.formatDuration
 import digital.giacomello.kairos.notify.Notifier
+import digital.giacomello.kairos.travel.LeavePlan
 import digital.giacomello.kairos.travel.TravelService
 import digital.giacomello.kairos.ui.FlightsViewModel
 import digital.giacomello.kairos.ui.theme.KairosColors
@@ -44,13 +45,26 @@ fun FlightDetailScreen(vm: FlightsViewModel, id: String, onRemoved: () -> Unit) 
     val flights by vm.flights.collectAsStateWithLifecycle()
     val refreshing by vm.refreshing.collectAsStateWithLifecycle()
     val f = flights.firstOrNull { it.id == id }
-    val plan by vm.plans.collectAsStateWithLifecycle()
-    val listState = rememberScalingLazyListState()
+    val plans by vm.plans.collectAsStateWithLifecycle()
 
     // Tick ogni 30s per countdown e avanzamento
     var now by remember { mutableLongStateOf(System.currentTimeMillis()) }
     LaunchedEffect(Unit) { while (true) { delay(30_000); now = System.currentTimeMillis() } }
 
+    FlightDetailContent(
+        f, f?.let { plans[it.id] }, refreshing, now,
+        onRefresh = { vm.refreshOne(it) }, onRemove = { vm.remove(it); onRemoved() },
+    )
+}
+
+/** Dettaglio volo senza stato (usato anche per gli screenshot). */
+@Composable
+fun FlightDetailContent(
+    f: Flight?, p: LeavePlan?, refreshing: Boolean, now: Long,
+    onRefresh: (String) -> Unit, onRemove: (String) -> Unit,
+    initialItem: Int = 0,
+) {
+    val listState = rememberScalingLazyListState(initialCenterItemIndex = initialItem)
     if (f == null) {
         ScreenScaffold(scrollState = listState) { padding ->
             ScalingLazyColumn(state = listState, contentPadding = padding) {
@@ -65,7 +79,7 @@ fun FlightDetailScreen(vm: FlightsViewModel, id: String, onRemoved: () -> Unit) 
     ScreenScaffold(
         scrollState = listState,
         edgeButton = {
-            EdgeButton(onClick = { vm.refreshOne(f.id) }, enabled = !refreshing) {
+            EdgeButton(onClick = { onRefresh(f.id) }, enabled = !refreshing) {
                 Text(if (refreshing) "…" else "Aggiorna")
             }
         },
@@ -89,7 +103,7 @@ fun FlightDetailScreen(vm: FlightsViewModel, id: String, onRemoved: () -> Unit) 
                     Text(Notifier.liveLine(f, now), color = color, fontWeight = FontWeight.Bold, fontSize = 14.sp)
                 }
             }
-            plan[f.id]?.let { p ->
+            p?.let { p ->
                 item { ListHeader { Text("Quando partire") } }
                 item {
                     Card(onClick = {}, enabled = false, modifier = Modifier.fillMaxWidth()) {
@@ -151,7 +165,7 @@ fun FlightDetailScreen(vm: FlightsViewModel, id: String, onRemoved: () -> Unit) 
             }
             item {
                 FilledTonalButton(
-                    onClick = { vm.remove(f.id); onRemoved() },
+                    onClick = { onRemove(f.id) },
                     colors = ButtonDefaults.filledTonalButtonColors(contentColor = MaterialTheme.colorScheme.error),
                     modifier = Modifier.fillMaxWidth(),
                 ) { Text("Rimuovi volo") }

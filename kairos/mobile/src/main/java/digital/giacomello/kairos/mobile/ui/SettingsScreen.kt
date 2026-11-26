@@ -35,11 +35,18 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import digital.giacomello.kairos.travel.StrikeSource
 import digital.giacomello.kairos.travel.TravelMode
+import digital.giacomello.kairos.travel.TravelPrefs
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SettingsScreen(vm: MobileViewModel, onBack: () -> Unit) {
     val saved by vm.prefs.collectAsStateWithLifecycle()
+    SettingsContent(saved, vm.gmailConfigured, vm.mapsConfigured, !vm.isDemo, onSave = { vm.savePrefs(it); onBack() }, onBack = onBack)
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun SettingsContent(saved: TravelPrefs, gmail: Boolean, maps: Boolean, live: Boolean, onSave: (TravelPrefs) -> Unit, onBack: () -> Unit) {
     var p by remember { mutableStateOf(saved) }
     LaunchedEffect(saved) { p = saved }
 
@@ -74,12 +81,12 @@ fun SettingsScreen(vm: MobileViewModel, onBack: () -> Unit) {
             NumberField("Margine extra personale (min)", p.extraMargin) { p = p.copy(extraMargin = it) }
             NumberField("Tempo di viaggio stimato se Google non disponibile (min)", p.fallbackTravelMinutes) { p = p.copy(fallbackTravelMinutes = it) }
             Toggle("Avvisi \"Preparati\" ed \"Esci ora\"", p.notifyLeave) { p = p.copy(notifyLeave = it) }
-            Button(onClick = { vm.savePrefs(p); onBack() }, modifier = Modifier.fillMaxWidth()) { Text("Salva") }
+            Button(onClick = { onSave(p) }, modifier = Modifier.fillMaxWidth()) { Text("Salva") }
 
             Section("Collegamenti")
-            Status("Gmail (import voli, posto, PNR)", vm.gmailConfigured)
-            Status("Google Routes (traffico e mezzi)", vm.mapsConfigured)
-            Status("Dati voli live (AeroDataBox)", !vm.isDemo)
+            Status("Gmail (import voli, posto, PNR)", gmail)
+            Status("Google Routes (traffico e mezzi)", maps)
+            Status("Dati voli live (AeroDataBox)", live)
             Text(
                 "Le chiavi si configurano in local.properties al momento della build (vedi README). " +
                     "Le email restano nel tuo account Google: all'app arrivano solo i dati del volo.",

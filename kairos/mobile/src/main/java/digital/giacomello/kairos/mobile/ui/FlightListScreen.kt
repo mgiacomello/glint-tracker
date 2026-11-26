@@ -66,7 +66,6 @@ import java.time.ZoneOffset
 import java.time.format.DateTimeFormatter
 import java.util.Locale
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun FlightListScreen(vm: MobileViewModel, onOpen: (String) -> Unit, onSettings: () -> Unit) {
     val flights by vm.flights.collectAsStateWithLifecycle()
@@ -75,10 +74,29 @@ fun FlightListScreen(vm: MobileViewModel, onOpen: (String) -> Unit, onSettings: 
     val msg by vm.message.collectAsStateWithLifecycle()
     val snack = remember { SnackbarHostState() }
     var showAdd by remember { mutableStateOf(false) }
-    val now = System.currentTimeMillis()
 
     LaunchedEffect(msg) { msg?.let { snack.showSnackbar(it); vm.consumeMessage() } }
 
+    FlightListContent(
+        flights = flights, plans = plans, busy = busy, isDemo = vm.isDemo, gmail = vm.gmailConfigured,
+        snack = snack, now = System.currentTimeMillis(), onOpen = onOpen, onSettings = onSettings,
+        onSync = { vm.sync() }, onScanGmail = { vm.sync(scanGmail = true) }, onAdd = { showAdd = true },
+    )
+
+    if (showAdd) AddFlightDialog(onDismiss = { showAdd = false }) { n, d ->
+        showAdd = false
+        vm.add(n, d) { onOpen(it) }
+    }
+}
+
+/** Schermata elenco senza stato (usata anche per gli screenshot). */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun FlightListContent(
+    flights: List<Flight>, plans: Map<String, LeavePlan>, busy: Boolean, isDemo: Boolean, gmail: Boolean,
+    snack: SnackbarHostState, now: Long, onOpen: (String) -> Unit, onSettings: () -> Unit,
+    onSync: () -> Unit, onScanGmail: () -> Unit, onAdd: () -> Unit,
+) {
     val upcoming = flights.filter { !it.status.isFinished }
     val past = flights.filter { it.status.isFinished }
 
@@ -86,24 +104,24 @@ fun FlightListScreen(vm: MobileViewModel, onOpen: (String) -> Unit, onSettings: 
         topBar = {
             TopAppBar(
                 title = {
-                    Text(if (vm.isDemo) "Kair.OS · demo" else "Kair.OS", fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
+                    Text(if (isDemo) "Kair.OS · demo" else "Kair.OS", fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
                 },
                 actions = {
-                    if (vm.gmailConfigured) IconButton(onClick = { vm.sync(scanGmail = true) }) { Icon(Icons.Default.Email, "Importa da Gmail") }
-                    IconButton(onClick = { vm.sync() }) { Icon(Icons.Default.Refresh, "Aggiorna") }
+                    if (gmail) IconButton(onClick = onScanGmail) { Icon(Icons.Default.Email, "Importa da Gmail") }
+                    IconButton(onClick = onSync) { Icon(Icons.Default.Refresh, "Aggiorna") }
                     IconButton(onClick = onSettings) { Icon(Icons.Default.Settings, "Impostazioni") }
                 },
             )
         },
         floatingActionButton = {
-            ExtendedFloatingActionButton(onClick = { showAdd = true }, icon = { Icon(Icons.Default.Add, null) }, text = { Text("Volo") })
+            ExtendedFloatingActionButton(onClick = onAdd, icon = { Icon(Icons.Default.Add, null) }, text = { Text("Volo") })
         },
         snackbarHost = { SnackbarHost(snack) },
     ) { pad ->
         Column(Modifier.padding(pad).fillMaxSize()) {
             if (busy) LinearProgressIndicator(Modifier.fillMaxWidth())
             LazyColumn(contentPadding = PaddingValues(16.dp, 8.dp, 16.dp, 96.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                if (flights.isEmpty()) item { EmptyState(vm.gmailConfigured) }
+                if (flights.isEmpty()) item { EmptyState(gmail) }
                 if (upcoming.isNotEmpty()) item { SectionTitle("In programma") }
                 items(upcoming, key = { it.id }) { f -> FlightRow(f, plans[f.id], now) { onOpen(f.id) } }
                 if (past.isNotEmpty()) {
@@ -113,11 +131,6 @@ fun FlightListScreen(vm: MobileViewModel, onOpen: (String) -> Unit, onSettings: 
                 }
             }
         }
-    }
-
-    if (showAdd) AddFlightDialog(onDismiss = { showAdd = false }) { n, d ->
-        showAdd = false
-        vm.add(n, d) { onOpen(it) }
     }
 }
 
