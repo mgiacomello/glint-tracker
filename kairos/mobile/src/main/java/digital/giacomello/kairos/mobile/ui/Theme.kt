@@ -35,8 +35,9 @@ fun KairosTheme(content: @Composable () -> Unit) {
         colorScheme = if (dark) darkColorScheme(
             primary = KColors.Amber, onPrimary = Color.Black,
             primaryContainer = Color(0xFF3A2A10), onPrimaryContainer = KColors.Amber,
-            background = Color(0xFF0E0F11), surface = Color(0xFF0E0F11),
-            surfaceContainer = Color(0xFF17191C), surfaceContainerHigh = Color(0xFF1F2226),
+            background = Color(0xFF090B0E), surface = Color(0xFF090B0E),
+            surfaceContainer = Color(0xFF14171C), surfaceContainerHigh = Color(0xFF1C2026),
+            outlineVariant = Color(0xFF2B3038), onSurfaceVariant = Color(0xFF9AA1AB),
         ) else lightColorScheme(
             primary = KColors.AmberDark, onPrimary = Color.White,
             primaryContainer = Color(0xFFFFE7C2), onPrimaryContainer = Color(0xFF3A2A10),

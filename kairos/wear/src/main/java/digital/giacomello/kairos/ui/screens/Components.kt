@@ -17,6 +17,14 @@ import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.foundation.layout.BoxWithConstraints
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.runtime.remember
+import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.drawscope.rotateRad
+import androidx.compose.ui.graphics.drawscope.translate
+import androidx.compose.ui.platform.LocalContext
+import digital.giacomello.kairos.geo.LandMask
 import androidx.wear.compose.material3.Text
 import digital.giacomello.kairos.model.Flight
 import digital.giacomello.kairos.ui.theme.KairosColors
@@ -72,5 +80,44 @@ fun FlightArc(progress: Float, color: Color, modifier: Modifier = Modifier) {
         val p = point(progress.coerceIn(0f, 1f))
         drawCircle(color, 5.dp.toPx(), p)
         drawCircle(Color.Black, 5.dp.toPx(), p, style = Stroke(1.5.dp.toPx()))
+    }
+}
+
+/** Mappa della rotta per il polso: terre a puntini, arco, aeroporti e aereo in volo. */
+@Composable
+fun WearRouteMap(f: Flight, progress: Float, color: Color, modifier: Modifier = Modifier) {
+    val ctx = LocalContext.current
+    val coords = remember(f.departure.iata, f.arrival.iata) { LandMask.coords(f) }
+    BoxWithConstraints(modifier) {
+        val aspect = (constraints.maxWidth.toFloat() / constraints.maxHeight.coerceAtLeast(1)).coerceIn(0.5f, 4f)
+        val frame = remember(coords, aspect) { coords?.let { (a, b) -> LandMask.get(ctx).frame(a, b, aspect, 34, 0.3) } }
+        Canvas(Modifier.fillMaxSize()) {
+            if (frame == null) return@Canvas
+            val w = size.width; val h = size.height
+            fun o(p: digital.giacomello.kairos.geo.P) = Offset(p.x * w, p.y * h)
+            frame.land.forEach { drawCircle(Color.White.copy(alpha = 0.22f), 1.6.dp.toPx(), o(it)) }
+            val pts = frame.path.map { o(it) }
+            for (i in 0 until pts.size - 1) {
+                val done = (i + 1f) / (pts.size - 1) <= progress
+                drawLine(if (done) color else Color(0x66FFFFFF), pts[i], pts[i + 1], strokeWidth = if (done) 3.dp.toPx() else 1.5.dp.toPx(),
+                    cap = StrokeCap.Round, pathEffect = if (done) null else PathEffect.dashPathEffect(floatArrayOf(5f, 5f)))
+            }
+            drawCircle(color, 4.dp.toPx(), o(frame.from))
+            drawCircle(if (progress >= 1f) color else Color.White, 4.dp.toPx(), o(frame.to))
+            if (progress in 0.001f..0.999f) {
+                val (pp, angle) = frame.planeAt(progress)
+                val s = 8.dp.toPx(); val c = o(pp)
+                translate(c.x, c.y) {
+                    rotateRad(angle, pivot = Offset.Zero) {
+                        drawPath(Path().apply {
+                            moveTo(s, 0f); lineTo(s * 0.2f, s * 0.15f); lineTo(-s * 0.15f, s * 0.9f); lineTo(-s * 0.35f, s * 0.9f)
+                            lineTo(-s * 0.25f, s * 0.15f); lineTo(-s * 0.75f, s * 0.12f); lineTo(-s, s * 0.45f); lineTo(-s * 0.9f, 0f)
+                            lineTo(-s, -s * 0.45f); lineTo(-s * 0.75f, -s * 0.12f); lineTo(-s * 0.25f, -s * 0.15f); lineTo(-s * 0.35f, -s * 0.9f)
+                            lineTo(-s * 0.15f, -s * 0.9f); lineTo(s * 0.2f, -s * 0.15f); close()
+                        }, color)
+                    }
+                }
+            }
+        }
     }
 }

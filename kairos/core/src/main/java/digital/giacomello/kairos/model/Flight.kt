@@ -43,6 +43,9 @@ data class Endpoint(
     val gate: String? = null,
     val checkInDesk: String? = null,
     val baggageBelt: String? = null,
+    /** Coordinate dell'aeroporto (per la mappa), se fornite dalla sorgente dati. */
+    val lat: Double? = null,
+    val lng: Double? = null,
 ) {
     /** Miglior stima disponibile: effettivo > stimato > programmato. */
     val best: Long? get() = actual ?: estimated ?: scheduled

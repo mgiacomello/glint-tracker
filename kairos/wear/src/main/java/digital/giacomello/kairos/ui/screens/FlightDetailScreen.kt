@@ -4,6 +4,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -15,6 +16,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextDecoration
+import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.wear.compose.foundation.lazy.ScalingLazyColumn
@@ -95,11 +97,9 @@ fun FlightDetailContent(
             // Rotta + traccia
             item {
                 Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.fillMaxWidth()) {
-                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                        Text(f.departure.iata, fontSize = 24.sp, fontWeight = FontWeight.Bold)
-                        Text(f.arrival.iata, fontSize = 24.sp, fontWeight = FontWeight.Bold)
-                    }
-                    FlightArc(progress = f.progress(now), color = color)
+                    // Rotta in testo + mappa: la geografia decide le posizioni, il testo il verso
+                    Text("${f.departure.iata} → ${f.arrival.iata}", fontSize = 24.sp, fontWeight = FontWeight.Black)
+                    WearRouteMap(f, f.progress(now), color, Modifier.fillMaxWidth().height(76.dp))
                     Text(Notifier.liveLine(f, now), color = color, fontWeight = FontWeight.Bold, fontSize = 14.sp)
                 }
             }

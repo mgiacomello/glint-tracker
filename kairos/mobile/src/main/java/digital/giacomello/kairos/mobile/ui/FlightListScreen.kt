@@ -56,6 +56,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import digital.giacomello.kairos.model.Flight
+import digital.giacomello.kairos.model.formatDuration
+import androidx.compose.ui.graphics.Color
 import digital.giacomello.kairos.model.Source
 import digital.giacomello.kairos.notify.Notifier
 import digital.giacomello.kairos.stats.TravelStats
@@ -121,7 +123,7 @@ fun FlightListContent(
     ) { pad ->
         Column(Modifier.padding(pad).fillMaxSize()) {
             if (busy) LinearProgressIndicator(Modifier.fillMaxWidth())
-            LazyColumn(contentPadding = PaddingValues(16.dp, 8.dp, 16.dp, 96.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            LazyColumn(contentPadding = PaddingValues(16.dp, 8.dp, 16.dp, 96.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
                 if (flights.isEmpty()) item { EmptyState(gmail) }
                 if (upcoming.isNotEmpty()) item { SectionTitle("In programma") }
                 items(upcoming, key = { it.id }) { f -> FlightRow(f, plans[f.id], now) { onOpen(f.id) } }
@@ -163,45 +165,103 @@ fun StatusChip(f: Flight) {
 }
 
 @Composable
-private fun FlightRow(f: Flight, plan: LeavePlan?, now: Long, onClick: () -> Unit) {
+private fun FlightRow(f: Flight, plan: LeavePlan?, now: Long, onClick: () -> Unit) =
+    if (f.status.isFinished) PastRow(f, onClick) else TicketCard(f, plan, now, onClick)
+
+/** Volo in programma: "biglietto" con mappa della rotta, orari grandi e riga di viaggio. */
+@Composable
+private fun TicketCard(f: Flight, plan: LeavePlan?, now: Long, onClick: () -> Unit) {
+    val c = KColors.forStatus(f)
+    val mapH = 150.dp
     Card(
         Modifier.fillMaxWidth().clickable(onClick = onClick),
+        shape = TicketShape(notchY = mapH + 118.dp),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer),
     ) {
-        Column(Modifier.padding(16.dp)) {
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+        Box(Modifier.fillMaxWidth().height(mapH).background(MaterialTheme.colorScheme.surfaceContainerHigh)) {
+            RouteMap(f, f.progress(now), c, Modifier.fillMaxSize().padding(top = 34.dp), labels = true, background = MaterialTheme.colorScheme.surfaceContainerHigh, padding = 0.25, dotsAcross = 56)
+            Row(Modifier.fillMaxWidth().padding(12.dp), horizontalArrangement = Arrangement.SpaceBetween) {
                 Text(
-                    "${f.number} · ${prettyDate(f.date)}" + if (f.source == Source.GMAIL) " · Gmail" else "",
-                    style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    "${f.number} · ${prettyDate(f.date)}",
+                    style = MaterialTheme.typography.labelLarge, color = Color.White,
+                    modifier = Modifier.background(Color.Black.copy(alpha = 0.45f), RoundedCornerShape(6.dp)).padding(horizontal = 8.dp, vertical = 3.dp),
                 )
                 StatusChip(f)
             }
-            Spacer(Modifier.height(8.dp))
-            Row(verticalAlignment = Alignment.Bottom) {
+        }
+        Column(Modifier.padding(horizontal = 18.dp, vertical = 14.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
                 Column(Modifier.weight(1f)) {
-                    Text(f.departure.iata, fontSize = 28.sp, fontWeight = FontWeight.Bold)
-                    Text(f.departure.localTime(f.departure.best), color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Text(f.departure.iata, fontSize = 30.sp, fontWeight = FontWeight.Black)
+                    Text(f.departure.localTime(f.departure.best), style = TabularNums, fontSize = 18.sp, fontWeight = FontWeight.SemiBold,
+                        color = if (f.departure.delayMinutes >= 15) KColors.Delay else MaterialTheme.colorScheme.onSurface)
                 }
-                FlightArc(f.progress(now), KColors.forStatus(f), Modifier.weight(1.2f).padding(bottom = 18.dp))
+                Column(Modifier.weight(1f), horizontalAlignment = Alignment.CenterHorizontally) {
+                    Text(f.durationMinutes?.let { formatDuration(it.toLong()) } ?: "", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    DashedDivider(Modifier.padding(vertical = 4.dp))
+                    Text(f.airline ?: "", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1)
+                }
                 Column(Modifier.weight(1f), horizontalAlignment = Alignment.End) {
-                    Text(f.arrival.iata, fontSize = 28.sp, fontWeight = FontWeight.Bold)
-                    Text(f.arrival.localTime(f.arrival.best), color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Text(f.arrival.iata, fontSize = 30.sp, fontWeight = FontWeight.Black)
+                    Text(f.arrival.localTime(f.arrival.best), style = TabularNums, fontSize = 18.sp, fontWeight = FontWeight.SemiBold)
                 }
             }
-            if (!f.status.isFinished) {
-                Spacer(Modifier.height(8.dp))
-                Text(Notifier.liveLine(f, now), color = KColors.forStatus(f), fontWeight = FontWeight.SemiBold)
-                plan?.let { p ->
+            Spacer(Modifier.height(6.dp))
+            Text(Notifier.liveLine(f, now), color = c, fontWeight = FontWeight.Bold)
+            Spacer(Modifier.height(12.dp))
+            DashedDivider()
+            Spacer(Modifier.height(12.dp))
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                Mini("Gate", f.departure.gate)
+                Mini("Terminal", f.departure.terminal)
+                Mini("Posto", f.booking?.seat)
+                Mini("Imbarco", f.booking?.boardingTime)
+            }
+            plan?.let { p ->
+                Spacer(Modifier.height(12.dp))
+                Row(
+                    Modifier.fillMaxWidth().background(MaterialTheme.colorScheme.primaryContainer, RoundedCornerShape(10.dp)).padding(10.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Text("Esci alle ${TravelService.hhmm(p.leaveAt)}", fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onPrimaryContainer)
                     Text(
-                        "Esci alle ${TravelService.hhmm(p.leaveAt)} · ${p.mode.label.lowercase()} ${p.travelMinutes}'" +
-                            (if (p.loungeMinutes > 0) " · lounge ${p.loungeMinutes}'" else "") +
-                            (if (p.strikes.isNotEmpty()) " · ⚠ sciopero" else ""),
-                        color = MaterialTheme.colorScheme.primary, style = MaterialTheme.typography.bodyMedium,
+                        "  " + (p.travelSummary ?: "${p.mode.label} ${p.travelMinutes}'") + if (p.strikes.isNotEmpty()) " · ⚠" else "",
+                        style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onPrimaryContainer, maxLines = 1,
                     )
                 }
-                f.booking?.let { b -> b.seat?.let { Text("Posto $it${b.boardingGroup?.let { g -> " · gruppo $g" } ?: ""}", style = MaterialTheme.typography.bodySmall) } }
             }
         }
+    }
+}
+
+@Composable
+private fun Mini(label: String, v: String?) = Column {
+    Text(label.uppercase(), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+    Text(v ?: "—", style = TabularNums, fontSize = 17.sp, fontWeight = FontWeight.Bold)
+}
+
+/** Volo passato: riga compatta. */
+@Composable
+private fun PastRow(f: Flight, onClick: () -> Unit) {
+    Row(
+        Modifier.fillMaxWidth().background(MaterialTheme.colorScheme.surfaceContainer, RoundedCornerShape(14.dp))
+            .clickable(onClick = onClick).padding(horizontal = 16.dp, vertical = 12.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Column(Modifier.width(64.dp)) {
+            Text(prettyDate(f.date).substringAfter(' '), style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Text(f.date.take(4), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        }
+        Column(Modifier.weight(1f)) {
+            Text("${f.departure.iata} → ${f.arrival.iata}", fontWeight = FontWeight.Bold, fontSize = 17.sp)
+            Text("${f.number}${f.airline?.let { " · $it" } ?: ""}", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        }
+        val d = f.arrival.delayMinutes
+        Text(
+            when { f.status == digital.giacomello.kairos.model.FlightStatus.CANCELED -> "Cancellato"; d >= 15 -> "+$d'"; else -> "In orario" },
+            color = when { f.status == digital.giacomello.kairos.model.FlightStatus.CANCELED -> KColors.Bad; d >= 15 -> KColors.Delay; else -> KColors.OnTime },
+            fontWeight = FontWeight.SemiBold, style = TabularNums,
+        )
     }
 }
 

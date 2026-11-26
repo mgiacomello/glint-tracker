@@ -77,7 +77,11 @@ class AeroDataBoxProvider(
         val baggageBelt: String? = null,
     )
 
-    @Serializable private data class AdbAirport(val iata: String? = null, val icao: String? = null, val name: String? = null, val municipalityName: String? = null)
+    @Serializable private data class AdbAirport(
+        val iata: String? = null, val icao: String? = null, val name: String? = null,
+        val municipalityName: String? = null, val location: AdbLoc? = null,
+    )
+    @Serializable private data class AdbLoc(val lat: Double? = null, val lon: Double? = null)
     @Serializable private data class AdbTime(val utc: String? = null, val local: String? = null)
     @Serializable private data class AdbAircraft(val reg: String? = null, val model: String? = null)
     @Serializable private data class AdbAirline(val name: String? = null, val iata: String? = null)
@@ -119,6 +123,8 @@ class AeroDataBoxProvider(
             gate = gate,
             checkInDesk = checkInDesk,
             baggageBelt = baggageBelt,
+            lat = airport?.location?.lat,
+            lng = airport?.location?.lon,
         )
     }
 
