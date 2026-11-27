@@ -92,6 +92,25 @@ fun StatsContent(flights: List<Flight>, onBack: () -> Unit, initialYear: Int? = 
                 }
             }
 
+            // Mappa di tutte le rotte del periodo selezionato
+            val flown = remember(flights, year) {
+                flights.filter { it.status.isFinished && it.status != digital.giacomello.kairos.model.FlightStatus.CANCELED &&
+                    (year == null || it.date.take(4).toIntOrNull() == year) }
+            }
+            if (flown.isNotEmpty()) {
+                Card(Modifier.fillMaxWidth(), shape = RoundedCornerShape(20.dp),
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer)) {
+                    Column {
+                        Row(Modifier.fillMaxWidth().padding(start = 16.dp, end = 16.dp, top = 14.dp), verticalAlignment = Alignment.CenterVertically) {
+                            Text("LE TUE ROTTE", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.weight(1f))
+                            Text("${flown.map { listOf(it.departure.iata, it.arrival.iata).sorted() }.toSet().size} rotte",
+                                style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary)
+                        }
+                        AllRoutesMap(flown, MaterialTheme.colorScheme.primary, Modifier.fillMaxWidth().height(260.dp).padding(8.dp))
+                    }
+                }
+            }
+
             // Puntualità e ritardi
             Section {
                 Title("Puntualità e ritardi")

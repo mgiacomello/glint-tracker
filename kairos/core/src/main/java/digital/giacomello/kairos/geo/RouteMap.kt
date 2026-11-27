@@ -35,6 +35,9 @@ data class RouteFrame(
     }
 }
 
+/** Mappa con più rotte: terre a puntini e un percorso per rotta. */
+data class MultiFrame(val land: List<P>, val paths: List<List<P>>, val dotStep: Float)
+
 /**
  * Maschera terre emerse (Natural Earth 1:50m, pubblico dominio) su griglia di 0,25°,
  * 1440×720 bit = 130 KB in assets. Proiezione equirettangolare con correzione cos(lat).
@@ -88,6 +91,49 @@ class LandMask private constructor(private val bits: ByteArray) {
         }
         val path = gc.indices.map { proj(lats[it], lngs[it]) }
         return RouteFrame(land, path, path.first(), path.last(), (1.0 / dotsAcross).toFloat())
+    }
+
+    /**
+     * Mappa di più rotte insieme (es. "tutte le mie rotte"): inquadra tutti gli archi.
+     * @return terre a puntini + un percorso per rotta, nello stesso ordine di [routes].
+     */
+    fun frameMany(routes: List<Pair<LatLng, LatLng>>, aspect: Float, dotsAcross: Int = 80, padding: Double = 0.08): MultiFrame? {
+        if (routes.isEmpty()) return null
+        val arcs = routes.map { (a, b) -> greatCircle(a, b, 48) }
+        // Longitudini srotolate per arco, poi allineate al centro del primo arco (gestisce l'antimeridiano)
+        val ref = unwrap(arcs.first().map { it.lng }).average()
+        val unwrapped = arcs.map { arc ->
+            val l = unwrap(arc.map { it.lng }); val shift = Math.round((ref - l.average()) / 360.0) * 360.0
+            l.map { it + shift }
+        }
+        val allLats = arcs.flatten().map { it.lat }
+        val allLngs = unwrapped.flatten()
+        val midLat = (allLats.min() + allLats.max()) / 2
+        val kx = cos(midLat * PI / 180).coerceAtLeast(0.2)
+
+        var minX = allLngs.min() * kx; var maxX = allLngs.max() * kx
+        var minY = allLats.min(); var maxY = allLats.max()
+        var w = max(maxX - minX, (maxY - minY) * aspect).coerceAtLeast(14.0) * (1 + 2 * padding)
+        var h = w / aspect
+        if (h < (maxY - minY) * (1 + 2 * padding)) { h = (maxY - minY) * (1 + 2 * padding); w = h * aspect }
+        val cx = (minX + maxX) / 2; val cy = (minY + maxY) / 2
+        minX = cx - w / 2; maxX = cx + w / 2; minY = cy - h / 2; maxY = cy + h / 2
+        fun proj(lat: Double, lng: Double) = P(((lng * kx - minX) / w).toFloat(), ((maxY - lat) / h).toFloat())
+
+        val step = w / dotsAcross
+        val land = ArrayList<P>()
+        var y = maxY - step / 2
+        while (y > minY) {
+            var x = minX + step / 2
+            while (x < maxX) {
+                val lng = x / kx
+                if (y in -85.0..85.0 && isLand(y, normLng(lng))) land += proj(y, lng)
+                x += step
+            }
+            y -= step
+        }
+        val paths = arcs.indices.map { i -> arcs[i].indices.map { j -> proj(arcs[i][j].lat, unwrapped[i][j]) } }
+        return MultiFrame(land, paths, (1.0 / dotsAcross).toFloat())
     }
 
     companion object {

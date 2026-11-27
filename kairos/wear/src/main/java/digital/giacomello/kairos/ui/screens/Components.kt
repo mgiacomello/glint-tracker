@@ -121,3 +121,31 @@ fun WearRouteMap(f: Flight, progress: Float, color: Color, modifier: Modifier = 
         }
     }
 }
+
+/** Mini mappa di tutte le rotte per il polso. */
+@Composable
+fun WearAllRoutesMap(flights: List<Flight>, color: Color, modifier: Modifier = Modifier) {
+    val ctx = LocalContext.current
+    val routes = remember(flights) {
+        flights.mapNotNull { f -> LandMask.coords(f)?.let { listOf(f.departure.iata, f.arrival.iata).sorted() to it } }
+            .groupBy { it.first }.map { (_, v) -> v.first().second to v.size }
+    }
+    BoxWithConstraints(modifier) {
+        val aspect = (constraints.maxWidth.toFloat() / constraints.maxHeight.coerceAtLeast(1)).coerceIn(0.5f, 4f)
+        val frame = remember(routes, aspect) { LandMask.get(ctx).frameMany(routes.map { it.first }, aspect, 40, 0.1) }
+        Canvas(Modifier.fillMaxSize()) {
+            if (frame == null) return@Canvas
+            val w = size.width; val h = size.height
+            frame.land.forEach { drawCircle(Color.White.copy(alpha = 0.2f), 1.3.dp.toPx(), Offset(it.x * w, it.y * h)) }
+            val maxN = routes.maxOfOrNull { it.second }?.toFloat() ?: 1f
+            frame.paths.forEachIndexed { i, pts ->
+                val k = routes[i].second / maxN
+                for (j in 0 until pts.size - 1) drawLine(color.copy(alpha = 0.5f + 0.5f * k),
+                    Offset(pts[j].x * w, pts[j].y * h), Offset(pts[j + 1].x * w, pts[j + 1].y * h),
+                    strokeWidth = (1f + 1.5f * k).dp.toPx(), cap = StrokeCap.Round)
+                drawCircle(Color.White, 2.dp.toPx(), Offset(pts.first().x * w, pts.first().y * h))
+                drawCircle(Color.White, 2.dp.toPx(), Offset(pts.last().x * w, pts.last().y * h))
+            }
+        }
+    }
+}

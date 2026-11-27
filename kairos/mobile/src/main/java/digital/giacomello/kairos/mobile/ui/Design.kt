@@ -228,3 +228,80 @@ fun fadeToBottom(bg: Color) = Brush.verticalGradient(0f to Color.Transparent, 0.
 
 @Composable
 fun dpToPx(dp: Dp) = with(LocalDensity.current) { dp.toPx() }
+
+/**
+ * Mappa di tutte le rotte volate: archi più spessi e luminosi per le rotte più frequenti,
+ * aeroporti dimensionati per numero di passaggi, etichette sui più usati.
+ */
+@Composable
+fun AllRoutesMap(flights: List<Flight>, color: Color, modifier: Modifier = Modifier, maxLabels: Int = 8) {
+    val ctx = LocalContext.current
+    val measurer = rememberTextMeasurer()
+    val labelStyle = TextStyle(color = Color.White, fontSize = 10.sp, fontWeight = FontWeight.Bold)
+
+    // Rotte non orientate (A–B = B–A) con conteggio, aeroporti con conteggio
+    data class Route(val a: String, val b: String, val coords: Pair<digital.giacomello.kairos.geo.LatLng, digital.giacomello.kairos.geo.LatLng>, val n: Int)
+    val routes = remember(flights) {
+        flights.mapNotNull { f -> LandMask.coords(f)?.let { c -> Triple(listOf(f.departure.iata, f.arrival.iata).sorted(), c, f) } }
+            .groupBy { it.first }
+            .map { (k, v) ->
+                val c = v.first().second
+                val swapped = v.first().third.departure.iata != k[0]
+                Route(k[0], k[1], if (swapped) c.second to c.first else c, v.size)
+            }
+            .sortedBy { it.n } // le più frequenti disegnate sopra
+    }
+    val airports = remember(routes) {
+        routes.flatMap { r -> listOf(Triple(r.a, 0, r), Triple(r.b, 1, r)) }
+            .groupBy { it.first }
+            .map { (code, l) -> Triple(code, l.sumOf { it.third.n }, l.first()) }
+    }
+
+    BoxWithConstraints(modifier) {
+        val aspect = (constraints.maxWidth.toFloat() / constraints.maxHeight.coerceAtLeast(1)).coerceIn(0.5f, 4f)
+        val frame = remember(routes, aspect) { LandMask.get(ctx).frameMany(routes.map { it.coords }, aspect, 90, 0.1) }
+        Canvas(Modifier.fillMaxSize()) {
+            if (frame == null) return@Canvas
+            val w = size.width; val h = size.height
+            val dotR = (frame.dotStep * w * 0.28f).coerceIn(0.8f, 2.6f)
+            frame.land.forEach { drawCircle(Color.White.copy(alpha = 0.17f), dotR, Offset(it.x * w, it.y * h)) }
+            val maxN = routes.maxOfOrNull { it.n }?.toFloat() ?: 1f
+            routes.forEachIndexed { i, r ->
+                val pts = frame.paths[i]
+                val path = Path().apply { pts.forEachIndexed { j, p -> if (j == 0) moveTo(p.x * w, p.y * h) else lineTo(p.x * w, p.y * h) } }
+                val k = r.n / maxN
+                drawPath(path, color.copy(alpha = 0.15f + 0.2f * k), style = Stroke((4f + 6f * k).dp.toPx(), cap = StrokeCap.Round))
+                drawPath(path, color.copy(alpha = 0.55f + 0.45f * k), style = Stroke((1.2f + 1.6f * k).dp.toPx(), cap = StrokeCap.Round))
+            }
+            // Aeroporti: posizione presa dall'estremo dell'arco corrispondente
+            val maxA = airports.maxOfOrNull { it.second }?.toFloat() ?: 1f
+            val placed = airports.map { (code, n, ref) ->
+                val idx = routes.indexOf(ref.third)
+                val p = if (ref.second == 0) frame.paths[idx].first() else frame.paths[idx].last()
+                Triple(code, n, Offset(p.x * w, p.y * h))
+            }.sortedByDescending { it.second }
+            placed.forEach { (_, n, o) ->
+                val r = (2.5f + 3.5f * n / maxA).dp.toPx()
+                drawCircle(Color.Black, r + 1.5.dp.toPx(), o)
+                drawCircle(Color.White, r, o)
+            }
+            // Etichette sui più frequenti, evitando sovrapposizioni
+            val used = mutableListOf<androidx.compose.ui.geometry.Rect>()
+            placed.take(maxLabels).forEach { (code, _, o) ->
+                val t = measurer.measure(code, labelStyle)
+                val pad = 3.dp.toPx()
+                val candidates = listOf(
+                    Offset(o.x + 7.dp.toPx(), o.y - t.size.height / 2f), Offset(o.x - t.size.width - 7.dp.toPx(), o.y - t.size.height / 2f),
+                    Offset(o.x - t.size.width / 2f, o.y - t.size.height - 7.dp.toPx()), Offset(o.x - t.size.width / 2f, o.y + 7.dp.toPx()),
+                )
+                val pos = candidates.firstOrNull { c ->
+                    val rect = androidx.compose.ui.geometry.Rect(c.x - pad, c.y, c.x + t.size.width + pad, c.y + t.size.height)
+                    rect.left >= 0 && rect.right <= w && rect.top >= 0 && rect.bottom <= h && used.none { it.overlaps(rect) }
+                } ?: return@forEach
+                used += androidx.compose.ui.geometry.Rect(pos.x - pad, pos.y, pos.x + t.size.width + pad, pos.y + t.size.height)
+                drawRoundRect(Color.Black.copy(alpha = 0.6f), Offset(pos.x - pad, pos.y), Size(t.size.width + 2 * pad, t.size.height.toFloat()), CornerRadius(3.dp.toPx()))
+                drawText(t, topLeft = pos)
+            }
+        }
+    }
+}

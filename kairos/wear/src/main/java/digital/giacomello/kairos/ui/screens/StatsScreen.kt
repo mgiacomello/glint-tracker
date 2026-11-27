@@ -4,12 +4,14 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.wear.compose.foundation.lazy.ScalingLazyColumn
@@ -47,6 +49,10 @@ fun StatsContent(flights: List<Flight>, initialItem: Int = 0) {
                     Text("${s.flights} voli · ${s.airMinutes / 60}h in volo", fontSize = 13.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     Text("${s.airports} aeroporti · ${s.countries} paesi", fontSize = 13.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
+            }
+            item {
+                val flown = remember(flights) { flights.filter { it.status.isFinished && it.status != digital.giacomello.kairos.model.FlightStatus.CANCELED } }
+                WearAllRoutesMap(flown, MaterialTheme.colorScheme.primary, Modifier.fillMaxWidth().height(110.dp))
             }
             item { ListHeader { Text("Ritardi") } }
             item {

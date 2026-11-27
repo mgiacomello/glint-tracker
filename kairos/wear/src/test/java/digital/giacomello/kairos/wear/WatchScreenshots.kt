@@ -65,7 +65,9 @@ class WatchScreenshots {
 
     @Test fun stats() = shot("4-statistiche") { StatsContent(SampleData.flights) }
 
-    @Test fun statsDelays() = shot("4b-ritardi") { StatsContent(SampleData.flights, initialItem = 3) }
+    @Test fun statsMap() = shot("4a-mappa-rotte") { StatsContent(SampleData.flights, initialItem = 2) }
+
+    @Test fun statsDelays() = shot("4b-ritardi") { StatsContent(SampleData.flights, initialItem = 4) }
 
     @Test fun inFlight() = shot("3-in-volo") {
         FlightDetailContent(SampleData.airborne, null, refreshing = false, now = SampleData.airborneNow, onRefresh = {}, onRemove = {})
