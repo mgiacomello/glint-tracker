@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.PathEffect
@@ -124,7 +125,7 @@ fun WearRouteMap(f: Flight, progress: Float, color: Color, modifier: Modifier = 
 
 /** Mini mappa di tutte le rotte per il polso. */
 @Composable
-fun WearAllRoutesMap(flights: List<Flight>, color: Color, modifier: Modifier = Modifier) {
+fun WearAllRoutesMap(flights: List<Flight>, color: Color, modifier: Modifier = Modifier, europe: Boolean = false) {
     val ctx = LocalContext.current
     val routes = remember(flights) {
         flights.mapNotNull { f -> LandMask.coords(f)?.let { listOf(f.departure.iata, f.arrival.iata).sorted() to it } }
@@ -132,8 +133,11 @@ fun WearAllRoutesMap(flights: List<Flight>, color: Color, modifier: Modifier = M
     }
     BoxWithConstraints(modifier) {
         val aspect = (constraints.maxWidth.toFloat() / constraints.maxHeight.coerceAtLeast(1)).coerceIn(0.5f, 4f)
-        val frame = remember(routes, aspect) { LandMask.get(ctx).frameMany(routes.map { it.first }, aspect, 40, 0.1) }
-        Canvas(Modifier.fillMaxSize()) {
+        val frame = remember(routes, aspect, europe) {
+            LandMask.get(ctx).frameMany(routes.map { it.first }, aspect, 40, 0.1,
+                bounds = if (europe) digital.giacomello.kairos.geo.Bounds.EUROPE else null)
+        }
+        Canvas(Modifier.fillMaxSize().clipToBounds()) {
             if (frame == null) return@Canvas
             val w = size.width; val h = size.height
             frame.land.forEach { drawCircle(Color.White.copy(alpha = 0.2f), 1.3.dp.toPx(), Offset(it.x * w, it.y * h)) }

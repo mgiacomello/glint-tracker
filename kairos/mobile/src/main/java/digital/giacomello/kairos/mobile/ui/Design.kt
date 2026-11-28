@@ -23,6 +23,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.RoundRect
@@ -234,7 +235,7 @@ fun dpToPx(dp: Dp) = with(LocalDensity.current) { dp.toPx() }
  * aeroporti dimensionati per numero di passaggi, etichette sui più usati.
  */
 @Composable
-fun AllRoutesMap(flights: List<Flight>, color: Color, modifier: Modifier = Modifier, maxLabels: Int = 8) {
+fun AllRoutesMap(flights: List<Flight>, color: Color, modifier: Modifier = Modifier, maxLabels: Int = 8, europe: Boolean = false) {
     val ctx = LocalContext.current
     val measurer = rememberTextMeasurer()
     val labelStyle = TextStyle(color = Color.White, fontSize = 10.sp, fontWeight = FontWeight.Bold)
@@ -259,8 +260,11 @@ fun AllRoutesMap(flights: List<Flight>, color: Color, modifier: Modifier = Modif
 
     BoxWithConstraints(modifier) {
         val aspect = (constraints.maxWidth.toFloat() / constraints.maxHeight.coerceAtLeast(1)).coerceIn(0.5f, 4f)
-        val frame = remember(routes, aspect) { LandMask.get(ctx).frameMany(routes.map { it.coords }, aspect, 90, 0.1) }
-        Canvas(Modifier.fillMaxSize()) {
+        val frame = remember(routes, aspect, europe) {
+            LandMask.get(ctx).frameMany(routes.map { it.coords }, aspect, 90, 0.1,
+                bounds = if (europe) digital.giacomello.kairos.geo.Bounds.EUROPE else null)
+        }
+        Canvas(Modifier.fillMaxSize().clipToBounds()) {
             if (frame == null) return@Canvas
             val w = size.width; val h = size.height
             val dotR = (frame.dotStep * w * 0.28f).coerceIn(0.8f, 2.6f)
@@ -279,7 +283,8 @@ fun AllRoutesMap(flights: List<Flight>, color: Color, modifier: Modifier = Modif
                 val idx = routes.indexOf(ref.third)
                 val p = if (ref.second == 0) frame.paths[idx].first() else frame.paths[idx].last()
                 Triple(code, n, Offset(p.x * w, p.y * h))
-            }.sortedByDescending { it.second }
+            }.filter { (_, _, o) -> o.x in 0f..w && o.y in 0f..h } // in vista Europa gli scali lontani restano fuori
+                .sortedByDescending { it.second }
             placed.forEach { (_, n, o) ->
                 val r = (2.5f + 3.5f * n / maxA).dp.toPx()
                 drawCircle(Color.Black, r + 1.5.dp.toPx(), o)

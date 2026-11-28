@@ -6,6 +6,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -53,8 +54,9 @@ fun StatsScreen(vm: MobileViewModel, onBack: () -> Unit) {
 /** Statistiche di viaggio: km, ore, puntualità e ritardi, classifiche. Filtro per anno. */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun StatsContent(flights: List<Flight>, onBack: () -> Unit, initialYear: Int? = null) {
+fun StatsContent(flights: List<Flight>, onBack: () -> Unit, initialYear: Int? = null, initialWorld: Boolean = false) {
     var year by remember { mutableStateOf(initialYear) }
+    var world by remember { mutableStateOf(initialWorld) }
     val years = remember(flights) { TravelStats.years(flights) }
     val s = remember(flights, year) { TravelStats.from(flights, year) }
 
@@ -101,12 +103,26 @@ fun StatsContent(flights: List<Flight>, onBack: () -> Unit, initialYear: Int? = 
                 Card(Modifier.fillMaxWidth(), shape = RoundedCornerShape(20.dp),
                     colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer)) {
                     Column {
-                        Row(Modifier.fillMaxWidth().padding(start = 16.dp, end = 16.dp, top = 14.dp), verticalAlignment = Alignment.CenterVertically) {
-                            Text("LE TUE ROTTE", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.weight(1f))
-                            Text("${flown.map { listOf(it.departure.iata, it.arrival.iata).sorted() }.toSet().size} rotte",
-                                style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary)
+                        val routeKeys = flown.map { listOf(it.departure.iata, it.arrival.iata).sorted() }.toSet()
+                        // Rotte con almeno uno scalo fuori dal riquadro Europa
+                        val outside = remember(flown) {
+                            flown.filter { f -> digital.giacomello.kairos.geo.LandMask.coords(f)?.let { (a, b) ->
+                                !digital.giacomello.kairos.geo.Bounds.EUROPE.contains(a) || !digital.giacomello.kairos.geo.Bounds.EUROPE.contains(b) } == true }
+                                .map { listOf(it.departure.iata, it.arrival.iata).sorted() }.toSet().size
                         }
-                        AllRoutesMap(flown, MaterialTheme.colorScheme.primary, Modifier.fillMaxWidth().height(260.dp).padding(8.dp))
+                        Row(Modifier.fillMaxWidth().padding(start = 16.dp, end = 12.dp, top = 12.dp), verticalAlignment = Alignment.CenterVertically) {
+                            Column(Modifier.weight(1f)) {
+                                Text("LE TUE ROTTE", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                Text(
+                                    "${routeKeys.size} rotte" + if (!world && outside > 0) " · $outside fuori Europa" else "",
+                                    style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary,
+                                )
+                            }
+                            FilterChip(selected = !world, onClick = { world = false }, label = { Text("Europa") })
+                            Spacer(Modifier.width(6.dp))
+                            FilterChip(selected = world, onClick = { world = true }, label = { Text("Mondo") })
+                        }
+                        AllRoutesMap(flown, MaterialTheme.colorScheme.primary, Modifier.fillMaxWidth().height(260.dp).padding(8.dp), europe = !world)
                     }
                 }
             }

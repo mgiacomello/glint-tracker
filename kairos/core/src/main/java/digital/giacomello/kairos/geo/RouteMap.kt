@@ -36,7 +36,20 @@ data class RouteFrame(
 }
 
 /** Mappa con più rotte: terre a puntini e un percorso per rotta. */
-data class MultiFrame(val land: List<P>, val paths: List<List<P>>, val dotStep: Float)
+data class MultiFrame(val land: List<P>, val paths: List<List<P>>, val dotStep: Float) {
+    /** Un punto è visibile se cade dentro il riquadro. */
+    fun visible(p: P) = p.x in 0f..1f && p.y in 0f..1f
+}
+
+/** Riquadro geografico fisso. */
+data class Bounds(val minLat: Double, val maxLat: Double, val minLng: Double, val maxLng: Double) {
+    fun contains(p: LatLng) = p.lat in minLat..maxLat && p.lng in minLng..maxLng
+
+    companion object {
+        /** Europa geografica + Nord Africa mediterraneo, quanto basta per le rotte UE/UK. */
+        val EUROPE = Bounds(33.0, 63.0, -13.0, 33.0)
+    }
+}
 
 /**
  * Maschera terre emerse (Natural Earth 1:50m, pubblico dominio) su griglia di 0,25°,
@@ -97,7 +110,11 @@ class LandMask private constructor(private val bits: ByteArray) {
      * Mappa di più rotte insieme (es. "tutte le mie rotte"): inquadra tutti gli archi.
      * @return terre a puntini + un percorso per rotta, nello stesso ordine di [routes].
      */
-    fun frameMany(routes: List<Pair<LatLng, LatLng>>, aspect: Float, dotsAcross: Int = 80, padding: Double = 0.08): MultiFrame? {
+    fun frameMany(
+        routes: List<Pair<LatLng, LatLng>>, aspect: Float, dotsAcross: Int = 80, padding: Double = 0.08,
+        /** Riquadro fisso (es. Europa); null = inquadra tutte le rotte. */
+        bounds: Bounds? = null,
+    ): MultiFrame? {
         if (routes.isEmpty()) return null
         val arcs = routes.map { (a, b) -> greatCircle(a, b, 48) }
         // Longitudini srotolate per arco, poi allineate al centro del primo arco (gestisce l'antimeridiano)
@@ -111,14 +128,17 @@ class LandMask private constructor(private val bits: ByteArray) {
         val midLat = (allLats.min() + allLats.max()) / 2
         val kx = cos(midLat * PI / 180).coerceAtLeast(0.2)
 
-        var minX = allLngs.min() * kx; var maxX = allLngs.max() * kx
-        var minY = allLats.min(); var maxY = allLats.max()
-        var w = max(maxX - minX, (maxY - minY) * aspect).coerceAtLeast(14.0) * (1 + 2 * padding)
+        val kxB = bounds?.let { cos((it.minLat + it.maxLat) / 2 * PI / 180) }
+        val k = kxB ?: kx
+        var minX = (bounds?.minLng ?: allLngs.min()) * k; var maxX = (bounds?.maxLng ?: allLngs.max()) * k
+        var minY = bounds?.minLat ?: allLats.min(); var maxY = bounds?.maxLat ?: allLats.max()
+        val pad = if (bounds != null) 0.0 else padding
+        var w = max(maxX - minX, (maxY - minY) * aspect).coerceAtLeast(14.0) * (1 + 2 * pad)
         var h = w / aspect
-        if (h < (maxY - minY) * (1 + 2 * padding)) { h = (maxY - minY) * (1 + 2 * padding); w = h * aspect }
+        if (h < (maxY - minY) * (1 + 2 * pad)) { h = (maxY - minY) * (1 + 2 * pad); w = h * aspect }
         val cx = (minX + maxX) / 2; val cy = (minY + maxY) / 2
         minX = cx - w / 2; maxX = cx + w / 2; minY = cy - h / 2; maxY = cy + h / 2
-        fun proj(lat: Double, lng: Double) = P(((lng * kx - minX) / w).toFloat(), ((maxY - lat) / h).toFloat())
+        fun proj(lat: Double, lng: Double) = P(((lng * k - minX) / w).toFloat(), ((maxY - lat) / h).toFloat())
 
         val step = w / dotsAcross
         val land = ArrayList<P>()
@@ -126,7 +146,7 @@ class LandMask private constructor(private val bits: ByteArray) {
         while (y > minY) {
             var x = minX + step / 2
             while (x < maxX) {
-                val lng = x / kx
+                val lng = x / k
                 if (y in -85.0..85.0 && isLand(y, normLng(lng))) land += proj(y, lng)
                 x += step
             }

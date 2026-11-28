@@ -6,6 +6,9 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.foundation.clickable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
@@ -36,7 +39,8 @@ fun StatsScreen(vm: FlightsViewModel) {
 
 /** Statistiche compatte per l'orologio: totali, puntualità, ritardi, top rotte. */
 @Composable
-fun StatsContent(flights: List<Flight>, initialItem: Int = 0) {
+fun StatsContent(flights: List<Flight>, initialItem: Int = 0, initialWorld: Boolean = false) {
+    var world by remember { mutableStateOf(initialWorld) }
     val s = remember(flights) { TravelStats.from(flights) }
     val listState = rememberScalingLazyListState(initialCenterItemIndex = initialItem)
 
@@ -52,7 +56,11 @@ fun StatsContent(flights: List<Flight>, initialItem: Int = 0) {
             }
             item {
                 val flown = remember(flights) { flights.filter { it.status.isFinished && it.status != digital.giacomello.kairos.model.FlightStatus.CANCELED } }
-                WearAllRoutesMap(flown, MaterialTheme.colorScheme.primary, Modifier.fillMaxWidth().height(110.dp))
+                // Tocca la mappa per passare da Europa a Mondo
+                Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.fillMaxWidth().clickable { world = !world }) {
+                    WearAllRoutesMap(flown, MaterialTheme.colorScheme.primary, Modifier.fillMaxWidth().height(110.dp), europe = !world)
+                    Text(if (world) "Mondo · tocca per Europa" else "Europa · tocca per Mondo", fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
             }
             item { ListHeader { Text("Ritardi") } }
             item {

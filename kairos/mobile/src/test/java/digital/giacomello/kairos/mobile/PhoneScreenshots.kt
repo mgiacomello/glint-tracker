@@ -55,6 +55,8 @@ class PhoneScreenshots {
 
     @Test fun stats() = shot("5-statistiche") { StatsContent(SampleData.flights, onBack = {}) }
 
+    @Test fun statsWorld() = shot("5b-statistiche-mondo") { StatsContent(SampleData.flights, onBack = {}, initialWorld = true) }
+
     @Test fun statsYear() = shot("6-statistiche-2026") { StatsContent(SampleData.flights, onBack = {}, initialYear = 2026) }
 
     @Test fun settings() = shot("4-impostazioni") {
